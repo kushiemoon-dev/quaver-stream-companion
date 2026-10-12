@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>QSC now playing</title>
+<link rel="stylesheet" href="/overlays/overlay.css">
+<script src="/overlays/common.js"></script>
+</head>
+<body>
+<div id="card" class="card hidden">
+  <div id="title" class="title"></div>
+  <div id="artist" class="sub"></div>
+  <div id="diff" class="sub"></div>
+</div>
+<script>
+  let game = 'unknown';
+  let map = null;
+  const card = document.getElementById('card');
+
+  function render() {
+    if (!map || game === 'menu' || game === 'initialization' || game === 'closed') {
+      card.classList.add('hidden');
+      return;
+    }
+    document.getElementById('title').textContent = map.title;
+    document.getElementById('artist').textContent = map.artist;
+    const keys = map.keys ? ' · ' + map.keys + 'K' : '';
+    document.getElementById('diff').textContent =
+      map.difficulty_name + ' · ' + map.difficulty.toFixed(2) + '★' + keys;
+    card.classList.remove('hidden');
+  }
+
+  const isDemo = new URLSearchParams(location.search).get('demo') === '1';
+
+  if (isDemo) {
+    game = 'gameplay';
+    map = { title: 'Example Song', artist: 'Example Artist', difficulty_name: 'Hard', difficulty: 18.5, keys: 4 };
+    render();
+  } else {
+    qscConnect({
+      'snapshot': function (d) { game = d.game; map = d.map; render(); },
+      'game.state': function (d) { game = d.state; render(); },
+      'map.started': function (d) { map = d; render(); },
+    });
+  }
+</script>
+</body>
+</html>

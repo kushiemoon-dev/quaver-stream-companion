@@ -1,0 +1,488 @@
+package api
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"runtime"
+	"slices"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/config"
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/scores"
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/state"
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/testutil"
+)
+
+type env struct {
+	h       http.Handler
+	cfgPath string
+	quaver  string
+}
+
+type opt func(*Deps)
+
+func newEnv(t *testing.T, opts ...opt) env {
+	t.Helper()
+	q := testutil.NewQuaverDir(t)
+	cfgPath := filepath.Join(t.TempDir(), "sub", "config.json")
+	d := Deps{
+		Version:  "test-1",
+		Started:  time.Now().Add(-5 * time.Second),
+		Snapshot: func() state.Snapshot { return state.Snapshot{Game: "menu", Map: &scores.Map{Title: "Song"}} },
+		History: func(ctx context.Context, limit int) ([]scores.Result, error) {
+			return nil, nil
+		},
+		ConfigPath: cfgPath,
+		Effective:  func() string { return q.Path },
+		Detect:     func() string { return q.Path },
+		Themes:     []string{"neutral-light", "dark"},
+		Port:       testPort,
+	}
+	for _, o := range opts {
+		o(&d)
+	}
+	return env{h: GuardHost(testPort, New(d)), cfgPath: cfgPath, quaver: q.Path}
+}
+
+func (e env) get(path string) *httptest.ResponseRecorder {
+	return do(e.h, "GET", "127.0.0.1:5555", path, "", nil)
+}
+
+func (e env) put(body string, hdr map[string]string) *httptest.ResponseRecorder {
+	h := map[string]string{"Content-Type": "application/json", "X-Requested-With": "qsc"}
+	for k, v := range hdr {
+		if v == "" {
+			delete(h, k)
+		} else {
+			h[k] = v
+		}
+	}
+	return do(e.h, "PUT", "127.0.0.1:5555", "/api/config", body, h)
+}
+
+func decode(t *testing.T, w *httptest.ResponseRecorder, v any) {
+	t.Helper()
+	if ct := w.Header().Get("Content-Type"); ct != "application/json" {
+		t.Fatalf("Content-Type = %q (body %q)", ct, w.Body.String())
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), v); err != nil {
+		t.Fatalf("bad JSON %q: %v", w.Body.String(), err)
+	}
+}
+
+func (e env) noFile(t *testing.T) {
+	t.Helper()
+	if _, err := os.Stat(e.cfgPath); !os.IsNotExist(err) {
+		t.Fatalf("config file must not exist, stat err = %v", err)
+	}
+	if entries, _ := os.ReadDir(filepath.Dir(e.cfgPath)); len(entries) > 0 {
+		t.Fatalf("config folder must stay empty, has %d entries", len(entries))
+	}
+}
+
+func jsonPath(p string) string { return strings.ReplaceAll(p, `\`, `\\`) }
+
+func TestStatus(t *testing.T) {
+	e := newEnv(t)
+	w := e.get("/api/status")
+	if w.Code != 200 {
+		t.Fatalf("code %d: %s", w.Code, w.Body.String())
+	}
+	var got struct {
+		Version   string         `json:"version"`
+		Game      string         `json:"game"`
+		Map       *scores.Map    `json:"map"`
+		LastScore *scores.Result `json:"last_score"`
+		Checks    []struct {
+			ID string `json:"id"`
+			OK bool   `json:"ok"`
+		} `json:"checks"`
+		ConfigPath string `json:"config_path"`
+		UptimeS    int64  `json:"uptime_s"`
+	}
+	decode(t, w, &got)
+	if got.Version != "test-1" || got.Game != "menu" || got.Map == nil || got.ConfigPath != e.cfgPath || got.UptimeS < 5 {
+		t.Fatalf("status = %+v", got)
+	}
+	if len(got.Checks) != 4 {
+		t.Fatalf("checks = %+v", got.Checks)
+	}
+	for i, id := range []string{"quaver_dir", "log", "database", "port"} {
+		if got.Checks[i].ID != id || !got.Checks[i].OK {
+			t.Errorf("check %d = %+v, want %s ok", i, got.Checks[i], id)
+		}
+	}
+}
+
+func TestConfigGetEffective(t *testing.T) {
+	e := newEnv(t)
+	if err := config.Save(e.cfgPath, config.Config{Port: testPort, Overlay: config.Overlay{Theme: "dark"}}); err != nil {
+		t.Fatal(err)
+	}
+	w := e.get("/api/config")
+	var got struct {
+		Config    config.Config `json:"config"`
+		Effective struct {
+			QuaverDir string `json:"quaver_dir"`
+			Port      int    `json:"port"`
+		} `json:"effective"`
+		RestartRequired bool `json:"restart_required"`
+	}
+	decode(t, w, &got)
+	if w.Code != 200 || got.Effective.QuaverDir != e.quaver || got.Effective.Port != testPort || got.RestartRequired {
+		t.Fatalf("code %d got %+v", w.Code, got)
+	}
+	if got.Config.QuaverDir != "" || got.Config.Port != testPort || got.Config.Overlay.Theme != "dark" {
+		t.Fatalf("config = %+v", got.Config)
+	}
+}
+
+func TestConfigGetNoFileShowsDefaultsAndRestart(t *testing.T) {
+	e := newEnv(t)
+	var got struct {
+		Config          config.Config `json:"config"`
+		RestartRequired bool          `json:"restart_required"`
+	}
+	decode(t, e.get("/api/config"), &got)
+	if got.Config.Port != config.DefaultPort || !got.RestartRequired {
+		t.Fatalf("got %+v", got)
+	}
+}
+
+func TestConfigGetBrokenFile(t *testing.T) {
+	e := newEnv(t)
+	os.MkdirAll(filepath.Dir(e.cfgPath), 0o755)
+	os.WriteFile(e.cfgPath, []byte("{nope"), 0o644)
+	w := e.get("/api/config")
+	var er errBody
+	decode(t, w, &er)
+	if w.Code != 500 || er.Error != "could not read the config file" {
+		t.Fatalf("code %d body %s", w.Code, w.Body.String())
+	}
+}
+
+func TestPutValidWritesFile(t *testing.T) {
+	e := newEnv(t)
+	body := `{"quaver_dir":"` + jsonPath(e.quaver) + `","port":5555,"language":"fr","overlay":{"theme":"dark","accent":"a855f7"}}`
+	w := e.put(body, nil)
+	var got struct {
+		Config          config.Config `json:"config"`
+		RestartRequired bool          `json:"restart_required"`
+	}
+	decode(t, w, &got)
+	if w.Code != 200 || got.Config.Language != "fr" || got.RestartRequired {
+		t.Fatalf("code %d got %+v", w.Code, got)
+	}
+	saved, err := config.Load(e.cfgPath)
+	if err != nil || saved.Language != "fr" || saved.Overlay.Theme != "dark" || saved.QuaverDir != e.quaver {
+		t.Fatalf("saved = %+v err %v", saved, err)
+	}
+}
+
+func TestPutRestartRequired(t *testing.T) {
+	var got struct {
+		RestartRequired bool `json:"restart_required"`
+	}
+
+	e := newEnv(t)
+	w := e.put(`{"port":5555,"language":"de","overlay":{"theme":"dark"}}`, nil)
+	decode(t, w, &got)
+	if w.Code != 200 || got.RestartRequired {
+		t.Fatalf("no change: code %d %s", w.Code, w.Body.String())
+	}
+
+	w = e.put(`{"port":6000,"overlay":{"theme":"dark"}}`, nil)
+	decode(t, w, &got)
+	if w.Code != 200 || !got.RestartRequired {
+		t.Fatalf("port change: code %d %s", w.Code, w.Body.String())
+	}
+
+	other := testutil.NewQuaverDir(t).Path
+	w = e.put(`{"port":5555,"quaver_dir":"`+jsonPath(other)+`"}`, nil)
+	decode(t, w, &got)
+	if w.Code != 200 || !got.RestartRequired {
+		t.Fatalf("dir change: code %d %s", w.Code, w.Body.String())
+	}
+
+	w = e.put(`{"port":5555,"quaver_dir":"`+jsonPath(e.quaver)+`"}`, nil)
+	decode(t, w, &got)
+	if w.Code != 200 || got.RestartRequired {
+		t.Fatalf("dir equal to the one in use: code %d %s", w.Code, w.Body.String())
+	}
+}
+
+type cfgResp struct {
+	Config          config.Config `json:"config"`
+	RestartRequired bool          `json:"restart_required"`
+	Overridden      *[]string     `json:"overridden"`
+}
+
+func TestOverriddenByFlags(t *testing.T) {
+	other := testutil.NewQuaverDir(t).Path
+	otherBody := `"quaver_dir":"` + jsonPath(other) + `"`
+	cases := []struct {
+		name string
+		opt  opt
+		body string
+		want []string
+		rr   bool
+	}{
+		{"none", func(d *Deps) {}, `{"port":5555}`, []string{}, false},
+		{"port flag", func(d *Deps) { d.PortFlag = true }, `{"port":6000}`, []string{"port"}, false},
+		{"dir flag", func(d *Deps) { d.QuaverDirFlag = true }, `{"port":5555,` + otherBody + `}`, []string{"quaver_dir"}, false},
+		{"both", func(d *Deps) { d.PortFlag, d.QuaverDirFlag = true, true }, `{"port":6000,` + otherBody + `}`, []string{"port", "quaver_dir"}, false},
+		{"port flag, dir changes", func(d *Deps) { d.PortFlag = true }, `{"port":6000,` + otherBody + `}`, []string{"port"}, true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			e := newEnv(t, c.opt)
+			var put cfgResp
+			w := e.put(c.body, nil)
+			decode(t, w, &put)
+			if w.Code != 200 || put.RestartRequired != c.rr || put.Overridden == nil || !slices.Equal(*put.Overridden, c.want) {
+				t.Fatalf("PUT: code %d %s", w.Code, w.Body.String())
+			}
+			var get cfgResp
+			decode(t, e.get("/api/config"), &get)
+			if get.RestartRequired != c.rr || get.Overridden == nil || !slices.Equal(*get.Overridden, c.want) {
+				t.Fatalf("GET: %+v", get)
+			}
+		})
+	}
+}
+
+func TestRestartRequiredEmptyDirUsesDetected(t *testing.T) {
+	other := testutil.NewQuaverDir(t).Path
+	e := newEnv(t, func(d *Deps) { d.Detect = func() string { return other } })
+	var got cfgResp
+	decode(t, e.put(`{"port":5555}`, nil), &got)
+	if !got.RestartRequired {
+		t.Fatal("detected folder differs from the one in use: restart required")
+	}
+}
+
+func TestPutAppliesLoadDefaults(t *testing.T) {
+	e := newEnv(t)
+	var got cfgResp
+	w := e.put(`{"port":5555}`, nil)
+	decode(t, w, &got)
+	if w.Code != 200 || got.Config.Overlay.Theme != "neutral-light" {
+		t.Fatalf("code %d %s", w.Code, w.Body.String())
+	}
+	raw, _ := os.ReadFile(e.cfgPath)
+	if !strings.Contains(string(raw), `"neutral-light"`) {
+		t.Fatalf("file = %s", raw)
+	}
+	w = e.put(`{"overlay":{"theme":"dark"}}`, nil)
+	decode(t, w, &got)
+	if w.Code != 200 || got.Config.Port != config.DefaultPort {
+		t.Fatalf("missing port: code %d %s", w.Code, w.Body.String())
+	}
+}
+
+func TestConfigGetBrokenFileLeaksNothing(t *testing.T) {
+	e := newEnv(t)
+	os.MkdirAll(filepath.Dir(e.cfgPath), 0o755)
+	os.WriteFile(e.cfgPath, []byte("{nope"), 0o644)
+	if body := e.get("/api/config").Body.String(); strings.Contains(body, "config.json") || strings.Contains(body, "invalid character") {
+		t.Fatalf("leaks details: %s", body)
+	}
+}
+
+func TestPutInvalidIsRejectedAndWritesNothing(t *testing.T) {
+	big := `{"port":5555,"language":"` + strings.Repeat("a", maxBody) + `"}`
+	cases := []struct {
+		name, body string
+		hdr        map[string]string
+		code       int
+		field      string
+	}{
+		{"port 70000", `{"port":70000}`, nil, 400, "port"},
+		{"port negative", `{"port":-1}`, nil, 400, "port"},
+		{"quaver_dir missing", `{"port":5555,"quaver_dir":"Z:\\no\\such\\dir"}`, nil, 400, "quaver_dir"},
+		{"theme traversal", `{"port":5555,"overlay":{"theme":"../x"}}`, nil, 400, "overlay.theme"},
+		{"accent", `{"port":5555,"overlay":{"theme":"dark","accent":"zzz"}}`, nil, 400, "overlay.accent"},
+		{"language", `{"port":5555,"language":"xx"}`, nil, 400, "language"},
+		{"broken json", `{"port":`, nil, 400, ""},
+		{"trailing data", `{"port":5555} {"port":1}`, nil, 400, ""},
+		{"not an object", `[1]`, nil, 400, ""},
+		{"wrong type", `{"port":"5555"}`, nil, 400, ""},
+		{"empty body", ``, nil, 400, ""},
+		{"wrong content type", `{"port":5555}`, map[string]string{"Content-Type": "text/plain"}, 415, ""},
+		{"no requested-with", `{"port":5555}`, map[string]string{"X-Requested-With": ""}, 403, ""},
+		{"foreign origin", `{"port":5555}`, map[string]string{"Origin": "http://evil.example"}, 403, ""},
+		{"body over 64 KB", big, nil, 413, ""},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			e := newEnv(t)
+			w := e.put(c.body, c.hdr)
+			if w.Code != c.code {
+				t.Fatalf("code %d, want %d: %s", w.Code, c.code, w.Body.String())
+			}
+			var er errBody
+			decode(t, w, &er)
+			if er.Error == "" || er.Field != c.field {
+				t.Fatalf("body = %+v, want field %q", er, c.field)
+			}
+			e.noFile(t)
+		})
+	}
+}
+
+func TestPutKeepsPreviousFileOnInvalid(t *testing.T) {
+	e := newEnv(t)
+	if w := e.put(`{"port":5555,"language":"de","overlay":{"theme":"dark"}}`, nil); w.Code != 200 {
+		t.Fatal(w.Body.String())
+	}
+	before, _ := os.ReadFile(e.cfgPath)
+	if w := e.put(`{"port":70000}`, nil); w.Code != 400 {
+		t.Fatal(w.Code)
+	}
+	after, _ := os.ReadFile(e.cfgPath)
+	if string(before) != string(after) {
+		t.Fatal("file changed by a rejected PUT")
+	}
+}
+
+func TestHistory(t *testing.T) {
+	var gotLimit int
+	e := newEnv(t, func(d *Deps) {
+		d.History = func(ctx context.Context, limit int) ([]scores.Result, error) {
+			gotLimit = limit
+			return []scores.Result{{
+				Score:     scores.Score{ID: 7, Grade: "S", Accuracy: 97.5, MaxCombo: 100, PlayedAt: "2026-01-01 10:00:00", Rate: 1.2},
+				Map:       scores.Map{Title: "T", Artist: "A", DifficultyName: "Hard", Difficulty: 12.3, Keys: 4},
+				IsPB:      true,
+				FullCombo: true,
+			}}, nil
+		}
+	})
+	w := e.get("/api/history?limit=3")
+	var got []map[string]any
+	decode(t, w, &got)
+	if w.Code != 200 || gotLimit != 3 || len(got) != 1 {
+		t.Fatalf("code %d limit %d body %s", w.Code, gotLimit, w.Body.String())
+	}
+	row := got[0]
+	for _, k := range []string{"id", "played_at", "title", "artist", "difficulty_name", "difficulty", "keys", "rate", "mods", "grade", "accuracy", "max_combo", "judgments", "failed", "paused", "is_pb", "full_combo"} {
+		if _, ok := row[k]; !ok {
+			t.Errorf("missing key %q", k)
+		}
+	}
+	if row["mods"] == nil || row["title"] != "T" || row["is_pb"] != true {
+		t.Errorf("row = %v", row)
+	}
+
+	e.get("/api/history")
+	if gotLimit != 50 {
+		t.Errorf("default limit = %d, want 50", gotLimit)
+	}
+}
+
+func TestHistoryReportsAutoplay(t *testing.T) {
+	e := newEnv(t, func(d *Deps) {
+		d.History = func(ctx context.Context, limit int) ([]scores.Result, error) {
+			return []scores.Result{{Autoplay: true}, {}}, nil
+		}
+	})
+	var got []map[string]any
+	decode(t, e.get("/api/history"), &got)
+	if len(got) != 2 || got[0]["autoplay"] != true || got[1]["autoplay"] != false {
+		t.Fatalf("autoplay flags = %v", got)
+	}
+}
+
+func TestHistoryEmptyIsArray(t *testing.T) {
+	e := newEnv(t)
+	w := e.get("/api/history")
+	if w.Code != 200 || strings.TrimSpace(w.Body.String()) != "[]" {
+		t.Fatalf("code %d body %q", w.Code, w.Body.String())
+	}
+}
+
+func TestHistoryBadLimit(t *testing.T) {
+	e := newEnv(t)
+	for _, q := range []string{"0", "201", "-1", "abc"} {
+		w := e.get("/api/history?limit=" + q)
+		var er errBody
+		decode(t, w, &er)
+		if w.Code != 400 || er.Field != "limit" {
+			t.Errorf("limit=%s: code %d body %+v", q, w.Code, er)
+		}
+	}
+}
+
+func TestHistoryDatabaseError(t *testing.T) {
+	e := newEnv(t, func(d *Deps) {
+		d.History = func(ctx context.Context, limit int) ([]scores.Result, error) {
+			return nil, errors.New("disk on fire: C:\\secret\\quaver.db")
+		}
+	})
+	w := e.get("/api/history")
+	var er errBody
+	decode(t, w, &er)
+	if w.Code != 500 || er.Error == "" || strings.Contains(w.Body.String(), "secret") {
+		t.Fatalf("code %d body %s", w.Code, w.Body.String())
+	}
+}
+
+func TestHistoryNilFunc(t *testing.T) {
+	e := newEnv(t, func(d *Deps) { d.History = nil })
+	w := e.get("/api/history")
+	if w.Code != 500 {
+		t.Fatalf("code %d", w.Code)
+	}
+}
+
+func TestThemes(t *testing.T) {
+	e := newEnv(t)
+	var got []string
+	w := e.get("/api/themes")
+	decode(t, w, &got)
+	if w.Code != 200 || len(got) != 2 || got[0] != "neutral-light" {
+		t.Fatalf("code %d got %v", w.Code, got)
+	}
+}
+
+func TestMethodsAndUnknownPaths(t *testing.T) {
+	e := newEnv(t)
+	hdr := map[string]string{"Content-Type": "application/json", "X-Requested-With": "qsc"}
+	for _, c := range []struct {
+		method, path string
+		want         int
+	}{
+		{"POST", "/api/status", 405}, {"PUT", "/api/history", 405}, {"DELETE", "/api/config", 405},
+		{"POST", "/api/themes", 405}, {"GET", "/api/config/x", 404}, {"GET", "/api/nope", 404},
+	} {
+		w := do(e.h, c.method, "127.0.0.1:5555", c.path, "{}", hdr)
+		var er errBody
+		decode(t, w, &er)
+		if w.Code != c.want || er.Error == "" {
+			t.Errorf("%s %s: code %d body %s", c.method, c.path, w.Code, w.Body.String())
+		}
+	}
+}
+
+func TestRestartRequiredIgnoresSpellingOfSameFolder(t *testing.T) {
+	e := newEnv(t)
+	spellings := []string{filepath.ToSlash(e.quaver), e.quaver + "/", filepath.Join(e.quaver, "..", filepath.Base(e.quaver))}
+	if runtime.GOOS == "windows" {
+		spellings = append(spellings, strings.ToUpper(e.quaver), strings.ToLower(e.quaver))
+	}
+	for _, dir := range spellings {
+		body, _ := json.Marshal(map[string]any{"quaver_dir": dir, "port": 5555})
+		var got cfgResp
+		decode(t, e.put(string(body), nil), &got)
+		if got.RestartRequired {
+			t.Errorf("%q is the folder already in use: no restart needed", dir)
+		}
+	}
+}
