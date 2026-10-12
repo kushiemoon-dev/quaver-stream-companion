@@ -12,6 +12,7 @@
   const MAX_COUNT = 50;
   const MIN_COUNT = 5;
   const MAX_JUDGMENT = 999999;
+  const MAX_KPS = 999;
   const PAD = { l: 26, r: 14, t: 14, b: 10 };
 
   const has = function (obj, key) { return Object.prototype.hasOwnProperty.call(obj, key); };
@@ -176,11 +177,73 @@
     };
   }
 
-  // The dashed line at the best accuracy of the window, from a curve() result.
+  const LABEL_H = 12;
+  const DOT_R = 6;
+  const LAST_W = 48;
+  const BEST_W = 84;
+  const box = function (x, y, anchor, w) {
+    const x0 = anchor === 'end' ? x - w : x;
+    return { x0: x0, x1: x0 + w, y0: y - LABEL_H + 2, y1: y + 3 };
+  };
+  const overlaps = function (a, b) { return a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1; };
+
+  // Where the accuracy label of the newest play goes: beside its dot, on the inner side near the right edge.
+  function lastLabel(c) {
+    if (!c || c.points.length === 0) return null;
+    const p = c.points[c.points.length - 1];
+    const nearRight = p.x > c.right + PAD.r - 50;
+    return { x: p.x + (nearRight ? -10 : 10), y: Math.max(12, p.y - 8), anchor: nearRight ? 'end' : 'start', text: p.accuracy.toFixed(2) + '%' };
+  }
+
+  // The line at the best accuracy of the window, from a curve() result. Its label is right aligned at
+  // the plot edge, above or below the line, whichever collides less with the dots (a third spot sits just above the plot) and the newest label.
   function bestLine(c) {
     if (!c || c.points.length === 0) return null;
     const top = c.points.reduce(function (a, p) { return p.accuracy > a.accuracy ? p : a; });
-    return { y: top.y, x1: c.left, x2: c.right, text: formatAccuracy(top.accuracy) };
+    const taken = c.points.map(function (p) { return { x0: p.x - DOT_R, x1: p.x + DOT_R, y0: p.y - DOT_R, y1: p.y + DOT_R }; });
+    const last = lastLabel(c);
+    taken.push(box(last.x, last.y, last.anchor, LAST_W));
+    const candidates = [top.y - 4, top.y + 13, c.yTop - 3].filter(function (y) { return y >= c.yTop - 3 && y <= c.yBottom - 2; });
+    let label = null;
+    let fewest = Infinity;
+    candidates.forEach(function (y) {
+      const hits = taken.filter(function (b) { return overlaps(b, box(c.right, y, 'end', BEST_W)); }).length;
+      if (hits < fewest) {
+        fewest = hits;
+        label = { x: c.right, y: y, anchor: 'end' };
+      }
+    });
+    return { y: top.y, x1: c.left, x2: c.right, text: formatAccuracy(top.accuracy), label: label };
+  }
+
+  function keysCounter(v, max) {
+    const n = Math.floor(num(v));
+    return isFinite(n) ? clamp(n, 0, max) : 0;
+  }
+
+  // Lane state from a keys.frame; null when the frame cannot be drawn.
+  function keysView(frame) {
+    const f = obj(frame);
+    if (f.lanes !== 4 && f.lanes !== 7) return null;
+    const lane = function (list, make) {
+      const src = Array.isArray(list) ? list : [];
+      return Array.from({ length: f.lanes }, function (_, i) { return make(src[i]); });
+    };
+    return {
+      lanes: f.lanes,
+      down: lane(f.down, function (v) { return v === true; }),
+      presses: lane(f.presses, function (v) { return keysCounter(v, MAX_JUDGMENT); }),
+      kps: keysCounter(f.kps, MAX_KPS),
+      peak: keysCounter(f.peak, MAX_KPS),
+    };
+  }
+
+  // The reason to explain why no lane data will come: 'unsupported', 'off' or '' when it should work.
+  function keysHint(status) {
+    const s = obj(status);
+    if (s.supported === false) return 'unsupported';
+    if (s.enabled === false) return 'off';
+    return '';
   }
 
   // seconds <= 0 disables it. The clock is injectable for tests.
@@ -205,6 +268,7 @@
     parseScale: parseScale, parseAutohide: parseAutohide, parseLang: parseLang, parseHide: parseHide,
     isHiddenState: isHiddenState, stateKey: stateKey, stateTone: stateTone, resultView: resultView,
     curve: curve, createAutohide: createAutohide, alertView: alertView, bestLine: bestLine,
+    lastLabel: lastLabel, keysView: keysView, keysHint: keysHint,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else window.qscModel = api;

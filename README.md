@@ -39,7 +39,7 @@ QuaverStreamCompanion only reads files that Quaver already writes itself:
 | `Logs/runtime.log` | Live game state (menu, select, loading, gameplay, results) and the "score saved" signal |
 | `quaver.db` | Map being played and the result of each play (opened **read-only**) |
 
-It never reads game memory, never modifies or injects into the game, never talks to the game's internal ports, and never writes anything to the Quaver folder. There is no telemetry, and the server listens on `127.0.0.1` only (requests with another `Host` header are rejected). `qsc` never opens a browser by itself: it only does so with `--open`.
+The one optional exception is the lane keys overlay (see [Lane keys](#lane-keys)), which is off by default. Apart from it, `qsc` never reads game memory, never modifies or injects into the game, never talks to the game's internal ports, and never writes anything to the Quaver folder. There is no telemetry, and the server listens on `127.0.0.1` only (requests with another `Host` header are rejected). `qsc` never opens a browser by itself: it only does so with `--open`.
 
 ---
 
@@ -80,6 +80,7 @@ The full walkthrough, with troubleshooting, is in the [OBS setup guide](docs/OBS
 | History | 520 x 180 | `/overlays/history/` |
 | State | 280 x 64 | `/overlays/state/` |
 | Alert | 520 x 120 | `/overlays/alert/` |
+| Lane keys | 480 x 200 (560 x 200 for 7K) | `/overlays/keys/` |
 
 Each link starts with `http://127.0.0.1:7878`. Use the size as the width and height of the OBS Browser source.
 
@@ -225,11 +226,20 @@ Settings are stored in a JSON file, written by the Settings and Overlays pages o
   "quaver_dir": "",
   "port": 7878,
   "language": "en",
-  "overlay": { "theme": "neutral-light", "accent": "" }
+  "overlay": { "theme": "neutral-light", "accent": "" },
+  "keys": { "enabled": false }
 }
 ```
 
 An empty `quaver_dir` means auto-detection from your Steam libraries. `language` is `en`, `fr` or `de`. `accent` is a hex color without `#`. A missing file gives the defaults. A change of port or Quaver folder takes effect the next time `qsc` starts. In a hand-edited JSON path, double each backslash (`\\`) or use forward slashes.
+
+#### Lane keys
+
+The lane keys overlay shows a bar per lane that lights up while its key is held, a press counter per lane, the keys per second (KPS) and the peak of the map. The numbers come from raw key state, they are not note accurate judgments.
+
+**Privacy.** Lane keys are off by default. Only the lane keys you choose are read, and only while a map is being played. Nothing is stored or logged: no key names, no key history. The key state is read system wide, regardless of the focused window, so lane key timing may be sampled while you type elsewhere during gameplay. It works on Windows only for now, and a tap shorter than the polling interval may be missed. Overlays only receive per lane on/off states, counters and KPS.
+
+To turn it on, use the Keys card on the dashboard Settings page, or edit the file: set `"keys": { "enabled": true, "layout": "auto", "k4": ["A","S","K","L"], "k7": ["A","S","D","SPACE","J","K","L"] }`. `layout` is `auto` (from the map's key count), `4k` or `7k`; each list holds exactly that many different key names (`A` to `Z`, `0` to `9`, `SPACE`, the arrows, `SHIFT_L`, `CTRL_L`, `ALT_L` and their `_R` twins, `;` `,` `.` `/` `'`, `F1` to `F12`). A change takes effect the next time `qsc` starts. The overlay stays blank until data arrives; if the feature is off or unsupported it shows a short hint instead.
 
 Precedence: command-line flag, then config file, then defaults. Use `--config <path>` to read another file.
 

@@ -87,3 +87,16 @@ func TestEventJSONShape(t *testing.T) {
 		t.Fatalf("time missing in %s", raw)
 	}
 }
+
+func TestFilteredSubscriberNeverQueuesRejectedTypes(t *testing.T) {
+	b := New()
+	ch, unsub := b.SubscribeFiltered(func(typ string) bool { return typ != TypeKeysFrame })
+	defer unsub()
+	for i := 0; i < 3*subscriberQueue; i++ {
+		b.Publish(TypeKeysFrame, i)
+	}
+	b.Publish(TypeMapStarted, "m")
+	if e := recv(t, ch); e.Type != TypeMapStarted {
+		t.Fatalf("got %+v, want map.started (rejected frames must not fill the queue)", e)
+	}
+}

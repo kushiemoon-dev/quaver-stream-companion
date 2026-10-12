@@ -75,6 +75,8 @@
     n: model.parseCount(params.get('n')),
     best: params.get('best') === '1',
     sound: params.get('sound') === '1',
+    counts: params.get('counts') !== '0',
+    peak: params.get('peak') !== '0',
   };
   root.style.setProperty('--scale', String(qscParams.scale));
   window.qscParams = qscParams;
@@ -101,8 +103,9 @@
     return el;
   };
 
-  window.qscConnect = function (handlers) {
-    const es = new EventSource('/events');
+  // options.keys asks the server for lane key frames, which are not sent otherwise.
+  window.qscConnect = function (handlers, options) {
+    const es = new EventSource(options && options.keys ? '/events?keys=1' : '/events');
     Object.keys(handlers).forEach(function (name) {
       es.addEventListener(name, function (ev) {
         handlers[name](JSON.parse(ev.data).data);

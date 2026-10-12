@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strconv"
 	"strings"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/config"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/diagnose"
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/keys"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/overlays"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/scores"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/state"
@@ -46,8 +48,11 @@ type Deps struct {
 	// OverlaysDir is the custom overlays folder; IsBuiltinOverlay tells which ids custom overlays may not use.
 	OverlaysDir      string
 	IsBuiltinOverlay func(id string) bool
-	SteamRoots       []string
-	Port             int
+	// Keys reports the lane key sampler and KeysConfig holds the settings it started with.
+	Keys       func() keys.Status
+	KeysConfig keys.Config
+	SteamRoots []string
+	Port       int
 }
 
 type errBody struct {
@@ -94,11 +99,13 @@ func New(d Deps) http.Handler {
 
 func (a api) status(w http.ResponseWriter, r *http.Request) {
 	snap := a.d.Snapshot()
+	ks := a.keysStatus()
 	checks := diagnose.Run(r.Context(), diagnose.Options{
 		QuaverDir:     a.d.Effective(),
 		SteamRoots:    a.d.SteamRoots,
 		Port:          a.d.Port,
 		PortOwnedByUs: true,
+		KeysEnabled:   ks.Enabled,
 	})
 	writeJSON(w, http.StatusOK, map[string]any{
 		"version":     a.d.Version,
@@ -106,12 +113,16 @@ func (a api) status(w http.ResponseWriter, r *http.Request) {
 		"map":         snap.Map,
 		"last_score":  snap.LastScore,
 		"checks":      checks,
+		"keys":        ks,
 		"config_path": a.d.ConfigPath,
 		"uptime_s":    int64(time.Since(a.d.Started).Seconds()),
 	})
 }
 
 func (a api) restartRequired(c config.Config) bool {
+	if nk, ok := c.Keys.Normalized(), a.d.KeysConfig.Normalized(); (nk.Enabled || ok.Enabled) && !reflect.DeepEqual(nk, ok) {
+		return true
+	}
 	if !a.d.PortFlag && c.Port != a.d.Port {
 		return true
 	}
@@ -281,4 +292,11 @@ func (a api) overlays(w http.ResponseWriter, r *http.Request) {
 		builtin = func(string) bool { return false }
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"dir": a.d.OverlaysDir, "custom": overlays.List(a.d.OverlaysDir, builtin)})
+}
+
+func (a api) keysStatus() keys.Status {
+	if a.d.Keys == nil {
+		return keys.Status{Layout: "auto"}
+	}
+	return a.d.Keys()
 }

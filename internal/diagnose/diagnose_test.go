@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/keys"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/testutil"
 )
 
@@ -98,5 +99,19 @@ func TestPortBusyAndOwned(t *testing.T) {
 	owned := Run(context.Background(), Options{QuaverDir: d.Path, Port: port, PortOwnedByUs: true})
 	if !owned[3].OK || owned[3].Detail != "in use by this qsc" {
 		t.Fatalf("owned = %+v", owned[3])
+	}
+}
+
+func TestKeysCheckOnlyWhenEnabled(t *testing.T) {
+	d := testutil.NewQuaverDir(t)
+	checks := Run(context.Background(), Options{QuaverDir: d.Path, Port: freePort(t)})
+	wantIDs(t, checks)
+
+	checks = Run(context.Background(), Options{QuaverDir: d.Path, Port: freePort(t), KeysEnabled: true})
+	if len(checks) != 5 || checks[4].ID != "keys" || checks[4].Detail == "" {
+		t.Fatalf("checks = %+v", checks)
+	}
+	if checks[4].OK != keys.Supported() {
+		t.Fatalf("keys check ok = %v, platform support = %v", checks[4].OK, keys.Supported())
 	}
 }

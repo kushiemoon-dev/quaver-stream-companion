@@ -452,3 +452,63 @@ func TestCustomThemeNeverServedUnderADifferentCaseName(t *testing.T) {
 		t.Errorf("up.css served the file UP.css: %d %q", code, body)
 	}
 }
+
+func openEvents(t *testing.T, url string) *bufio.Scanner {
+	t.Helper()
+	resp, err := http.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { resp.Body.Close() })
+	sc := bufio.NewScanner(resp.Body)
+	if name, _ := readEvent(t, sc); name != "snapshot" {
+		t.Fatalf("first event = %q", name)
+	}
+	return sc
+}
+
+func TestKeysFramesOnlyReachClientsThatAskForThem(t *testing.T) {
+	srv, b := newServer(t)
+	plain := openEvents(t, srv.URL+"/events")
+	optIn := openEvents(t, srv.URL+"/events?keys=1")
+	other := openEvents(t, srv.URL+"/events?keys=0")
+
+	for i := 0; i < 200; i++ {
+		b.Publish(bus.TypeKeysFrame, map[string]int{"kps": i})
+	}
+	b.Publish(bus.TypeMapStarted, scores.Map{Title: "Live"})
+
+	for _, sc := range []*bufio.Scanner{plain, other} {
+		if name, data := readEvent(t, sc); name != "map.started" || !strings.Contains(data, `"title":"Live"`) {
+			t.Fatalf("client without keys=1 got %q %s", name, data)
+		}
+	}
+	if name, _ := readEvent(t, optIn); name != "keys.frame" {
+		t.Fatalf("opt-in client first event = %q, want keys.frame", name)
+	}
+}
+
+func TestOptInClientStillGetsOtherEvents(t *testing.T) {
+	srv, b := newServer(t)
+	sc := openEvents(t, srv.URL+"/events?keys=1")
+	b.Publish(bus.TypeGameState, bus.GameState{State: "gameplay"})
+	if name, _ := readEvent(t, sc); name != "game.state" {
+		t.Fatalf("event = %q", name)
+	}
+}
+
+func TestSnapshotKeepsKeysFieldForEveryClient(t *testing.T) {
+	b := bus.New()
+	snap := func() state.Snapshot { return state.Snapshot{Game: "menu"} }
+	srv := httptest.NewServer(New(b, snap, fstest.MapFS{}))
+	defer srv.Close()
+	resp, err := http.Get(srv.URL + "/events")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	_, data := readEvent(t, bufio.NewScanner(resp.Body))
+	if !strings.Contains(data, `"keys":null`) {
+		t.Fatalf("snapshot = %s", data)
+	}
+}

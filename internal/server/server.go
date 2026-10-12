@@ -85,7 +85,12 @@ func events(b *bus.Bus, snap func() state.Snapshot) http.HandlerFunc {
 		h.Set("Access-Control-Allow-Origin", "*")
 
 		// Subscribe before sending the snapshot so no event is lost in between.
-		ch, unsub := b.Subscribe()
+		// Key frames are frequent: only clients that ask with ?keys=1 get them.
+		var accept func(string) bool
+		if r.URL.Query().Get("keys") != "1" {
+			accept = func(typ string) bool { return typ != bus.TypeKeysFrame }
+		}
+		ch, unsub := b.SubscribeFiltered(accept)
 		defer unsub()
 
 		writeEvent(w, bus.Event{V: bus.SchemaVersion, Type: bus.TypeSnapshot, Time: time.Now().UTC(), Data: snap()})

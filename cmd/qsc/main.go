@@ -10,6 +10,7 @@ import (
 	"slices"
 
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/config"
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/keys"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/themes"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/version"
 	"github.com/kushiemoon-dev/quaver-stream-companion/web"
@@ -19,6 +20,7 @@ type options struct {
 	quaverDir  string
 	port       int
 	configPath string
+	keys       keys.Config
 	open       bool
 
 	portFlag, quaverDirFlag bool
@@ -105,6 +107,7 @@ func parseFlags(name string, serving bool, args []string, errw io.Writer) (optio
 		fmt.Fprintf(errw, "error: invalid config %v\n", err)
 		return options{}, 1
 	}
+	o.keys = cfg.Keys
 	if !set["quaver-dir"] {
 		o.quaverDir = cfg.QuaverDir
 	}

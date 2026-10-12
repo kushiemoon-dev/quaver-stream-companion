@@ -1,6 +1,6 @@
 # Build your own overlay
 
-An overlay is a web page that OBS shows in a Browser source. QuaverStreamCompanion serves five of them and lets you add your own: a folder with an `index.html` is enough. This guide lists the built-in overlays and their options, describes the data the companion publishes, and walks through two complete examples.
+An overlay is a web page that OBS shows in a Browser source. QuaverStreamCompanion serves six of them and lets you add your own: a folder with an `index.html` is enough. This guide lists the built-in overlays and their options, describes the data the companion publishes, and walks through two complete examples.
 
 Everything below uses the default port. Replace `7878` if you changed it in the settings.
 
@@ -13,6 +13,7 @@ Everything below uses the default port. Replace `7878` if you changed it in the 
 | History | `http://127.0.0.1:7878/overlays/history/` | 520 x 180 |
 | State | `http://127.0.0.1:7878/overlays/state/` | 280 x 64 |
 | Alert | `http://127.0.0.1:7878/overlays/alert/` | 520 x 120 |
+| Lane keys | `http://127.0.0.1:7878/overlays/keys/` | 480 x 200 (560 x 200 for 7K) |
 
 Options go in the query string, for example `/overlays/result/?theme=nord&autohide=20&scale=1.2`. A value that cannot be read is ignored and the default is used (`theme`, `accent`, `lang`, `autohide`, `hide`, `demo`). A number outside its range is clamped to the nearest limit (`scale`, `n`), and a `scale` or `n` that is not a number uses the default.
 
@@ -27,7 +28,11 @@ Options go in the query string, for example `/overlays/result/?theme=nord&autohi
 | `n` | history | Number of plays from 5 to 50 | 20 |
 | `best` | history | `1` draws a dashed line at the best accuracy of the plays shown | off |
 | `sound` | alert | `1` plays a short synthesized chime when an alert appears | off |
+| `counts` | keys | `0` hides the press counter under each lane | on |
+| `peak` | keys | `0` hides the peak keys per second of the map | on |
 | `hide` | state | Comma separated state names (see section 4) for which the badge is hidden, for example `menu,closed` | none |
+
+The lane keys overlay draws 4 or 7 lane bars (one per lane, lit while the key is down, with a smooth release), a press counter per lane, the KPS and the peak. It is hidden until lane data arrives (except with `demo=1`). When the feature is off or unsupported it shows a short hint line instead. Use 480 x 200 for 4K and 560 x 200 for 7K. It needs lane keys turned on in the settings, see Lane keys below.
 
 The alert overlay stays hidden until a saved play is a personal best or a full combo (and was not failed, paused or played with autoplay). It then shows "New personal best", "Full combo" or both, with the map title and accuracy. It never replays an old play when it connects.
 
@@ -59,11 +64,13 @@ The companion publishes read-only data on `127.0.0.1`. All numbers are JSON numb
 {
   "game": "menu",
   "map": null,
-  "last_score": null
+  "last_score": null,
+  "keys": null
 }
 ```
 
 - `game`: the game state, one of the values listed below. It is `unknown` until the first state is seen.
+- `keys`: the last lane keys frame, or `null` while key sampling is off or unsupported (see Lane keys below).
 - `map`: the map being played, or `null`. See the map object below.
 - `last_score`: the latest result, or `null`. See the result object below.
 
@@ -91,10 +98,11 @@ A comment line `: ping` is sent every 15 seconds to keep the connection open. Th
 
 | Type | `data` |
 |------|--------|
-| `snapshot` | The same object as `GET /state`: `game`, `map`, `last_score`. Always the first event. |
+| `snapshot` | The same object as `GET /state`: `game`, `map`, `last_score`, `keys`. Always the first event. |
 | `game.state` | `{ "state": "<value>" }` |
 | `map.started` | The map object, sent when gameplay begins |
 | `score.saved` | The result object, sent when a play is saved |
+| `keys.frame` | Lane keys, only when the optional key sampling is on: `{ "layout": "4k", "lanes": 4, "down": [bool], "presses": [int], "kps": n, "peak": n }`. See Lane keys below. |
 
 #### Game states
 
@@ -112,6 +120,24 @@ A comment line `: ping` is sent every 15 seconds to keep the connection open. Th
 | `unknown` | Nothing seen yet (only in a snapshot) |
 
 The game can report other screen names. They are passed through in lower case, so treat any value you do not know as "something else" instead of failing. The built-in overlays show it as `unknown`.
+
+#### Lane keys
+
+Lane keys are off by default. Only the lane keys you choose are read, and only while a map is being played. Nothing is stored or logged: no key names, no key history. The key state is read system wide, regardless of the focused window, so lane key timing may be sampled while you type elsewhere during gameplay. It works on Windows only for now, and a tap shorter than the polling interval may be missed. Only per lane booleans, press counters and keys per second are published, never key names. Turn it on in the Keys card of the dashboard settings or with `keys.enabled` in the config file (see the README).
+
+`keys.frame` is not sent to every client: open the stream with `GET /events?keys=1` to receive it. A plain `GET /events` (or `keys=0`) never carries these frames. The `snapshot` event and `GET /state` always have the `keys` member: the last frame, or `null` until one exists. A custom overlay that wants live lane data connects with `new EventSource("/events?keys=1")`; the built-in overlays use `qscConnect(handlers, { keys: true })`.
+
+`keys.frame` is sent at most 30 times per second and only when something changed, with one final frame when you leave `gameplay`; counters and peak restart on every `map.started`.
+
+| Field | Meaning |
+|-------|---------|
+| `layout`, `lanes` | `4k` with 4 lanes or `7k` with 7 |
+| `down` | One boolean per lane, true while the key is held |
+| `presses` | Presses per lane since the map started |
+| `kps` | Presses over the last second, all lanes together |
+| `peak` | Highest `kps` of the current map |
+
+These numbers come from raw key state: they are not note-accurate judgments. Only Windows is supported for now; on other systems the feature reports itself as unsupported.
 
 #### The map object
 
@@ -193,7 +219,7 @@ The fields mean the same as in the result object, but the map and score fields a
 
 ### GET /api/status
 
-Also same-origin only. It returns the keys `version`, `game`, `map`, `last_score` (as in the snapshot), `checks`, `config_path` and `uptime_s`. Each entry of `checks` is `{ "id", "ok", "detail" }`, with `id` one of `quaver_dir`, `log`, `database` and `port`. Use it to verify that the companion is healthy.
+Also same-origin only. It returns the keys `version`, `game`, `map`, `last_score` (as in the snapshot), `checks`, `config_path` and `uptime_s`. Each entry of `checks` is `{ "id", "ok", "detail" }`, with `id` one of `quaver_dir`, `log`, `database` and `port` (and `keys` while key sampling is on). It also returns `keys`: `{ "enabled", "supported", "layout" }`. Use it to verify that the companion is healthy.
 
 ## 5. Your own overlay folder
 
@@ -234,7 +260,7 @@ This overlay is served at `http://127.0.0.1:7878/overlays/mini-card/`. Files are
 
 ### Rules and limits
 
-- The folder name uses only lowercase letters, digits and hyphens. A name used by a built-in overlay (`now-playing`, `result`, `history`, `state`, `alert`) is ignored: the built-in one always wins.
+- The folder name uses only lowercase letters, digits and hyphens. A name used by a built-in overlay (`now-playing`, `result`, `history`, `state`, `alert`, `keys`) is ignored: the built-in one always wins.
 - `index.html` is required. At most 100 overlays are listed.
 - An overlay holds at most 200 files and folders, nested at most 3 levels deep (for example `index.html`, `css/style.css`, `img/icons/star.svg`).
 - A file is at most 2 MiB. Names use only letters, digits, `.`, `_` and `-`, and do not start with a dot.

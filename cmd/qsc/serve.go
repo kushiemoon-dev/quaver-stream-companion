@@ -18,6 +18,7 @@ import (
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/app"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/bus"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/gamestate"
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/keys"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/overlays"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/paths"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/scores"
@@ -27,6 +28,9 @@ import (
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/version"
 	"github.com/kushiemoon-dev/quaver-stream-companion/web"
 )
+
+// newSampler creates the lane key sampler; tests replace it so they never read the keyboard.
+var newSampler = keys.NewSampler
 
 const logPollInterval = 200 * time.Millisecond
 
@@ -79,6 +83,8 @@ func serve(ctx context.Context, args []string, out, errw io.Writer) int {
 		}
 	}()
 
+	laneKeys := keys.NewService(b, opts.keys, newSampler)
+	go laneKeys.Run(ctx)
 	a := app.New(b, store)
 	lines := make(chan string, 64)
 	logPath := filepath.Join(dir, "Logs", "runtime.log")
@@ -110,6 +116,8 @@ func serve(ctx context.Context, args []string, out, errw io.Writer) int {
 		ThemesDir:        themes.UserDir(opts.configPath),
 		OverlaysDir:      overlays.Dir(opts.configPath),
 		IsBuiltinOverlay: func(id string) bool { return overlays.IsBuiltin(web.FS, id) },
+		Keys:             laneKeys.Status,
+		KeysConfig:       opts.keys,
 		SteamRoots:       paths.DefaultSteamRoots(),
 		Port:             opts.port,
 	})

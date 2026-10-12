@@ -20,11 +20,13 @@ func doctor(args []string, out, errw io.Writer) int {
 		"log":        "Logs/runtime.log",
 		"database":   "quaver.db (read-only)",
 		"port":       fmt.Sprintf("port %d", opts.port),
+		"keys":       "Lane keys",
 	}
 	checks := diagnose.Run(context.Background(), diagnose.Options{
-		QuaverDir:  opts.quaverDir,
-		SteamRoots: paths.DefaultSteamRoots(),
-		Port:       opts.port,
+		QuaverDir:   opts.quaverDir,
+		SteamRoots:  paths.DefaultSteamRoots(),
+		Port:        opts.port,
+		KeysEnabled: opts.keys.Enabled,
 	})
 
 	healthy := true
@@ -39,6 +41,9 @@ func doctor(args []string, out, errw io.Writer) int {
 			tag = "[FAIL]"
 		}
 		fmt.Fprintf(out, "%s %s: %s\n", tag, names[c.ID], c.Detail)
+	}
+	if !opts.keys.Enabled {
+		fmt.Fprintf(out, "[ OK ] %s: off (opt-in)\n", names["keys"])
 	}
 	if !healthy {
 		return 1

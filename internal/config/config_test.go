@@ -4,9 +4,11 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/keys"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/testutil"
 )
 
@@ -33,11 +35,11 @@ func TestLoad(t *testing.T) {
 	}{
 		{"empty file", "", Defaults()},
 		{"empty object", "{}", Defaults()},
-		{"partial", `{"port": 9000}`, Config{Port: 9000, Overlay: Overlay{Theme: "neutral-light"}}},
-		{"zero port", `{"port": 0, "language": "fr"}`, Config{Port: DefaultPort, Language: "fr", Overlay: Overlay{Theme: "neutral-light"}}},
-		{"empty theme", `{"overlay": {"theme": "", "accent": "ff00aa"}}`, Config{Port: DefaultPort, Overlay: Overlay{Theme: "neutral-light", Accent: "ff00aa"}}},
-		{"unknown fields", `{"port": 9001, "extra": true, "overlay": {"x": 1}}`, Config{Port: 9001, Overlay: Overlay{Theme: "neutral-light"}}},
-		{"full", `{"quaver_dir":"/q","port":8000,"language":"de","overlay":{"theme":"dark","accent":"fff"}}`, Config{QuaverDir: "/q", Port: 8000, Language: "de", Overlay: Overlay{Theme: "dark", Accent: "fff"}}},
+		{"partial", `{"port": 9000}`, Config{Port: 9000, Overlay: Overlay{Theme: "neutral-light"}, Keys: keys.Defaults()}},
+		{"zero port", `{"port": 0, "language": "fr"}`, Config{Port: DefaultPort, Language: "fr", Overlay: Overlay{Theme: "neutral-light"}, Keys: keys.Defaults()}},
+		{"empty theme", `{"overlay": {"theme": "", "accent": "ff00aa"}}`, Config{Port: DefaultPort, Overlay: Overlay{Theme: "neutral-light", Accent: "ff00aa"}, Keys: keys.Defaults()}},
+		{"unknown fields", `{"port": 9001, "extra": true, "overlay": {"x": 1}}`, Config{Port: 9001, Overlay: Overlay{Theme: "neutral-light"}, Keys: keys.Defaults()}},
+		{"full", `{"quaver_dir":"/q","port":8000,"language":"de","overlay":{"theme":"dark","accent":"fff"}}`, Config{QuaverDir: "/q", Port: 8000, Language: "de", Overlay: Overlay{Theme: "dark", Accent: "fff"}, Keys: keys.Defaults()}},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -45,7 +47,7 @@ func TestLoad(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got != c.want {
+			if !reflect.DeepEqual(got, c.want) {
 				t.Fatalf("got %+v, want %+v", got, c.want)
 			}
 		})
@@ -54,7 +56,7 @@ func TestLoad(t *testing.T) {
 
 func TestLoadMissingFileGivesDefaults(t *testing.T) {
 	got, err := Load(filepath.Join(t.TempDir(), "nope", "config.json"))
-	if err != nil || got != Defaults() {
+	if err != nil || !reflect.DeepEqual(got, Defaults()) {
 		t.Fatalf("got %+v, %v", got, err)
 	}
 }
@@ -70,16 +72,16 @@ func TestLoadInvalidJSONMentionsPath(t *testing.T) {
 func TestSaveRoundTripOverwriteAndNoTempLeft(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "sub", "deeper")
 	p := filepath.Join(dir, "config.json")
-	first := Config{Port: 9100, Language: "en", Overlay: Overlay{Theme: "neutral-light", Accent: "abc"}}
+	first := Config{Port: 9100, Language: "en", Overlay: Overlay{Theme: "neutral-light", Accent: "abc"}, Keys: keys.Defaults()}
 	if err := Save(p, first); err != nil {
 		t.Fatal(err)
 	}
-	second := Config{Port: 9200, Overlay: Overlay{Theme: "neutral-light"}}
+	second := Config{Port: 9200, Overlay: Overlay{Theme: "neutral-light"}, Keys: keys.Defaults()}
 	if err := Save(p, second); err != nil {
 		t.Fatal(err)
 	}
 	got, err := Load(p)
-	if err != nil || got != second {
+	if err != nil || !reflect.DeepEqual(got, second) {
 		t.Fatalf("got %+v, %v", got, err)
 	}
 	entries, err := os.ReadDir(dir)
@@ -166,8 +168,60 @@ func TestNormalize(t *testing.T) {
 	if got.Port != DefaultPort || got.Overlay.Theme != "neutral-light" || got.Language != "fr" {
 		t.Fatalf("got %+v", got)
 	}
-	keep := Config{Port: 9, Overlay: Overlay{Theme: "dark"}}
-	if Normalize(keep) != keep {
+	keep := Config{Port: 9, Overlay: Overlay{Theme: "dark"}, Keys: keys.Defaults()}
+	if !reflect.DeepEqual(Normalize(keep), keep) {
 		t.Fatal("set fields must be kept")
+	}
+}
+
+func TestDefaultsKeepSamplingOff(t *testing.T) {
+	if k := Defaults().Keys; k.Enabled || !reflect.DeepEqual(k, keys.Defaults()) {
+		t.Fatalf("keys defaults = %+v", k)
+	}
+}
+
+func TestLoadKeysSection(t *testing.T) {
+	got, err := Load(write(t, `{"keys": {"enabled": true, "k4": ["Q","W","E","R"]}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := keys.Defaults()
+	want.Enabled, want.K4 = true, []keys.Key{"Q", "W", "E", "R"}
+	if !reflect.DeepEqual(got.Keys, want) {
+		t.Fatalf("keys = %+v, want %+v", got.Keys, want)
+	}
+}
+
+func TestKeysSaveRoundTrip(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "config.json")
+	c := Defaults()
+	c.Keys = keys.Config{Enabled: true, Layout: "7k", K4: []keys.Key{"F1", "F2", "F3", "F4"}, K7: []keys.Key{"Q", "W", "E", "SPACE", "I", "O", "P"}}
+	if err := Save(p, c); err != nil {
+		t.Fatal(err)
+	}
+	got, err := Load(p)
+	if err != nil || !reflect.DeepEqual(got, c) {
+		t.Fatalf("got %+v, %v", got, err)
+	}
+}
+
+func TestValidateKeysFields(t *testing.T) {
+	cases := []struct {
+		name  string
+		edit  func(*Config)
+		field string
+	}{
+		{"layout", func(c *Config) { c.Keys.Layout = "9k" }, "keys.layout"},
+		{"bad name", func(c *Config) { c.Keys.K4[0] = "ENTER" }, "keys.k4"},
+		{"wrong count", func(c *Config) { c.Keys.K7 = c.Keys.K7[:5] }, "keys.k7"},
+		{"duplicate", func(c *Config) { c.Keys.K4[1] = "A" }, "keys.k4"},
+	}
+	for _, tc := range cases {
+		c := Defaults()
+		tc.edit(&c)
+		var fe *FieldError
+		if err := c.Validate([]string{"neutral-light"}); !errors.As(err, &fe) || fe.Field != tc.field {
+			t.Errorf("%s: err = %v, want field %q", tc.name, err, tc.field)
+		}
 	}
 }

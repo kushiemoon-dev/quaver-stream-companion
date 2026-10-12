@@ -25,6 +25,7 @@ func TestMain(m *testing.M) {
 	for _, k := range []string{"APPDATA", "XDG_CONFIG_HOME", "HOME", "USERPROFILE"} {
 		os.Setenv(k, dir)
 	}
+	useFakeSampler()
 	code := m.Run()
 	os.RemoveAll(dir)
 	os.Exit(code)

@@ -18,6 +18,8 @@
       nameKey: 'overlays.state.name', descKey: 'overlays.state.description', params: ['scale', 'lang', 'hide'] },
     { id: 'alert', path: '/overlays/alert/', width: 520, height: 120, autohide: 8,
       nameKey: 'overlays.alert.name', descKey: 'overlays.alert.description', params: ['autohide', 'scale', 'lang', 'sound'] },
+    { id: 'keys', path: '/overlays/keys/', width: 480, height: 200,
+      nameKey: 'overlays.keys.name', descKey: 'overlays.keys.description', params: ['scale', 'lang', 'counts', 'peak'] },
   ];
 
   let custom = [];

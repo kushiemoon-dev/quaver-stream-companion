@@ -55,14 +55,14 @@
     const best = params.best ? qscModel.bestLine(c) : null;
     if (best) {
       root.appendChild(svg('line', { class: 'best', x1: best.x1, x2: best.x2, y1: best.y, y2: best.y }));
-      root.appendChild(svgText({ class: 'tick', x: best.x1 + 4, y: (best.y < yTop + 12 ? best.y + 12 : best.y - 4).toFixed(1), 'text-anchor': 'start' }, best.text));
+      root.appendChild(svgText({ class: 'best-label', x: best.label.x, y: best.label.y.toFixed(1), 'text-anchor': best.label.anchor }, qscT('history.best') + ' ' + best.text));
     }
     root.appendChild(svg('polyline', { class: 'line-path', points: c.points.map(function (p) { return p.x.toFixed(1) + ',' + p.y.toFixed(1); }).join(' ') }));
     c.points.forEach(function (p) {
       root.appendChild(svg('circle', { class: 'dot-' + qscModel.gradeClass(p.grade), cx: p.x.toFixed(1), cy: p.y.toFixed(1), r: p.last ? 6 : 3.5 }));
       if (p.last) {
-        const nearRight = p.x > WIDTH - 50;
-        root.appendChild(svgText({ x: (p.x + (nearRight ? -10 : 10)).toFixed(1), y: Math.max(12, p.y - 8).toFixed(1), 'text-anchor': nearRight ? 'end' : 'start', 'font-weight': 700 }, p.accuracy.toFixed(2) + '%'));
+        const l = qscModel.lastLabel(c);
+        root.appendChild(svgText({ x: l.x.toFixed(1), y: l.y.toFixed(1), 'text-anchor': l.anchor, 'font-weight': 700 }, l.text));
       }
     });
     card.replaceChildren(root);

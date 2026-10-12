@@ -12,6 +12,7 @@ const (
 	TypeGameState   = "game.state"
 	TypeMapStarted  = "map.started"
 	TypeScoreSaved  = "score.saved"
+	TypeKeysFrame   = "keys.frame"
 	subscriberQueue = 64
 )
 
@@ -26,31 +27,42 @@ type GameState struct {
 	State string `json:"state"`
 }
 
+type subscriber struct {
+	ch     chan Event
+	accept func(typ string) bool
+}
+
 type Bus struct {
 	mu   sync.Mutex
 	next int
-	subs map[int]chan Event
+	subs map[int]subscriber
 }
 
 func New() *Bus {
-	return &Bus{subs: map[int]chan Event{}}
+	return &Bus{subs: map[int]subscriber{}}
 }
 
 // Subscribe returns a channel of events and a function that unsubscribes
 // and closes it. The unsubscribe function is safe to call more than once.
 func (b *Bus) Subscribe() (<-chan Event, func()) {
+	return b.SubscribeFiltered(nil)
+}
+
+// SubscribeFiltered is Subscribe for a subscriber that only wants the event types accept
+// returns true for; the others never enter its queue. A nil accept takes everything.
+func (b *Bus) SubscribeFiltered(accept func(typ string) bool) (<-chan Event, func()) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	id := b.next
 	b.next++
 	ch := make(chan Event, subscriberQueue)
-	b.subs[id] = ch
+	b.subs[id] = subscriber{ch: ch, accept: accept}
 	return ch, func() {
 		b.mu.Lock()
 		defer b.mu.Unlock()
-		if c, ok := b.subs[id]; ok {
+		if s, ok := b.subs[id]; ok {
 			delete(b.subs, id)
-			close(c)
+			close(s.ch)
 		}
 	}
 }
@@ -61,9 +73,12 @@ func (b *Bus) Publish(typ string, data any) Event {
 	e := Event{V: SchemaVersion, Type: typ, Time: time.Now().UTC(), Data: data}
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	for _, ch := range b.subs {
+	for _, s := range b.subs {
+		if s.accept != nil && !s.accept(typ) {
+			continue
+		}
 		select {
-		case ch <- e:
+		case s.ch <- e:
 		default:
 		}
 	}

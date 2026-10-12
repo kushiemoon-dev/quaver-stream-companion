@@ -24,8 +24,13 @@ The overlays are web pages served by `qsc`. In OBS each one is a Browser source.
 | History | 520 x 180 | `http://127.0.0.1:7878/overlays/history/` |
 | State | 280 x 64 | `http://127.0.0.1:7878/overlays/state/` |
 | Alert | 520 x 120 | `http://127.0.0.1:7878/overlays/alert/` |
+| Lane keys | 480 x 200 (560 x 200 for 7K) | `http://127.0.0.1:7878/overlays/keys/` |
 
 Replace the port if you changed it. Options such as `scale`, `autohide` or `lang` are added by the Overlays page.
+
+### Lane keys overlay
+
+The lane keys overlay needs the Keys card of the dashboard Settings page: turn it on, pick your keys and restart `qsc`. Lane keys are off by default. Only the lane keys you choose are read, and only while a map is being played. Nothing is stored or logged: no key names, no key history. The key state is read system wide, regardless of the focused window, so lane key timing may be sampled while you type elsewhere during gameplay. It works on Windows only for now, and a tap shorter than the polling interval may be missed. Until then the overlay shows a short hint saying why it is empty.
 
 ## Troubleshooting
 

@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QSC lane keys</title>
+<link rel="stylesheet" href="/overlays/overlay.css">
+<script src="/overlays/i18n.js"></script>
+<script src="/overlays/model.js"></script>
+<script src="/overlays/common.js"></script>
+</head>
+<body>
+<div id="card" class="card fill hidden"></div>
+<script>
+  const params = qscParams;
+  const STATUS_TIMEOUT_MS = 4000;
+  const card = document.getElementById('card');
+  document.title = qscT('keys.title');
+  let lanesEl = null;
+  let built = 0;
+  let countEls = [];
+  let kpsEl = null;
+  let peakEl = null;
+
+  function stat(label) {
+    const num = qscEl('b', '', '0');
+    const el = qscEl('span');
+    el.append(qscEl('span', '', label), num);
+    return { el: el, num: num };
+  }
+
+  function build(lanes) {
+    const bars = qscEl('div', 'keys-lanes');
+    lanesEl = [];
+    countEls = [];
+    for (let i = 0; i < lanes; i++) {
+      const lane = qscEl('div', 'keys-lane');
+      lane.setAttribute('role', 'img');
+      lane.setAttribute('aria-label', qscT('keys.lane') + ' ' + (i + 1));
+      const count = qscEl('div', 'keys-count', '0');
+      if (!params.counts) count.hidden = true;
+      lane.appendChild(qscEl('div', 'keys-bar'));
+      lane.appendChild(count);
+      bars.appendChild(lane);
+      lanesEl.push(lane);
+      countEls.push(count);
+    }
+    const stats = qscEl('div', 'keys-stats');
+    const kps = stat(qscT('keys.kps'));
+    kpsEl = kps.num;
+    stats.appendChild(kps.el);
+    peakEl = null;
+    if (params.peak) {
+      const peak = stat(qscT('keys.peak'));
+      peakEl = peak.num;
+      stats.appendChild(peak.el);
+    }
+    const root = qscEl('div', 'keys');
+    root.append(bars, stats);
+    card.replaceChildren(root);
+    built = lanes;
+  }
+
+  function draw(frame) {
+    const v = qscModel.keysView(frame);
+    if (!v) return;
+    if (built !== v.lanes) build(v.lanes);
+    v.down.forEach(function (d, i) { lanesEl[i].classList.toggle('down', d); });
+    v.presses.forEach(function (n, i) { countEls[i].textContent = String(n); });
+    kpsEl.textContent = String(v.kps);
+    if (peakEl) peakEl.textContent = String(v.peak);
+    card.classList.remove('hidden');
+  }
+
+  function showHint(hint) {
+    built = 0;
+    card.replaceChildren(qscEl('div', 'sub', qscT('keys.' + hint)));
+    card.classList.remove('hidden');
+  }
+
+  function checkStatus() {
+    const ctl = new AbortController();
+    const timer = setTimeout(function () { ctl.abort(); }, STATUS_TIMEOUT_MS);
+    fetch('/api/status', { signal: ctl.signal, credentials: 'same-origin' })
+      .then(function (res) {
+        if (!res.ok) throw new Error('status ' + res.status);
+        return res.json();
+      })
+      .then(function (body) {
+        const hint = qscModel.keysHint(body && body.keys);
+        if (hint) showHint(hint);
+        else if (built === 0) card.classList.add('hidden');
+      })
+      .catch(function () {})
+      .then(function () { clearTimeout(timer); });
+  }
+
+  if (params.demo) {
+    draw({ layout: '4k', lanes: 4, down: [true, false, true, false], presses: [128, 97, 110, 85], kps: 9, peak: 14 });
+  } else {
+    const es = qscConnect({
+      snapshot: function (snap) { if (snap && snap.keys) draw(snap.keys); },
+      'keys.frame': draw,
+    }, { keys: true });
+    es.onopen = checkStatus;
+  }
+</script>
+</body>
+</html>

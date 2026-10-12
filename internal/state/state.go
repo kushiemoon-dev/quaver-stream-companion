@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/bus"
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/keys"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/scores"
 )
 
@@ -12,6 +13,7 @@ type Snapshot struct {
 	Game      string         `json:"game"`
 	Map       *scores.Map    `json:"map"`
 	LastScore *scores.Result `json:"last_score"`
+	Keys      *keys.Frame    `json:"keys"`
 }
 
 type Store struct {
@@ -41,6 +43,9 @@ func (s *Store) Apply(e bus.Event) {
 	case scores.Map:
 		m := d
 		next.Map = &m
+	case keys.Frame:
+		f := d
+		next.Keys = &f
 	case scores.Result:
 		r := d
 		next.LastScore = &r

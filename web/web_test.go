@@ -152,9 +152,10 @@ var (
 		"nav":      {"status", "overlays", "obs", "history", "settings", "twitch"},
 		"status":   {"live", "connecting", "reconnecting"},
 
-		"history.col":    {"map", "difficulty", "result", "accuracy", "combo", "judgments"},
-		"history.filter": {"all", "pb", "fc", "failed"},
-		"settings.lang":  {"auto", "en", "fr", "de"},
+		"history.col":          {"map", "difficulty", "result", "accuracy", "combo", "judgments"},
+		"history.filter":       {"all", "pb", "fc", "failed"},
+		"settings.lang":        {"auto", "en", "fr", "de"},
+		"settings.keys.layout": {"auto", "4k", "7k"},
 	}
 	eventNames = map[string]bool{"game.state": true, "map.started": true, "score.saved": true}
 	keyLiteral = regexp.MustCompile(`['"]([a-z_]+(?:\.[a-z_]+)+)['"]`)
@@ -368,7 +369,8 @@ func sharedTerm(key string) bool {
 	case "nav.twitch", "nav.overlays", "nav.obs", "status.version", "settings.version", "history.filter.fc",
 		"nav.status", "status.problem", "status.keys", "status.pb", "status.fc", "status.ok",
 		"status.live", "status.autoplay", "game.menu", "history.filter.pb", "history.col.map",
-		"settings.port", "settings.lang.en", "settings.lang.fr", "settings.lang.de":
+		"settings.port", "settings.lang.en", "settings.lang.fr", "settings.lang.de",
+		"settings.keys.layout.auto", "settings.keys.layout.4k", "settings.keys.layout.7k":
 		return true
 	}
 	return strings.HasPrefix(key, "judgment.")

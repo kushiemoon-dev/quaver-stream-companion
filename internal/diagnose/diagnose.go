@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/keys"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/paths"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/scores"
 )
@@ -26,11 +27,13 @@ type Options struct {
 	SteamRoots    []string
 	Port          int
 	PortOwnedByUs bool
+	// KeysEnabled adds the keys check; it is left out while lane key sampling is off.
+	KeysEnabled bool
 }
 
 const dirNotFound = "Quaver folder not found"
 
-// Run returns the checks quaver_dir, log, database and port, in that order.
+// Run returns the checks quaver_dir, log, database and port, in that order, then keys when enabled.
 func Run(ctx context.Context, o Options) []Check {
 	dir, err := paths.Find(o.QuaverDir, o.SteamRoots)
 	checks := []Check{result("quaver_dir", err, dir)}
@@ -45,7 +48,11 @@ func Run(ctx context.Context, o Options) []Check {
 			result("log", statErr, logPath),
 			result("database", checkDatabase(ctx, dir), "readable"))
 	}
-	return append(checks, checkPort(o))
+	checks = append(checks, checkPort(o))
+	if o.KeysEnabled {
+		checks = append(checks, checkKeys())
+	}
+	return checks
 }
 
 func result(id string, err error, okDetail string) Check {
@@ -76,4 +83,13 @@ func checkPort(o Options) Check {
 		ln.Close()
 	}
 	return result("port", err, "free")
+}
+
+func checkKeys() Check {
+	ok := keys.Supported()
+	detail := "enabled"
+	if !ok {
+		detail = keys.ErrUnsupported.Error()
+	}
+	return Check{ID: "keys", OK: ok, Detail: detail}
 }

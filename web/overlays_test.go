@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-var overlayPages = []string{"now-playing", "result", "history", "state", "alert"}
+var overlayPages = []string{"now-playing", "result", "history", "state", "alert", "keys"}
 
 func mustAbs(t *testing.T, p string) string {
 	t.Helper()

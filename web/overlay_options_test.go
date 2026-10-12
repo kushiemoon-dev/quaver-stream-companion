@@ -15,7 +15,7 @@ const O = 'http://127.0.0.1:7878';
 const base = { theme: 'neutral-light', accent: '', defaultTheme: 'neutral-light', defaultAccent: '' };
 const link = function (m, demo) { return u.buildOverlayUrl({ ...base, ...m }, !!demo, O); };
 
-assert.deepStrictEqual(cat.OVERLAYS.map(function (o) { return o.id; }), ['now-playing', 'result', 'history', 'state', 'alert']);
+assert.deepStrictEqual(cat.OVERLAYS.map(function (o) { return o.id; }), ['now-playing', 'result', 'history', 'state', 'alert', 'keys']);
 assert.strictEqual(cat.sizeText(cat.byId('now-playing')), '540 x 140');
 assert.strictEqual(cat.byId('nope').id, 'now-playing');
 for (const o of cat.OVERLAYS) {
@@ -43,6 +43,15 @@ assert.strictEqual(link({ overlay: 'history', best: true }), O + '/overlays/hist
 assert.strictEqual(link({ overlay: 'history', best: 'yes' }), O + '/overlays/history/');
 assert.strictEqual(link({ overlay: 'history', sound: true }), O + '/overlays/history/');
 assert.strictEqual(link({ overlay: 'alert' }, true), '/overlays/alert/?theme=neutral-light&demo=1');
+
+// keys: counts and peak are on by default, only an explicit off is carried
+assert.strictEqual(link({ overlay: 'keys' }), O + '/overlays/keys/');
+assert.strictEqual(link({ overlay: 'keys', counts: true, peak: true }), O + '/overlays/keys/');
+assert.strictEqual(link({ overlay: 'keys', counts: false }), O + '/overlays/keys/?counts=0');
+assert.strictEqual(link({ overlay: 'keys', counts: false, peak: false, scale: '1.5', lang: 'de' }), O + '/overlays/keys/?scale=1.5&lang=de&counts=0&peak=0');
+assert.strictEqual(link({ overlay: 'keys', n: '30', best: true, autohide: '5' }), O + '/overlays/keys/');
+assert.strictEqual(link({ overlay: 'history', counts: false, peak: false }), O + '/overlays/history/');
+assert.strictEqual(link({ overlay: 'keys' }, true), '/overlays/keys/?theme=neutral-light&demo=1');
 
 // defaults and clamping
 assert.strictEqual(link({ overlay: 'result', scale: '1', lang: 'auto', autohide: '0' }), O + '/overlays/result/');
@@ -107,6 +116,6 @@ func TestOverlayRecommendedSizes(t *testing.T) {
 const assert = require('assert');
 const cat = require(process.argv[2]);
 const sizes = cat.OVERLAYS.map(function (o) { return o.id + ' ' + cat.sizeText(o); });
-assert.deepStrictEqual(sizes, ['now-playing 540 x 140', 'result 520 x 230', 'history 520 x 180', 'state 280 x 64', 'alert 520 x 120']);
+assert.deepStrictEqual(sizes, ['now-playing 540 x 140', 'result 520 x 230', 'history 520 x 180', 'state 280 x 64', 'alert 520 x 120', 'keys 480 x 200']);
 `)
 }

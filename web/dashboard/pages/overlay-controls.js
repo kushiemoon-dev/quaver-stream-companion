@@ -75,6 +75,8 @@
         { min: String(lim.n.min), max: String(lim.n.max), step: '1', placeholder: String(cat.DEFAULTS.n), value: model.n },
         function (v) { onChange({ n: v }); }),
       best: checkField('overlays.best', 'overlays.best_hint', model.best, function (v) { onChange({ best: v }); }),
+      counts: checkField('overlays.counts', 'overlays.counts_hint', model.counts, function (v) { onChange({ counts: v }); }),
+      peak: checkField('overlays.peak', 'overlays.peak_hint', model.peak, function (v) { onChange({ peak: v }); }),
       sound: checkField('overlays.sound', 'overlays.sound_hint', model.sound, function (v) { onChange({ sound: v }); }),
       hide: hideGroup(model, onChange),
     };

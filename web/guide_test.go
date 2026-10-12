@@ -65,7 +65,7 @@ func TestOverlayGuideCoversTheContract(t *testing.T) {
 	if overlays.MaxFile != 2<<20 || overlays.MaxFiles != 200 || overlays.MaxListed != 100 || overlays.MaxDepth != 3 {
 		t.Error("the limits in docs/OVERLAYS.md must follow internal/overlays")
 	}
-	for _, id := range []string{"now-playing", "result", "history", "state", "alert"} {
+	for _, id := range []string{"now-playing", "result", "history", "state", "alert", "keys"} {
 		if !strings.Contains(guide, "/overlays/"+id+"/") {
 			t.Errorf("docs/OVERLAYS.md does not mention the %s overlay link", id)
 		}

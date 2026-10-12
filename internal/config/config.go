@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"slices"
 
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/keys"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/paths"
 )
 
@@ -28,10 +29,11 @@ type Overlay struct {
 
 // Config is the content of the settings file.
 type Config struct {
-	QuaverDir string  `json:"quaver_dir"`
-	Port      int     `json:"port"`
-	Language  string  `json:"language"`
-	Overlay   Overlay `json:"overlay"`
+	QuaverDir string      `json:"quaver_dir"`
+	Port      int         `json:"port"`
+	Language  string      `json:"language"`
+	Overlay   Overlay     `json:"overlay"`
+	Keys      keys.Config `json:"keys"`
 }
 
 // FieldError describes an invalid setting.
@@ -43,7 +45,7 @@ func (e *FieldError) Error() string { return e.Field + ": " + e.Msg }
 
 // Defaults returns the settings used when no file exists.
 func Defaults() Config {
-	return Config{Port: DefaultPort, Overlay: Overlay{Theme: defaultTheme}}
+	return Config{Port: DefaultPort, Overlay: Overlay{Theme: defaultTheme}, Keys: keys.Defaults()}
 }
 
 // DefaultPath returns the per-user location of the settings file.
@@ -76,7 +78,7 @@ func Load(path string) (Config, error) {
 	return Normalize(c), nil
 }
 
-// Normalize gives every zero port or theme its default value.
+// Normalize gives every zero port, theme or key setting its default value.
 func Normalize(c Config) Config {
 	d := Defaults()
 	if c.Port == 0 {
@@ -85,6 +87,7 @@ func Normalize(c Config) Config {
 	if c.Overlay.Theme == "" {
 		c.Overlay.Theme = d.Overlay.Theme
 	}
+	c.Keys = c.Keys.Normalized()
 	return c
 }
 
@@ -145,6 +148,9 @@ func (c Config) Validate(themes []string) error {
 	}
 	if c.Overlay.Accent != "" && !accentRe.MatchString(c.Overlay.Accent) {
 		return &FieldError{"overlay.accent", "must be 3, 4, 6 or 8 hexadecimal digits without #"}
+	}
+	if field, msg := c.Keys.Check(); field != "" {
+		return &FieldError{field, msg}
 	}
 	return nil
 }
