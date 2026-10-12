@@ -1,0 +1,5 @@
+/qsc
+/qsc.exe
+/dist/
+*.test
+coverage.out
