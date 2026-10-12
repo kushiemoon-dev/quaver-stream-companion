@@ -575,3 +575,67 @@ func TestPutKeepsMissingSavedThemeButRejectsChangedUnknownTheme(t *testing.T) {
 		}
 	}
 }
+
+func TestOverlaysListing(t *testing.T) {
+	dir := t.TempDir()
+	e := newEnv(t, func(d *Deps) {
+		d.OverlaysDir = dir
+		d.IsBuiltinOverlay = func(id string) bool { return id == "now-playing" }
+	})
+	type listing struct {
+		Dir    string `json:"dir"`
+		Custom []struct {
+			ID          string `json:"id"`
+			Name        string `json:"name"`
+			Description string `json:"description"`
+			Width       int    `json:"width"`
+			Height      int    `json:"height"`
+		} `json:"custom"`
+	}
+	var got listing
+	w := e.get("/api/overlays")
+	decode(t, w, &got)
+	if w.Code != 200 || got.Dir != dir || got.Custom == nil || len(got.Custom) != 0 || !strings.Contains(w.Body.String(), `"custom":[]`) {
+		t.Fatalf("empty folder: %d %s", w.Code, w.Body.String())
+	}
+	for id, manifest := range map[string]string{"zeta": "", "alpha": `{"name":"Alpha","description":"d","width":640,"height":100}`, "now-playing": ""} {
+		if err := os.MkdirAll(filepath.Join(dir, id), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, id, "index.html"), []byte("x"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if manifest != "" {
+			if err := os.WriteFile(filepath.Join(dir, id, "overlay.json"), []byte(manifest), 0o600); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	got = listing{}
+	decode(t, e.get("/api/overlays"), &got)
+	if len(got.Custom) != 2 || got.Custom[0].ID != "alpha" || got.Custom[0].Name != "Alpha" || got.Custom[0].Width != 640 ||
+		got.Custom[1].ID != "zeta" || got.Custom[1].Name != "zeta" || got.Custom[1].Width != 500 || got.Custom[1].Height != 200 {
+		t.Fatalf("listing = %+v", got.Custom)
+	}
+	if w := do(e.h, "POST", "127.0.0.1:5555", "/api/overlays", "{}", map[string]string{"Content-Type": "application/json", "X-Requested-With": "qsc"}); w.Code != 405 {
+		t.Errorf("POST: %d", w.Code)
+	}
+}
+
+func TestOverlaysListingMissingFolderAndNoDir(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "absent")
+	e := newEnv(t, func(d *Deps) { d.OverlaysDir = missing })
+	var got struct {
+		Dir    string `json:"dir"`
+		Custom []any  `json:"custom"`
+	}
+	decode(t, e.get("/api/overlays"), &got)
+	if got.Dir != missing || got.Custom == nil || len(got.Custom) != 0 {
+		t.Errorf("missing folder: %+v", got)
+	}
+	e = newEnv(t)
+	w := e.get("/api/overlays")
+	if w.Code != 200 || !strings.Contains(w.Body.String(), `"custom":[]`) {
+		t.Errorf("no deps: %d %s", w.Code, w.Body.String())
+	}
+}

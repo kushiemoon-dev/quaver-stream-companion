@@ -5,6 +5,7 @@
   const cat = window.qscOverlayCatalog;
   const CHECK_TIMEOUT_MS = 8000;
   const COPIED_MS = 2000;
+  const GUIDE_URL = 'https://github.com/kushiemoon-dev/quaver-stream-companion/blob/main/docs/OVERLAYS.md';
 
   let ui = null;
   let mountId = 0;
@@ -93,6 +94,32 @@
       h('p', null, t(allOk ? 'obs.check_ok' : 'obs.check_bad'), allOk ? null : [' ', h('a', { href: '#/status' }, t('obs.status_link'))]));
   }
 
+  async function loadFolder() {
+    const id = mountId;
+    const ctl = new AbortController();
+    const timeout = setTimeout(function () { ctl.abort(); }, CHECK_TIMEOUT_MS);
+    let dir = '';
+    try {
+      const body = await qsc.api.get('/api/overlays', ctl.signal);
+      dir = body && typeof body.dir === 'string' ? body.dir : '';
+    } catch (e) {
+      dir = '';
+    } finally {
+      clearTimeout(timeout);
+    }
+    if (id !== mountId || !ui) return;
+    if (dir) ui.folder.replaceChildren(t('obs.custom.folder'), ' ', h('code', null, qsc.pathNodes(dir)));
+    else ui.folder.replaceChildren(t('obs.custom.folder_unavailable'));
+  }
+
+  function customCard() {
+    return h('section', { class: 'card obs-card', 'aria-label': t('obs.custom.title') },
+      h('h2', null, t('obs.custom.title')),
+      h('p', { class: 'muted' }, t('obs.custom.body')),
+      ui.folder,
+      h('p', null, h('a', { class: 'btn', href: GUIDE_URL, target: '_blank', rel: 'noopener noreferrer' }, t('obs.custom.link'))));
+  }
+
   function troubleshooting() {
     return TROUBLES.map(function (k) {
       return h('div', { class: 'obs-trouble' }, h('h4', null, t(k[0])), h('p', { class: 'muted' }, t(k[1])));
@@ -105,6 +132,7 @@
       copyStatus: h('p', { class: 'muted status-line', role: 'status', 'aria-live': 'polite' }),
       check: h('button', { type: 'button', class: 'btn', onclick: runCheck }, t('obs.check')),
       result: h('div', { class: 'obs-result', role: 'status', 'aria-live': 'polite' }),
+      folder: h('p', { class: 'muted', role: 'status', 'aria-live': 'polite' }),
     };
     root.appendChild(h('header', { class: 'page-head' },
       h('div', null, h('h1', null, t('nav.obs')), h('p', { class: 'subtitle' }, t('obs.subtitle')))));
@@ -118,6 +146,8 @@
         step('obs.step5.title', h('ul', { class: 'muted' }, STEP5.map(function (k) { return h('li', null, t(k)); }))),
         step('obs.step6.title', h('p', { class: 'muted' }, t('obs.step6.body'))),
         step('obs.step7.title', [troubleshooting(), h('p', null, ui.check), ui.result]))));
+    root.appendChild(customCard());
+    loadFolder();
   }
 
   function unmount() {

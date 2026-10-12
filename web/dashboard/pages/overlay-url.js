@@ -46,13 +46,13 @@
   // Demo links are relative and always carry the look; copied links only carry what differs from the saved default.
   function buildOverlayUrl(m, demo, origin) {
     const params = new URLSearchParams();
+    const overlay = cat.byId(m.overlay);
     if (isValidTheme(m.theme) && (demo || m.theme !== m.defaultTheme)) params.set('theme', m.theme);
     const accent = normalizeAccent(m.accent || '');
     if (isValidAccent(accent) && (demo || accent !== normalizeAccent(m.defaultAccent || ''))) params.set('accent', accent);
-    const overlay = cat.byId(m.overlay);
     const options = overlayOptions(m, overlay);
     Object.keys(options).forEach(function (k) { params.set(k, options[k]); });
-    if (demo) params.set('demo', '1');
+    if (demo && !overlay.custom) params.set('demo', '1');
     const query = params.toString();
     return (demo ? '' : origin) + overlay.path + (query ? '?' + query : '');
   }

@@ -42,6 +42,8 @@
   "overlays.theme_default": "Standard",
   "overlays.theme_custom": "Benutzerdefiniert",
   "overlays.themes_dir_help": "Legen Sie eine .css-Datei in diesen Ordner, um ein eigenes Design hinzuzufügen:",
+  "overlays.custom": "Benutzerdefiniert",
+  "overlays.custom_dir_help": "Legen Sie einen Ordner mit einer index.html in diesen Ordner, um ein eigenes Overlay hinzuzufügen:",
   "overlays.accent": "Akzentfarbe",
   "overlays.accent_hex": "Hex-Code",
   "overlays.accent_hint": "3, 4, 6 oder 8 Hex-Ziffern, mit oder ohne #. Leer lassen, um die Farbe des Designs zu verwenden.",
@@ -199,5 +201,10 @@
   "obs.check_ok": "Alle Prüfungen bestanden.",
   "obs.check_bad": "Einige Prüfungen sind fehlgeschlagen. Öffne die Seite Status für Details.",
   "obs.check_failed": "Der Companion ist nicht erreichbar.",
-  "obs.status_link": "Seite Status öffnen"
+  "obs.status_link": "Seite Status öffnen",
+  "obs.custom.title": "Erstelle dein eigenes",
+  "obs.custom.body": "Baue ein eigenes Overlay mit einfachem HTML, CSS und JavaScript. Die Anleitung listet die vom Companion veröffentlichten Daten auf und enthält zwei vollständige Beispiele.",
+  "obs.custom.folder": "Dein Overlay-Ordner ist:",
+  "obs.custom.folder_unavailable": "Der Overlay-Ordner ist nicht verfügbar.",
+  "obs.custom.link": "Anleitung lesen"
 }

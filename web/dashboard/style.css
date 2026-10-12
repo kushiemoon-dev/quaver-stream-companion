@@ -474,3 +474,4 @@ input:disabled, select:disabled { opacity: 0.65; cursor: not-allowed; }
 .obs-checks { list-style: none; padding: 0; margin: var(--s1) 0; }
 .obs-ok { color: var(--ok); }
 .obs-bad { color: var(--bad); }
+.obs-card + .obs-card { margin-top: var(--s3); }

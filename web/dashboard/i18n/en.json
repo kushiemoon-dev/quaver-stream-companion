@@ -42,6 +42,8 @@
   "overlays.theme_default": "Default",
   "overlays.theme_custom": "Custom",
   "overlays.themes_dir_help": "Put a .css file in this folder to add your own theme:",
+  "overlays.custom": "Custom",
+  "overlays.custom_dir_help": "Put a folder with an index.html file in this folder to add your own overlay:",
   "overlays.accent": "Accent color",
   "overlays.accent_hex": "Hex code",
   "overlays.accent_hint": "3, 4, 6 or 8 hex digits, with or without #. Leave empty to use the theme color.",
@@ -199,5 +201,10 @@
   "obs.check_ok": "All checks passed.",
   "obs.check_bad": "Some checks failed. Open the Status page for details.",
   "obs.check_failed": "Could not reach the companion.",
-  "obs.status_link": "Open the Status page"
+  "obs.status_link": "Open the Status page",
+  "obs.custom.title": "Create your own",
+  "obs.custom.body": "Build an overlay of your own with plain HTML, CSS and JavaScript. The guide lists the data the companion publishes and gives two complete examples.",
+  "obs.custom.folder": "Your overlays folder is:",
+  "obs.custom.folder_unavailable": "The overlays folder is not available.",
+  "obs.custom.link": "Read the guide"
 }

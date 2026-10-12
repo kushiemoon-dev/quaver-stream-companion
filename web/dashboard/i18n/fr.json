@@ -42,6 +42,8 @@
   "overlays.theme_default": "Par défaut",
   "overlays.theme_custom": "Personnalisé",
   "overlays.themes_dir_help": "Placez un fichier .css dans ce dossier pour ajouter votre propre thème :",
+  "overlays.custom": "Personnalisé",
+  "overlays.custom_dir_help": "Placez un dossier contenant un fichier index.html dans ce dossier pour ajouter votre propre overlay :",
   "overlays.accent": "Couleur d'accent",
   "overlays.accent_hex": "Code hexadécimal",
   "overlays.accent_hint": "3, 4, 6 ou 8 chiffres hexadécimaux, avec ou sans #. Laissez vide pour utiliser la couleur du thème.",
@@ -199,5 +201,10 @@
   "obs.check_ok": "Toutes les vérifications sont passées.",
   "obs.check_bad": "Certaines vérifications ont échoué. Ouvrez la page État pour le détail.",
   "obs.check_failed": "Impossible de joindre le companion.",
-  "obs.status_link": "Ouvrir la page État"
+  "obs.status_link": "Ouvrir la page État",
+  "obs.custom.title": "Créez le vôtre",
+  "obs.custom.body": "Créez votre propre overlay avec du HTML, du CSS et du JavaScript simples. Le guide décrit les données publiées par le companion et donne deux exemples complets.",
+  "obs.custom.folder": "Votre dossier d'overlays est :",
+  "obs.custom.folder_unavailable": "Le dossier d'overlays n'est pas disponible.",
+  "obs.custom.link": "Lire le guide"
 }

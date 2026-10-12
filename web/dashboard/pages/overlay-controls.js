@@ -3,18 +3,21 @@
   const t = qsc.t;
   const h = qsc.h;
   const cat = window.qscOverlayCatalog;
+  const custom = window.qscOverlayCustom;
   const LANG_LABEL = { auto: 'settings.lang.auto', en: 'settings.lang.en', fr: 'settings.lang.fr', de: 'settings.lang.de' };
 
-  // One radio card per overlay: name, one-line description and recommended size.
+  // One radio card per overlay (built-in first, then custom): name, one-line description and recommended size.
   function picker(selected, onSelect) {
-    const cards = cat.OVERLAYS.map(function (o) {
+    const cards = cat.OVERLAYS.concat(cat.customList()).map(function (o) {
       return h('label', { class: 'theme-card' },
         h('input', { type: 'radio', class: 'theme-input', name: 'ov-overlay', value: o.id, checked: o.id === selected,
           onchange: function (ev) { if (ev.target.checked) onSelect(o.id); } }),
         h('span', { class: 'theme-body' },
-          h('span', { class: 'theme-name' }, t(o.nameKey)),
-          h('span', { class: 'muted overlay-desc' }, t(o.descKey)),
-          h('span', { class: 'theme-tags' }, h('span', { class: 'pill pill-muted' }, cat.sizeText(o)))));
+          h('span', { class: 'theme-name' }, custom.name(o)),
+          h('span', { class: 'muted overlay-desc' }, custom.desc(o)),
+          h('span', { class: 'theme-tags' },
+            o.custom && h('span', { class: 'pill pill-amber' }, t('overlays.custom')),
+            h('span', { class: 'pill pill-muted' }, cat.sizeText(o)))));
     });
     return h('fieldset', { class: 'theme-picker' }, h('legend', null, t('overlays.choose')),
       h('div', { class: 'theme-grid overlay-grid' }, cards));

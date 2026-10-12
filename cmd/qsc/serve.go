@@ -18,6 +18,7 @@ import (
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/app"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/bus"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/gamestate"
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/overlays"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/paths"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/scores"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/server"
@@ -103,16 +104,18 @@ func serve(ctx context.Context, args []string, out, errw io.Writer) int {
 			d, _ := paths.Find("", paths.DefaultSteamRoots())
 			return d
 		},
-		PortFlag:      opts.portFlag,
-		QuaverDirFlag: opts.quaverDirFlag,
-		Themes:        func() []themes.Theme { return availableThemes(opts.configPath) },
-		ThemesDir:     themes.UserDir(opts.configPath),
-		SteamRoots:    paths.DefaultSteamRoots(),
-		Port:          opts.port,
+		PortFlag:         opts.portFlag,
+		QuaverDirFlag:    opts.quaverDirFlag,
+		Themes:           func() []themes.Theme { return availableThemes(opts.configPath) },
+		ThemesDir:        themes.UserDir(opts.configPath),
+		OverlaysDir:      overlays.Dir(opts.configPath),
+		IsBuiltinOverlay: func(id string) bool { return overlays.IsBuiltin(web.FS, id) },
+		SteamRoots:       paths.DefaultSteamRoots(),
+		Port:             opts.port,
 	})
 	srv := &http.Server{
 		Handler: server.New(b, st.Snapshot, web.FS,
-			server.WithAPI(apiHandler, opts.port), server.WithDashboard(dashboard), server.WithThemesDir(themes.UserDir(opts.configPath))),
+			server.WithAPI(apiHandler, opts.port), server.WithDashboard(dashboard), server.WithThemesDir(themes.UserDir(opts.configPath)), server.WithOverlaysDir(overlays.Dir(opts.configPath))),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 	go func() {

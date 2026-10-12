@@ -2,6 +2,7 @@ package web
 
 import (
 	"io/fs"
+	"os/exec"
 	"regexp"
 	"strings"
 	"testing"
@@ -80,4 +81,27 @@ const c = require(process.argv[2]);
 const got = c.OVERLAYS.map((o) => o.id + ':' + c.sizeText(o)).join(',');
 assert.strictEqual(got, 'now-playing:540 x 140,result:520 x 230,history:520 x 180,state:280 x 64');
 `)
+}
+
+func TestObsPageHasACreateYourOwnCard(t *testing.T) {
+	src, err := fs.ReadFile(FS, "dashboard/pages/obs.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"/api/overlays", "docs/OVERLAYS.md", "obs.custom.title", "obs.custom.body", "obs.custom.link", "obs.custom.folder", "obs.custom.folder_unavailable", "noopener", "pathNodes"} {
+		if !strings.Contains(string(src), want) {
+			t.Errorf("obs.js must use %s", want)
+		}
+	}
+}
+
+func TestObsCardShowsTheOverlaysFolder(t *testing.T) {
+	node, err := exec.LookPath("node")
+	if err != nil {
+		t.Skip("node is not on PATH")
+	}
+	out, err := exec.Command(node, mustAbs(t, "testdata/obs_card_harness.js"), mustAbs(t, "dashboard/pages/obs.js")).CombinedOutput()
+	if err != nil {
+		t.Fatalf("obs card: %v: %s", err, out)
+	}
 }

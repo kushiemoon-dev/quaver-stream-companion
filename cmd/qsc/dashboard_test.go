@@ -254,3 +254,73 @@ func TestBrowserFailureIsReportedNotFatal(t *testing.T) {
 		t.Fatalf("stderr = %q", errw.String())
 	}
 }
+
+func TestServeLoadsCustomOverlaysFromTheConfigFolder(t *testing.T) {
+	s := startServer(t)
+	dir := filepath.Join(filepath.Dir(s.cfgPath), "overlays", "mine")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "index.html"), []byte("<p>mine</p>"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(filepath.Dir(s.cfgPath), "overlays", "now-playing"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(filepath.Dir(s.cfgPath), "overlays", "now-playing", "index.html"), []byte("hijack"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if code, body := s.req(t, "GET", "/overlays/mine/", "", "", nil); code != 200 || body != "<p>mine</p>" {
+		t.Fatalf("custom overlay: %d %q", code, body)
+	}
+	if code, body := s.req(t, "GET", "/overlays/now-playing/", "", "", nil); code != 200 || strings.Contains(body, "hijack") {
+		t.Fatalf("built-in overlay: %d %.40q", code, body)
+	}
+	code, body := s.req(t, "GET", "/api/overlays", "", "", nil)
+	var got struct {
+		Dir    string `json:"dir"`
+		Custom []struct {
+			ID string `json:"id"`
+		} `json:"custom"`
+	}
+	if code != 200 || json.Unmarshal([]byte(body), &got) != nil || got.Dir != filepath.Join(filepath.Dir(s.cfgPath), "overlays") ||
+		len(got.Custom) != 1 || got.Custom[0].ID != "mine" {
+		t.Fatalf("/api/overlays: %d %q", code, body)
+	}
+	if code, _ := s.req(t, "GET", "/overlays/mine/", "evil.example", "", nil); code != http.StatusForbidden {
+		t.Errorf("foreign Host: %d", code)
+	}
+}
+
+func TestServeStartsWhenTheOverlaysFolderIsBroken(t *testing.T) {
+	d := testutil.NewQuaverDir(t)
+	cfgDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(cfgDir, "overlays"), []byte("a file, not a folder"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	port := freePort(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan int, 1)
+	var out, errw bytes.Buffer
+	go func() {
+		done <- run(ctx, []string{"--quaver-dir", d.Path, "--port", fmt.Sprint(port), "--config", filepath.Join(cfgDir, "config.json")}, &out, &errw)
+	}()
+	defer func() {
+		cancel()
+		<-done
+	}()
+	url := fmt.Sprintf("http://127.0.0.1:%d/api/overlays", port)
+	for deadline := time.Now().Add(3 * time.Second); time.Now().Before(deadline); time.Sleep(30 * time.Millisecond) {
+		resp, err := http.Get(url)
+		if err != nil {
+			continue
+		}
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if resp.StatusCode != 200 || !strings.Contains(string(body), `"custom":[]`) {
+			t.Fatalf("%d %s", resp.StatusCode, body)
+		}
+		return
+	}
+	t.Fatalf("server not up (stderr: %s)", errw.String())
+}

@@ -1,0 +1,56 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Mini card</title>
+<style>
+  body { margin: 0; font: 600 28px system-ui, sans-serif; color: #fff; text-shadow: 0 2px 6px #000; }
+  #status { font-size: 14px; opacity: 0.7; }
+</style>
+</head>
+<body>
+<div id="title"></div>
+<div id="acc"></div>
+<div id="status"></div>
+<script>
+  const $ = (id) => document.getElementById(id);
+  let map = null;
+  let last = null;
+
+  function render() {
+    $('title').textContent = map && typeof map.title === 'string' ? map.title : 'Waiting for Quaver';
+    const acc = last && last.score ? Number(last.score.accuracy) : NaN;
+    $('acc').textContent = Number.isFinite(acc) ? 'Last play: ' + acc.toFixed(2) + '%' : '';
+  }
+
+  function on(es, type, apply) {
+    es.addEventListener(type, (ev) => {
+      try {
+        apply(JSON.parse(ev.data).data);
+        render();
+      } catch (err) {
+        console.warn('Ignored a bad ' + type + ' event', err);
+      }
+    });
+  }
+
+  function connect() {
+    const es = new EventSource('/events');
+    es.onopen = () => { $('status').textContent = ''; };
+    es.onerror = () => {
+      $('status').textContent = 'Reconnecting';
+      if (es.readyState === EventSource.CLOSED) {
+        es.close();
+        setTimeout(connect, 2000);
+      }
+    };
+    on(es, 'snapshot', (d) => { map = d.map; last = d.last_score; });
+    on(es, 'map.started', (d) => { map = d; });
+    on(es, 'score.saved', (d) => { last = d; });
+  }
+
+  render();
+  connect();
+</script>
+</body>
+</html>

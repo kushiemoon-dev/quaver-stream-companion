@@ -15,6 +15,7 @@ import (
 
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/config"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/diagnose"
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/overlays"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/scores"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/state"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/themes"
@@ -41,9 +42,12 @@ type Deps struct {
 	// Themes lists the selectable overlay themes in display order; it is called per request.
 	Themes func() []themes.Theme
 	// ThemesDir is the custom themes folder shown to the dashboard.
-	ThemesDir  string
-	SteamRoots []string
-	Port       int
+	ThemesDir string
+	// OverlaysDir is the custom overlays folder; IsBuiltinOverlay tells which ids custom overlays may not use.
+	OverlaysDir      string
+	IsBuiltinOverlay func(id string) bool
+	SteamRoots       []string
+	Port             int
 }
 
 type errBody struct {
@@ -67,10 +71,11 @@ type api struct{ d Deps }
 func New(d Deps) http.Handler {
 	a := api{d}
 	routes := map[string]map[string]http.HandlerFunc{
-		"/api/status":  {http.MethodGet: a.status},
-		"/api/config":  {http.MethodGet: a.getConfig, http.MethodPut: a.putConfig},
-		"/api/history": {http.MethodGet: a.history},
-		"/api/themes":  {http.MethodGet: a.themes},
+		"/api/status":   {http.MethodGet: a.status},
+		"/api/config":   {http.MethodGet: a.getConfig, http.MethodPut: a.putConfig},
+		"/api/history":  {http.MethodGet: a.history},
+		"/api/themes":   {http.MethodGet: a.themes},
+		"/api/overlays": {http.MethodGet: a.overlays},
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		methods, ok := routes[r.URL.Path]
@@ -268,4 +273,12 @@ func (a api) themeList() []themes.Theme {
 		return nil
 	}
 	return a.d.Themes()
+}
+
+func (a api) overlays(w http.ResponseWriter, r *http.Request) {
+	builtin := a.d.IsBuiltinOverlay
+	if builtin == nil {
+		builtin = func(string) bool { return false }
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"dir": a.d.OverlaysDir, "custom": overlays.List(a.d.OverlaysDir, builtin)})
 }

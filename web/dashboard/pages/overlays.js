@@ -6,9 +6,11 @@
   const tm = window.qscThemeModel;
   const cat = window.qscOverlayCatalog;
   const controls = window.qscOverlayControls;
+  const custom = window.qscOverlayCustom;
+  const util = window.qscOverlayUtil;
+  const pickerValue = util.pickerValue;
+  const describe = util.describe;
   const FALLBACK_THEME = 'neutral-light';
-  const PICKER_START = '#a855f7';
-  const TIMEOUT_MS = 8000;
   const PREVIEW_DELAY_MS = 250;
   const COPIED_MS = 2000;
 
@@ -18,39 +20,7 @@
   let model = null;
   let previewTimer = null;
   let copiedTimer = null;
-
-  function pickerValue(hex) {
-    if (!url.isValidAccent(hex)) return PICKER_START;
-    const rgb = hex.length <= 4
-      ? hex.slice(0, 3).split('').map(function (c) { return c + c; }).join('')
-      : hex.slice(0, 6);
-    return '#' + rgb;
-  }
-
-  function call(fn) {
-    const life = lifetime;
-    const own = new AbortController();
-    const stop = function () { own.abort(); };
-    life.signal.addEventListener('abort', stop);
-    const timer = setTimeout(function () { own.abort(); }, TIMEOUT_MS);
-    return fn(own.signal)
-      .catch(function (e) {
-        if (e && e.name === 'AbortError') {
-          const err = new Error(t('overlays.timeout'));
-          err.timedOut = !life.signal.aborted;
-          throw err;
-        }
-        throw e;
-      })
-      .finally(function () {
-        clearTimeout(timer);
-        life.signal.removeEventListener('abort', stop);
-      });
-  }
-
-  function describe(e) {
-    return e.field ? e.field + ': ' + e.message : e.message;
-  }
+  const call = util.makeCall(function () { return lifetime; });
 
   function field(id, labelKey, control, extra) {
     return h('div', { class: 'field' }, h('label', { for: id }, t(labelKey)), control, extra);
@@ -80,13 +50,14 @@
 
   function selectOverlay(id) {
     const overlay = cat.byId(id);
-    const name = t(overlay.nameKey);
+    const name = custom.name(overlay);
     model = Object.assign({}, model, { overlay: overlay.id });
     ui.name.textContent = name;
-    ui.desc.textContent = t(overlay.descKey);
+    ui.desc.textContent = custom.desc(overlay);
     ui.size.textContent = cat.sizeText(overlay);
     ui.sizeStatus.textContent = '';
-    ui.frame.className = 'preview-frame size-' + overlay.id;
+    ui.frame.className = custom.frameClass(overlay);
+    custom.frameHeight(ui.frame, overlay);
     ui.frame.setAttribute('title', t('overlays.preview_title', { name: name }));
     ui.copy.setAttribute('aria-label', t('overlays.copy_aria', { name: name }));
     ui.options.sync(overlay);
@@ -275,7 +246,7 @@
     ui.frame.setAttribute('src', url.buildOverlayUrl(model, true, location.origin));
 
     return h('section', { class: 'card overlay-card', 'aria-labelledby': 'ov-name' },
-      ui.picked, ui.name, ui.desc,
+      ui.picked, custom.dirHelp(model.overlaysDir), ui.name, ui.desc,
       h('div', { class: 'field' }, h('label', { for: 'ov-url' }, t('overlays.url')),
         h('div', { class: 'url-row' }, ui.url, ui.copy), ui.copyStatus),
       h('div', { class: 'overlay-body' },
@@ -309,12 +280,14 @@
       const res = await Promise.all([
         call(function (s) { return qsc.api.get('/api/themes', s); }),
         call(function (s) { return qsc.api.get('/api/config', s); }),
+        call(function (s) { return qsc.api.get('/api/overlays', s); }).catch(function () { return {}; }),
       ]);
       if (id !== mountId) return;
+      cat.setCustom((res[2] || {}).custom);
       const overlay = (res[1].config && res[1].config.overlay) || {};
       const theme = overlay.theme || FALLBACK_THEME;
       const accent = url.normalizeAccent(overlay.accent || '');
-      model = { overlay: cat.OVERLAYS[0].id, autohide: '', scale: '', lang: 'auto', n: '', hide: [], themes: Array.isArray(res[0]) ? res[0] : [], themesDir: res[1].themes_dir || '', theme: theme, accent: accent, defaultTheme: theme, defaultAccent: accent };
+      model = { overlay: cat.OVERLAYS[0].id, autohide: '', scale: '', lang: 'auto', n: '', hide: [], themes: Array.isArray(res[0]) ? res[0] : [], themesDir: res[1].themes_dir || '', overlaysDir: typeof (res[2] || {}).dir === 'string' ? res[2].dir : '', theme: theme, accent: accent, defaultTheme: theme, defaultAccent: accent };
       root.replaceChildren(buildCard());
       const target = ui.grid.querySelector('.theme-input:checked') || ui.grid.querySelector('.theme-input');
       if (refocus && target) target.focus();

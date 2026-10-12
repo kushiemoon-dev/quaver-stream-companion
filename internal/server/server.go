@@ -19,10 +19,11 @@ import (
 const keepAliveEvery = 15 * time.Second
 
 type settings struct {
-	api       http.Handler
-	port      int
-	dashboard fs.FS
-	themesDir string
+	api         http.Handler
+	port        int
+	dashboard   fs.FS
+	themesDir   string
+	overlaysDir string
 }
 
 // Option customizes New.
@@ -59,7 +60,7 @@ func New(b *bus.Bus, snap func() state.Snapshot, assets fs.FS, opts ...Option) h
 	})
 	mux.HandleFunc("GET /events", events(b, snap))
 	files := http.FileServerFS(assets)
-	mux.Handle("GET /overlays/", files)
+	mux.Handle("GET /overlays/", customOverlays(cfg.overlaysDir, assets, files))
 	mux.Handle("GET /themes/", publicAssets(userThemes(cfg.themesDir, files)))
 	if cfg.dashboard != nil {
 		mux.Handle("/", withCSP(readOnly(http.FileServerFS(cfg.dashboard))))
