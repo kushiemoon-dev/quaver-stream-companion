@@ -6,16 +6,18 @@
   const CUSTOM_ID = /^[a-z0-9-]+$/;
   const CUSTOM_LIMITS = { count: 100, name: 40, description: 160, width: { min: 100, max: 3840, def: 500 }, height: { min: 40, max: 2160, def: 200 } };
 
-  // Recommended OBS browser source sizes; params lists the options each overlay honors.
+  // Recommended OBS browser source sizes; params lists the options each overlay honors; autohide is the delay used when none is given.
   const OVERLAYS = [
     { id: 'now-playing', path: '/overlays/now-playing/', width: 540, height: 140,
       nameKey: 'overlays.now_playing.name', descKey: 'overlays.now_playing.description', params: ['autohide', 'scale', 'lang'] },
     { id: 'result', path: '/overlays/result/', width: 520, height: 230,
       nameKey: 'overlays.result.name', descKey: 'overlays.result.description', params: ['autohide', 'scale', 'lang'] },
     { id: 'history', path: '/overlays/history/', width: 520, height: 180,
-      nameKey: 'overlays.history.name', descKey: 'overlays.history.description', params: ['scale', 'lang', 'n'] },
+      nameKey: 'overlays.history.name', descKey: 'overlays.history.description', params: ['scale', 'lang', 'n', 'best'] },
     { id: 'state', path: '/overlays/state/', width: 280, height: 64,
       nameKey: 'overlays.state.name', descKey: 'overlays.state.description', params: ['scale', 'lang', 'hide'] },
+    { id: 'alert', path: '/overlays/alert/', width: 520, height: 120, autohide: 8,
+      nameKey: 'overlays.alert.name', descKey: 'overlays.alert.description', params: ['autohide', 'scale', 'lang', 'sound'] },
   ];
 
   let custom = [];

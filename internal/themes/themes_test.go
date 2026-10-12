@@ -10,7 +10,7 @@ import (
 	"github.com/kushiemoon-dev/quaver-stream-companion/web"
 )
 
-var wantOrder = []string{"neutral-light", "neutral-dark", "catppuccin-mocha", "catppuccin-latte", "tokyo-night", "dracula", "nord", "gruvbox", "rose-pine", "pixel"}
+var wantOrder = []string{"neutral-light", "neutral-dark", "catppuccin-mocha", "catppuccin-latte", "tokyo-night", "dracula", "nord", "gruvbox", "rose-pine", "pixel", "neon-cosy"}
 
 func TestBuiltinOrderAndColors(t *testing.T) {
 	got := Builtin(web.FS)

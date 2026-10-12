@@ -61,7 +61,7 @@ func TestOverlaysCopySizeButtonHasAccessibleName(t *testing.T) {
 func TestGuideDocsMatchTheCatalog(t *testing.T) {
 	guide := readDoc(t, "docs/OBS.md")
 	readme := readDoc(t, "README.md")
-	for _, size := range []string{"540 x 140", "520 x 230", "520 x 180", "280 x 64"} {
+	for _, size := range []string{"540 x 140", "520 x 230", "520 x 180", "280 x 64", "520 x 120"} {
 		if !strings.Contains(guide, size) {
 			t.Errorf("docs/OBS.md does not mention %s", size)
 		}
@@ -79,7 +79,7 @@ func TestObsSizesMatchPlan(t *testing.T) {
 const assert = require('assert');
 const c = require(process.argv[2]);
 const got = c.OVERLAYS.map((o) => o.id + ':' + c.sizeText(o)).join(',');
-assert.strictEqual(got, 'now-playing:540 x 140,result:520 x 230,history:520 x 180,state:280 x 64');
+assert.strictEqual(got, 'now-playing:540 x 140,result:520 x 230,history:520 x 180,state:280 x 64,alert:520 x 120');
 `)
 }
 

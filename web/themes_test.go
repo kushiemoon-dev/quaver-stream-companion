@@ -11,7 +11,7 @@ import (
 
 var builtinThemes = []string{
 	"neutral-dark", "catppuccin-mocha", "catppuccin-latte", "tokyo-night",
-	"dracula", "nord", "gruvbox", "rose-pine", "pixel",
+	"dracula", "nord", "gruvbox", "rose-pine", "pixel", "neon-cosy",
 }
 
 var requiredTokens = []string{"bg", "fg", "muted", "accent", "border", "radius", "shadow", "font"}

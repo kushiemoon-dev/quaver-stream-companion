@@ -15,7 +15,7 @@ const O = 'http://127.0.0.1:7878';
 const base = { theme: 'neutral-light', accent: '', defaultTheme: 'neutral-light', defaultAccent: '' };
 const link = function (m, demo) { return u.buildOverlayUrl({ ...base, ...m }, !!demo, O); };
 
-assert.deepStrictEqual(cat.OVERLAYS.map(function (o) { return o.id; }), ['now-playing', 'result', 'history', 'state']);
+assert.deepStrictEqual(cat.OVERLAYS.map(function (o) { return o.id; }), ['now-playing', 'result', 'history', 'state', 'alert']);
 assert.strictEqual(cat.sizeText(cat.byId('now-playing')), '540 x 140');
 assert.strictEqual(cat.byId('nope').id, 'now-playing');
 for (const o of cat.OVERLAYS) {
@@ -32,6 +32,17 @@ assert.strictEqual(link({ overlay: 'state', scale: 2 }, true), '/overlays/state/
 // options an overlay does not honor never leak into its link
 assert.strictEqual(link({ overlay: 'history', autohide: '5', hide: ['menu'] }), O + '/overlays/history/');
 assert.strictEqual(link({ overlay: 'now-playing', n: '30', hide: ['menu'] }), O + '/overlays/now-playing/');
+
+// alert hides after 8 seconds by default, so only a different value is carried
+assert.strictEqual(link({ overlay: 'alert' }), O + '/overlays/alert/');
+assert.strictEqual(link({ overlay: 'alert', autohide: '8' }), O + '/overlays/alert/');
+assert.strictEqual(link({ overlay: 'alert', autohide: '12', sound: true, scale: '2' }), O + '/overlays/alert/?autohide=12&scale=2&sound=1');
+assert.strictEqual(link({ overlay: 'alert', sound: false }), O + '/overlays/alert/');
+assert.strictEqual(link({ overlay: 'alert', best: true }), O + '/overlays/alert/');
+assert.strictEqual(link({ overlay: 'history', best: true }), O + '/overlays/history/?best=1');
+assert.strictEqual(link({ overlay: 'history', best: 'yes' }), O + '/overlays/history/');
+assert.strictEqual(link({ overlay: 'history', sound: true }), O + '/overlays/history/');
+assert.strictEqual(link({ overlay: 'alert' }, true), '/overlays/alert/?theme=neutral-light&demo=1');
 
 // defaults and clamping
 assert.strictEqual(link({ overlay: 'result', scale: '1', lang: 'auto', autohide: '0' }), O + '/overlays/result/');
@@ -96,6 +107,6 @@ func TestOverlayRecommendedSizes(t *testing.T) {
 const assert = require('assert');
 const cat = require(process.argv[2]);
 const sizes = cat.OVERLAYS.map(function (o) { return o.id + ' ' + cat.sizeText(o); });
-assert.deepStrictEqual(sizes, ['now-playing 540 x 140', 'result 520 x 230', 'history 520 x 180', 'state 280 x 64']);
+assert.deepStrictEqual(sizes, ['now-playing 540 x 140', 'result 520 x 230', 'history 520 x 180', 'state 280 x 64', 'alert 520 x 120']);
 `)
 }

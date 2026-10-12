@@ -94,6 +94,7 @@ html, body { overflow: hidden; }
 .curve { display: block; width: 100%; height: auto; }
 .curve .axis { stroke: var(--muted); stroke-width: 1; opacity: 0.35; }
 .curve .avg { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 3; }
+.curve .best { stroke: var(--accent); stroke-width: 1; stroke-dasharray: 2 3; }
 .curve .line-path { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
 .curve text { fill: var(--fg); font-size: 11px; }
 .curve text.tick { fill: var(--muted); }

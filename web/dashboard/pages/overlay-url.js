@@ -29,7 +29,7 @@
     const out = {};
     const has = function (k) { return overlay.params.indexOf(k) >= 0; };
     const autohide = Math.floor(number(m.autohide));
-    if (has('autohide') && isFinite(autohide) && autohide > 0) out.autohide = String(clamp(autohide, 'autohide'));
+    if (has('autohide') && isFinite(autohide) && autohide > 0 && clamp(autohide, 'autohide') !== overlay.autohide) out.autohide = String(clamp(autohide, 'autohide'));
     const scale = number(m.scale);
     if (has('scale') && scale > 0 && isFinite(scale)) {
       const v = Math.round(clamp(scale, 'scale') * 100) / 100;
@@ -38,6 +38,7 @@
     if (has('lang') && cat.LANGS.indexOf(m.lang) > 0) out.lang = m.lang;
     const n = Math.floor(number(m.n));
     if (has('n') && isFinite(n) && clamp(n, 'n') !== cat.DEFAULTS.n) out.n = String(clamp(n, 'n'));
+    ['best', 'sound'].forEach(function (k) { if (has(k) && m[k] === true) out[k] = '1'; });
     const hide = cat.STATES.filter(function (s) { return Array.isArray(m.hide) && m.hide.indexOf(s) >= 0; });
     if (has('hide') && hide.length > 0) out.hide = hide.join(',');
     return out;

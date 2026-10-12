@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-var overlayPages = []string{"now-playing", "result", "history", "state"}
+var overlayPages = []string{"now-playing", "result", "history", "state", "alert"}
 
 func mustAbs(t *testing.T, p string) string {
 	t.Helper()
@@ -394,6 +394,34 @@ const wild = m.curve([{ accuracy: 1e30 }, { accuracy: -50 }, { accuracy: 90 }, {
 assert.strictEqual(wild.points.length, 3);
 assert.ok(wild.points.every(p => isFinite(p.x) && isFinite(p.y) && p.y >= 0 && p.y <= 100));
 assert.strictEqual(m.curve(Array.from({ length: 5000 }, () => ({ accuracy: 90 })), 200, 100).points.length, 50);
+
+assert.strictEqual(m.parseAutohide(null, 8), 8);
+assert.strictEqual(m.parseAutohide(undefined, 8), 8);
+assert.strictEqual(m.parseAutohide('', 8), 8);
+assert.strictEqual(m.parseAutohide('3', 8), 3);
+assert.strictEqual(m.parseAutohide('0', 8), 0);
+assert.strictEqual(m.parseAutohide(null), 0);
+
+const av = m.alertView({ score: { accuracy: 98.765 }, map: { title: 'Song <b>' }, is_pb: true, full_combo: true });
+assert.deepStrictEqual(av.kinds, ['pb', 'fc']);
+assert.strictEqual(av.title, 'Song <b>');
+assert.strictEqual(av.accuracy, '98.77%');
+assert.deepStrictEqual(m.alertView({ is_pb: true, map: {}, score: {} }).kinds, ['pb']);
+assert.deepStrictEqual(m.alertView({ full_combo: true, map: {}, score: {} }).kinds, ['fc']);
+for (const flag of ['failed', 'paused', 'autoplay']) assert.strictEqual(m.alertView({ is_pb: true, full_combo: true, [flag]: true }), null, flag);
+assert.strictEqual(m.alertView({ is_pb: false, full_combo: false }), null);
+assert.strictEqual(m.alertView({ is_pb: 'true' }), null);
+for (const bad of [null, undefined, 'x', 7]) assert.strictEqual(m.alertView(bad), null);
+assert.ok(m.alertView({ is_pb: true, map: { title: 'x'.repeat(100000) } }).title.length <= 200);
+
+const bc = m.curve(plays, 200, 100);
+const bl = m.bestLine(bc);
+assert.strictEqual(bl.text, '99.10%');
+assert.strictEqual(bl.x1, bc.left);
+assert.strictEqual(bl.x2, bc.right);
+assert.strictEqual(bl.y, bc.points[2].y);
+assert.strictEqual(m.bestLine(null), null);
+assert.strictEqual(m.bestLine(m.curve([{ accuracy: 90 }], 200, 100)).text, '90.00%');
 
 function fakeClock() {
   let t = 0, id = 0; const timers = new Map();

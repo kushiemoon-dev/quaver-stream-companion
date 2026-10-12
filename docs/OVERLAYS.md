@@ -1,6 +1,6 @@
 # Build your own overlay
 
-An overlay is a web page that OBS shows in a Browser source. QuaverStreamCompanion serves four of them and lets you add your own: a folder with an `index.html` is enough. This guide lists the built-in overlays and their options, describes the data the companion publishes, and walks through two complete examples.
+An overlay is a web page that OBS shows in a Browser source. QuaverStreamCompanion serves five of them and lets you add your own: a folder with an `index.html` is enough. This guide lists the built-in overlays and their options, describes the data the companion publishes, and walks through two complete examples.
 
 Everything below uses the default port. Replace `7878` if you changed it in the settings.
 
@@ -12,6 +12,7 @@ Everything below uses the default port. Replace `7878` if you changed it in the 
 | Result | `http://127.0.0.1:7878/overlays/result/` | 520 x 230 |
 | History | `http://127.0.0.1:7878/overlays/history/` | 520 x 180 |
 | State | `http://127.0.0.1:7878/overlays/state/` | 280 x 64 |
+| Alert | `http://127.0.0.1:7878/overlays/alert/` | 520 x 120 |
 
 Options go in the query string, for example `/overlays/result/?theme=nord&autohide=20&scale=1.2`. A value that cannot be read is ignored and the default is used (`theme`, `accent`, `lang`, `autohide`, `hide`, `demo`). A number outside its range is clamped to the nearest limit (`scale`, `n`), and a `scale` or `n` that is not a number uses the default.
 
@@ -22,9 +23,13 @@ Options go in the query string, for example `/overlays/result/?theme=nord&autohi
 | `lang` | all | `en`, `fr` or `de` | The browser language, else `en` |
 | `scale` | all | A number from 0.5 to 3 | 1 |
 | `demo` | all | `1` shows example data and does not connect | off |
-| `autohide` | now playing, result | Seconds from 1 to 3600 until the card hides | never |
+| `autohide` | now playing, result, alert | Seconds from 1 to 3600 until the card hides | never (alert: 8) |
 | `n` | history | Number of plays from 5 to 50 | 20 |
+| `best` | history | `1` draws a dashed line at the best accuracy of the plays shown | off |
+| `sound` | alert | `1` plays a short synthesized chime when an alert appears | off |
 | `hide` | state | Comma separated state names (see section 4) for which the badge is hidden, for example `menu,closed` | none |
+
+The alert overlay stays hidden until a saved play is a personal best or a full combo (and was not failed, paused or played with autoplay). It then shows "New personal best", "Full combo" or both, with the map title and accuracy. It never replays an old play when it connects.
 
 ## 2. Combining overlays and sizes
 
@@ -229,7 +234,7 @@ This overlay is served at `http://127.0.0.1:7878/overlays/mini-card/`. Files are
 
 ### Rules and limits
 
-- The folder name uses only lowercase letters, digits and hyphens. A name used by a built-in overlay (`now-playing`, `result`, `history`, `state`) is ignored: the built-in one always wins.
+- The folder name uses only lowercase letters, digits and hyphens. A name used by a built-in overlay (`now-playing`, `result`, `history`, `state`, `alert`) is ignored: the built-in one always wins.
 - `index.html` is required. At most 100 overlays are listed.
 - An overlay holds at most 200 files and folders, nested at most 3 levels deep (for example `index.html`, `css/style.css`, `img/icons/star.svg`).
 - A file is at most 2 MiB. Names use only letters, digits, `.`, `_` and `-`, and do not start with a dot.

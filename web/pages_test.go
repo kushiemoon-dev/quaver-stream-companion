@@ -205,7 +205,7 @@ const themeModelScript = `
 const assert = require('assert');
 const m = require(process.argv[2]);
 
-const names = { 'neutral-light': 'Neutral Light', 'neutral-dark': 'Neutral Dark', 'catppuccin-mocha': 'Catppuccin Mocha', 'catppuccin-latte': 'Catppuccin Latte', 'tokyo-night': 'Tokyo Night', dracula: 'Dracula', nord: 'Nord', gruvbox: 'Gruvbox', 'rose-pine': 'Rose Pine', pixel: 'Pixel' };
+const names = { 'neutral-light': 'Neutral Light', 'neutral-dark': 'Neutral Dark', 'catppuccin-mocha': 'Catppuccin Mocha', 'catppuccin-latte': 'Catppuccin Latte', 'tokyo-night': 'Tokyo Night', dracula: 'Dracula', nord: 'Nord', gruvbox: 'Gruvbox', 'rose-pine': 'Rose Pine', pixel: 'Pixel', 'neon-cosy': 'Neon Cosy' };
 for (const [id, name] of Object.entries(names)) assert.strictEqual(m.displayName(id), name);
 for (const id of ['my-theme', 'toString', '__proto__', 'constructor']) assert.strictEqual(m.displayName(id), id);
 

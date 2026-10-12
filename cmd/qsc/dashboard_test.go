@@ -20,7 +20,7 @@ import (
 )
 
 func TestAvailableThemesAreTheBuiltInOnes(t *testing.T) {
-	if got := themes.IDs(availableThemes("")); !slices.Equal(got, []string{"neutral-light", "neutral-dark", "catppuccin-mocha", "catppuccin-latte", "tokyo-night", "dracula", "nord", "gruvbox", "rose-pine", "pixel"}) {
+	if got := themes.IDs(availableThemes("")); !slices.Equal(got, []string{"neutral-light", "neutral-dark", "catppuccin-mocha", "catppuccin-latte", "tokyo-night", "dracula", "nord", "gruvbox", "rose-pine", "pixel", "neon-cosy"}) {
 		t.Fatalf("themes = %v", got)
 	}
 }

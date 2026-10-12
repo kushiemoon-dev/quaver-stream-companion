@@ -1,0 +1,10 @@
+:root {
+  --bg: #0e0c26;
+  --fg: #fff4e0;
+  --muted: #cfc6f2;
+  --accent: #ff6fae;
+  --border: 2px solid #4e4590;
+  --radius: 18px;
+  --shadow: 0 0 6px #ff8cc2, 0 0 16px rgba(255, 111, 174, 0.55), 0 0 32px rgba(255, 79, 154, 0.3);
+  --font: ui-rounded, "Segoe UI", system-ui, -apple-system, sans-serif;
+}

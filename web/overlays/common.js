@@ -73,6 +73,8 @@
     autohide: model.parseAutohide(params.get('autohide')),
     hide: model.parseHide(params.get('hide')),
     n: model.parseCount(params.get('n')),
+    best: params.get('best') === '1',
+    sound: params.get('sound') === '1',
   };
   root.style.setProperty('--scale', String(qscParams.scale));
   window.qscParams = qscParams;
@@ -83,8 +85,10 @@
     return own(catalogs[lang]) || own(catalogs.en) || key;
   };
 
-  window.qscAutohide = function (onHide) {
-    return model.createAutohide(qscParams.autohide, {
+  // fallback is the delay used when the page has no autohide parameter.
+  window.qscAutohide = function (onHide, fallback) {
+    const seconds = fallback === undefined ? qscParams.autohide : model.parseAutohide(params.get('autohide'), fallback);
+    return model.createAutohide(seconds, {
       setTimeout: function (fn, ms) { return setTimeout(fn, ms); },
       clearTimeout: function (id) { clearTimeout(id); },
     }, onHide);

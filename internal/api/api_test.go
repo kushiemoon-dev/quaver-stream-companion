@@ -508,7 +508,7 @@ func TestThemesEmptyIsAnArray(t *testing.T) {
 
 func TestPutAcceptsEveryBuiltinThemeAndRejectsTraversal(t *testing.T) {
 	built := themes.Builtin(web.FS)
-	if len(built) != 10 {
+	if len(built) != 11 {
 		t.Fatalf("built-in themes = %d", len(built))
 	}
 	e := newEnv(t, func(d *Deps) { d.Themes = func() []themes.Theme { return built } })

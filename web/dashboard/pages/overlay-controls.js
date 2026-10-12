@@ -30,6 +30,12 @@
       h('p', { id: id + '-hint', class: 'muted hint' }, t(hintKey)));
   }
 
+  function checkField(labelKey, hintKey, checked, onValue) {
+    return h('div', { class: 'field' },
+      h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: checked, onchange: function (ev) { onValue(ev.target.checked); } }), h('span', null, t(labelKey))),
+      h('p', { class: 'muted hint' }, t(hintKey)));
+  }
+
   function langGroup(model, onChange) {
     const radios = cat.LANGS.map(function (code) {
       return h('label', { class: 'seg' },
@@ -68,12 +74,15 @@
       n: numberField('ov-count', 'overlays.count', 'overlays.count_hint',
         { min: String(lim.n.min), max: String(lim.n.max), step: '1', placeholder: String(cat.DEFAULTS.n), value: model.n },
         function (v) { onChange({ n: v }); }),
+      best: checkField('overlays.best', 'overlays.best_hint', model.best, function (v) { onChange({ best: v }); }),
+      sound: checkField('overlays.sound', 'overlays.sound_hint', model.sound, function (v) { onChange({ sound: v }); }),
       hide: hideGroup(model, onChange),
     };
     const root = h('div', { class: 'overlay-options' }, h('h3', { class: 'card-label' }, t('overlays.options')),
       Object.keys(parts).map(function (k) { return parts[k]; }));
     function sync(overlay) {
       Object.keys(parts).forEach(function (k) { parts[k].hidden = overlay.params.indexOf(k) < 0; });
+      parts.autohide.querySelector('.hint').textContent = t(overlay.autohide ? 'overlays.autohide_alert_hint' : 'overlays.autohide_hint');
     }
     return { el: root, sync: sync };
   }

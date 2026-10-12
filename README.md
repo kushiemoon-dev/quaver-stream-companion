@@ -79,6 +79,7 @@ The full walkthrough, with troubleshooting, is in the [OBS setup guide](docs/OBS
 | Result | 520 x 230 | `/overlays/result/` |
 | History | 520 x 180 | `/overlays/history/` |
 | State | 280 x 64 | `/overlays/state/` |
+| Alert | 520 x 120 | `/overlays/alert/` |
 
 Each link starts with `http://127.0.0.1:7878`. Use the size as the width and height of the OBS Browser source.
 
@@ -110,10 +111,10 @@ A **Twitch** tab is shown as "coming soon"; nothing behind it exists yet. The da
 
 ## Themes
 
-The overlay comes with 10 built-in themes, and you can add your own.
+The overlay comes with 11 built-in themes, and you can add your own.
 
 <p align="center">
-  <img src="docs/screenshots/themes.png" alt="The ten built-in overlay themes shown side by side on the Overlays page" width="800">
+  <img src="docs/screenshots/themes.png" alt="The built-in overlay themes shown side by side on the Overlays page" width="800">
 </p>
 
 | Theme id | Palette |
@@ -128,6 +129,7 @@ The overlay comes with 10 built-in themes, and you can add your own.
 | `gruvbox` | Gruvbox |
 | `rose-pine` | Rose Pine |
 | `pixel` | Original, with the VT323 font |
+| `neon-cosy` | Original, dark violet with soft neon glow |
 
 **Make your own.** A theme is one small CSS file of variables. Drop it in the `themes` folder next to your config file and select it with `?theme=<id>`. See the [theme guide](docs/THEMES.md).
 
@@ -256,7 +258,7 @@ The server only answers requests whose Host is `127.0.0.1:<port>` or `localhost:
 - [ ] Replay analysis after each play (timing graph, early / late split)
 - [ ] Quaver public API: profile, rank
 - [ ] Optional Twitch module: chat commands (`!map`, `!last`, `!pb`) and personal best / full combo alerts
-- [x] 10 ready-made themes (Catppuccin, Tokyo Night, Dracula, Nord, Gruvbox, Rose Pine, Pixel...) and a guide to make your own
+- [x] 11 ready-made themes (Catppuccin, Tokyo Night, Dracula, Nord, Gruvbox, Rose Pine, Pixel, Neon Cosy...) and a guide to make your own
 - [ ] Windows `.exe` and Linux AppImage releases
 
 ---

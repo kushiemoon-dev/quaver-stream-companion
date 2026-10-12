@@ -1,6 +1,6 @@
 # Themes
 
-A theme is a small CSS file that sets a few variables (tokens) on `:root`. The overlay reads those tokens for its colors, border, corners, shadow and font, so one file changes the whole look. QuaverStreamCompanion ships 10 built-in themes and also loads your own.
+A theme is a small CSS file that sets a few variables (tokens) on `:root`. The overlay reads those tokens for its colors, border, corners, shadow and font, so one file changes the whole look. QuaverStreamCompanion ships 11 built-in themes and also loads your own.
 
 ## Tokens
 
@@ -56,7 +56,7 @@ Files are read each time they are requested, so edits show up on the next load. 
 - In OBS, add `?theme=<id>` to the browser source URL, for example `http://127.0.0.1:7878/overlays/now-playing/?theme=my-theme`.
 - Or pick a theme on the Overlays page and use "Save as default". Sources without `?theme=` then use that default.
 
-Size the OBS browser source larger than the card, at least 540 x 140 for the default card, so a large shadow (like the hard shadow of the Pixel theme) is not clipped.
+Size the OBS browser source larger than the card, at least 540 x 140 for the default card, so a large shadow (like the hard shadow of the Pixel theme or the glow of Neon Cosy) is not clipped.
 
 ## Contrast
 
@@ -93,5 +93,6 @@ Built-in themes must not use remote resources.
 | Rose Pine | [Rose Pine](https://rosepinetheme.com) | MIT |
 | Neutral Light, Neutral Dark | Original | MIT (this project) |
 | Pixel | Original palette, font VT323 by Peter Hull | SIL Open Font License 1.1 (font) |
+| Neon Cosy | Original | MIT (this project) |
 
 The Pixel font license is in [`web/themes/fonts/OFL.txt`](../web/themes/fonts/OFL.txt).

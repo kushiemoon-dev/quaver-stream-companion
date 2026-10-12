@@ -29,7 +29,7 @@ type Theme struct {
 	Colors Colors `json:"colors"`
 }
 
-var builtinOrder = []string{"neutral-light", "neutral-dark", "catppuccin-mocha", "catppuccin-latte", "tokyo-night", "dracula", "nord", "gruvbox", "rose-pine", "pixel"}
+var builtinOrder = []string{"neutral-light", "neutral-dark", "catppuccin-mocha", "catppuccin-latte", "tokyo-night", "dracula", "nord", "gruvbox", "rose-pine", "pixel", "neon-cosy"}
 
 var (
 	rootBlock = regexp.MustCompile(`:root\s*\{([^}]*)\}`)

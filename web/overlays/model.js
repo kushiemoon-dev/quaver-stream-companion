@@ -74,7 +74,9 @@
     return isFinite(n) && n > 0 ? clamp(n, 0.5, 3) : 1;
   }
 
-  function parseAutohide(raw) {
+  // fallback applies only when the parameter is absent or empty.
+  function parseAutohide(raw, fallback) {
+    if ((raw === null || raw === undefined || raw === '') && fallback !== undefined) return fallback;
     const n = Math.floor(num(raw));
     return isFinite(n) && n > 0 ? Math.min(n, 3600) : 0;
   }
@@ -128,6 +130,18 @@
     };
   }
 
+  const ALERT_KINDS = [['is_pb', 'pb'], ['full_combo', 'fc']];
+  const ALERT_BLOCKERS = ['failed', 'paused', 'autoplay'];
+
+  // A saved score earns an alert when it is a personal best or a full combo, and was not failed, paused or autoplayed.
+  function alertView(result) {
+    if (result === null || typeof result !== 'object') return null;
+    if (ALERT_BLOCKERS.some(function (k) { return result[k] === true; })) return null;
+    const kinds = ALERT_KINDS.filter(function (k) { return result[k[0]] === true; }).map(function (k) { return k[1]; });
+    if (kinds.length === 0) return null;
+    return { kinds: kinds, title: text(obj(result.map).title), accuracy: formatAccuracy(obj(result.score).accuracy) };
+  }
+
   // Input is newest first (the API order); the curve runs oldest left to newest right.
   function curve(plays, width, height) {
     const list = (Array.isArray(plays) ? plays : []).slice(0, MAX_COUNT).reverse()
@@ -162,6 +176,13 @@
     };
   }
 
+  // The dashed line at the best accuracy of the window, from a curve() result.
+  function bestLine(c) {
+    if (!c || c.points.length === 0) return null;
+    const top = c.points.reduce(function (a, p) { return p.accuracy > a.accuracy ? p : a; });
+    return { y: top.y, x1: c.left, x2: c.right, text: formatAccuracy(top.accuracy) };
+  }
+
   // seconds <= 0 disables it. The clock is injectable for tests.
   function createAutohide(seconds, clock, onHide) {
     let timer = null;
@@ -183,7 +204,7 @@
     formatStars: formatStars, modList: modList, judgments: judgments, parseCount: parseCount,
     parseScale: parseScale, parseAutohide: parseAutohide, parseLang: parseLang, parseHide: parseHide,
     isHiddenState: isHiddenState, stateKey: stateKey, stateTone: stateTone, resultView: resultView,
-    curve: curve, createAutohide: createAutohide,
+    curve: curve, createAutohide: createAutohide, alertView: alertView, bestLine: bestLine,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else window.qscModel = api;

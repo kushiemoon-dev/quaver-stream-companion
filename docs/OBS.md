@@ -23,6 +23,7 @@ The overlays are web pages served by `qsc`. In OBS each one is a Browser source.
 | Result | 520 x 230 | `http://127.0.0.1:7878/overlays/result/` |
 | History | 520 x 180 | `http://127.0.0.1:7878/overlays/history/` |
 | State | 280 x 64 | `http://127.0.0.1:7878/overlays/state/` |
+| Alert | 520 x 120 | `http://127.0.0.1:7878/overlays/alert/` |
 
 Replace the port if you changed it. Options such as `scale`, `autohide` or `lang` are added by the Overlays page.
 

@@ -12,6 +12,7 @@
     'gruvbox': 'Gruvbox',
     'rose-pine': 'Rose Pine',
     'pixel': 'Pixel',
+    'neon-cosy': 'Neon Cosy',
   };
   const ORDER = Object.keys(NAMES);
 

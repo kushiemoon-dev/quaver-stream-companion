@@ -52,6 +52,11 @@
     root.appendChild(svgText({ class: 'tick', x: c.left - 4, y: yTop + 4, 'text-anchor': 'end' }, String(c.yMax)));
     root.appendChild(svgText({ class: 'tick', x: c.left - 4, y: yBottom + 4, 'text-anchor': 'end' }, String(c.yMin)));
     root.appendChild(svg('line', { class: 'avg', x1: c.left, x2: c.right, y1: c.avgY, y2: c.avgY }));
+    const best = params.best ? qscModel.bestLine(c) : null;
+    if (best) {
+      root.appendChild(svg('line', { class: 'best', x1: best.x1, x2: best.x2, y1: best.y, y2: best.y }));
+      root.appendChild(svgText({ class: 'tick', x: best.x1 + 4, y: (best.y < yTop + 12 ? best.y + 12 : best.y - 4).toFixed(1), 'text-anchor': 'start' }, best.text));
+    }
     root.appendChild(svg('polyline', { class: 'line-path', points: c.points.map(function (p) { return p.x.toFixed(1) + ',' + p.y.toFixed(1); }).join(' ') }));
     c.points.forEach(function (p) {
       root.appendChild(svg('circle', { class: 'dot-' + qscModel.gradeClass(p.grade), cx: p.x.toFixed(1), cy: p.y.toFixed(1), r: p.last ? 6 : 3.5 }));
