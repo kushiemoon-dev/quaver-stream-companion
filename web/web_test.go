@@ -62,11 +62,13 @@ func TestDashboardFilesExist(t *testing.T) {
 	for _, p := range []string{
 		"dashboard/index.html",
 		"dashboard/style.css",
+		"dashboard/favicon.svg",
 		"dashboard/app.js",
 		"dashboard/api.js",
 		"dashboard/i18n.js",
 		"dashboard/pages/status.js",
 		"dashboard/pages/overlay-url.js",
+		"dashboard/pages/theme-model.js",
 		"dashboard/pages/overlays.js",
 		"dashboard/pages/history-model.js",
 		"dashboard/pages/history.js",
@@ -243,6 +245,7 @@ func TestCommonJSValidatesParamsAndFetchesSavedDefaults(t *testing.T) {
 		"/^[a-z0-9-]+$/",
 		"/^[0-9a-fA-F]{3,8}$/",
 		"fetch('/api/config'",
+		"!isDemo && !(urlTheme && urlAccent)",
 		"AbortController",
 		"FALLBACK_THEME = 'neutral-light'",
 		"visibility = 'hidden'",
@@ -477,5 +480,26 @@ func TestDiagnoseFixedDetailsAreTranslated(t *testing.T) {
 				t.Errorf("%s.json is missing %q", lang, entry[1])
 			}
 		}
+	}
+}
+
+func TestCommonJSFallsBackOnceWhenThemeFailsToLoad(t *testing.T) {
+	data, err := fs.ReadFile(FS, "overlays/common.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := string(data)
+	for _, want := range []string{
+		"link.onerror = function ()",
+		"theme !== FALLBACK_THEME",
+		"applyLook(FALLBACK_THEME, accent)",
+		"setTimeout(reveal, REVEAL_TIMEOUT_MS)",
+	} {
+		if !strings.Contains(src, want) {
+			t.Errorf("common.js is missing %q", want)
+		}
+	}
+	if strings.Contains(src, "link.onerror = reveal") {
+		t.Error("a failed theme must fall back before revealing")
 	}
 }

@@ -1,0 +1,16 @@
+@font-face {
+  font-family: "VT323";
+  src: url("fonts/VT323-Regular.ttf") format("truetype");
+  font-display: swap;
+}
+:root {
+  --bg: #1b1b3a;
+  --fg: #ffffff;
+  --muted: #b8b8e0;
+  --accent: #ffcc00;
+  --border: 4px solid #ffffff;
+  --radius: 0;
+  --shadow: 6px 6px 0 #000000;
+  --font: "VT323", ui-monospace, "Courier New", monospace;
+  --scale: 1.3;
+}

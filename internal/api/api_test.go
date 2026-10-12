@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"slices"
 	"strings"
@@ -18,6 +19,8 @@ import (
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/scores"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/state"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/testutil"
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/themes"
+	"github.com/kushiemoon-dev/quaver-stream-companion/web"
 )
 
 type env struct {
@@ -42,7 +45,7 @@ func newEnv(t *testing.T, opts ...opt) env {
 		ConfigPath: cfgPath,
 		Effective:  func() string { return q.Path },
 		Detect:     func() string { return q.Path },
-		Themes:     []string{"neutral-light", "dark"},
+		Themes:     func() []themes.Theme { return testThemes },
 		Port:       testPort,
 	}
 	for _, o := range opts {
@@ -442,16 +445,6 @@ func TestHistoryNilFunc(t *testing.T) {
 	}
 }
 
-func TestThemes(t *testing.T) {
-	e := newEnv(t)
-	var got []string
-	w := e.get("/api/themes")
-	decode(t, w, &got)
-	if w.Code != 200 || len(got) != 2 || got[0] != "neutral-light" {
-		t.Fatalf("code %d got %v", w.Code, got)
-	}
-}
-
 func TestMethodsAndUnknownPaths(t *testing.T) {
 	e := newEnv(t)
 	hdr := map[string]string{"Content-Type": "application/json", "X-Requested-With": "qsc"}
@@ -483,6 +476,102 @@ func TestRestartRequiredIgnoresSpellingOfSameFolder(t *testing.T) {
 		decode(t, e.put(string(body), nil), &got)
 		if got.RestartRequired {
 			t.Errorf("%q is the folder already in use: no restart needed", dir)
+		}
+	}
+}
+
+var testThemes = []themes.Theme{
+	{ID: "neutral-light", Source: themes.SourceBuiltin, Colors: themes.Colors{BG: "#fff", FG: "#111111", Accent: "#a855f7"}},
+	{ID: "dark", Source: themes.SourceBuiltin},
+	{ID: "mine", Source: themes.SourceCustom, Colors: themes.Colors{BG: "#000", FG: "#fff", Accent: "#f00"}},
+}
+
+func TestThemes(t *testing.T) {
+	e := newEnv(t)
+	var got []themes.Theme
+	w := e.get("/api/themes")
+	decode(t, w, &got)
+	if w.Code != 200 || !reflect.DeepEqual(got, testThemes) {
+		t.Fatalf("code %d got %+v", w.Code, got)
+	}
+	if body := w.Body.String(); !strings.Contains(body, `"colors":{"bg":"","fg":"","accent":""}`) || !strings.Contains(body, `"source":"custom"`) {
+		t.Fatalf("body %s", body)
+	}
+}
+
+func TestThemesEmptyIsAnArray(t *testing.T) {
+	e := newEnv(t, func(d *Deps) { d.Themes = nil })
+	if w := e.get("/api/themes"); strings.TrimSpace(w.Body.String()) != "[]" {
+		t.Fatalf("body %q", w.Body.String())
+	}
+}
+
+func TestPutAcceptsEveryBuiltinThemeAndRejectsTraversal(t *testing.T) {
+	built := themes.Builtin(web.FS)
+	if len(built) != 10 {
+		t.Fatalf("built-in themes = %d", len(built))
+	}
+	e := newEnv(t, func(d *Deps) { d.Themes = func() []themes.Theme { return built } })
+	for _, th := range built {
+		if w := e.put(`{"port":5555,"overlay":{"theme":"`+th.ID+`"}}`, nil); w.Code != 200 {
+			t.Errorf("%s: code %d %s", th.ID, w.Code, w.Body)
+		}
+	}
+	w := e.put(`{"port":5555,"overlay":{"theme":"../x"}}`, nil)
+	if w.Code != 400 || !strings.Contains(w.Body.String(), "overlay.theme") {
+		t.Fatalf("code %d %s", w.Code, w.Body)
+	}
+}
+
+func TestCustomThemesAreListedLiveAndAcceptedByValidation(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "themes")
+	live := func() []themes.Theme { return themes.Merge(testThemes, dir) }
+	e := newEnv(t, func(d *Deps) { d.Themes = live; d.ThemesDir = dir })
+	if w := e.put(`{"port":5555,"overlay":{"theme":"fresh"}}`, nil); w.Code != 400 {
+		t.Fatalf("unknown theme: %d %s", w.Code, w.Body)
+	}
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "fresh.css"), []byte(":root{--bg:#123456}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if w := e.get("/api/themes"); !strings.Contains(w.Body.String(), `"id":"fresh","source":"custom","colors":{"bg":"#123456"`) {
+		t.Fatalf("themes %s", w.Body)
+	}
+	if w := e.put(`{"port":5555,"overlay":{"theme":"fresh"}}`, nil); w.Code != 200 {
+		t.Fatalf("custom theme: %d %s", w.Code, w.Body)
+	}
+	if w := e.put(`{"port":5555,"overlay":{"theme":"../x"}}`, nil); w.Code != 400 {
+		t.Fatalf("traversal: %d %s", w.Code, w.Body)
+	}
+}
+
+func TestGetConfigReturnsThemesDir(t *testing.T) {
+	e := newEnv(t, func(d *Deps) { d.ThemesDir = "/some/dir/themes" })
+	var got struct {
+		ThemesDir string `json:"themes_dir"`
+	}
+	if err := json.Unmarshal(e.get("/api/config").Body.Bytes(), &got); err != nil || got.ThemesDir != "/some/dir/themes" {
+		t.Fatalf("got %+v %v", got, err)
+	}
+}
+
+func TestPutKeepsMissingSavedThemeButRejectsChangedUnknownTheme(t *testing.T) {
+	e := newEnv(t)
+	if err := os.MkdirAll(filepath.Dir(e.cfgPath), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(e.cfgPath, []byte(`{"port":5555,"overlay":{"theme":"gone"}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if w := e.put(`{"port":5555,"language":"fr","overlay":{"theme":"gone"}}`, nil); w.Code != 200 {
+		t.Fatalf("unchanged missing theme: %d %s", w.Code, w.Body)
+	}
+	for _, id := range []string{"other-gone", "../x"} {
+		w := e.put(`{"port":5555,"overlay":{"theme":"`+id+`"}}`, nil)
+		if w.Code != 400 || !strings.Contains(w.Body.String(), "overlay.theme") {
+			t.Fatalf("%s: %d %s", id, w.Code, w.Body)
 		}
 	}
 }

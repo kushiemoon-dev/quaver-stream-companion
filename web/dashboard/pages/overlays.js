@@ -3,6 +3,7 @@
   const t = qsc.t;
   const h = qsc.h;
   const url = window.qscOverlayUrl;
+  const tm = window.qscThemeModel;
   const FALLBACK_THEME = 'neutral-light';
   const PICKER_START = '#a855f7';
   const TIMEOUT_MS = 8000;
@@ -171,12 +172,36 @@
     if (id === mountId) ui.reload.disabled = false;
   }
 
+  function swatch(color) {
+    const el = h('span', { class: color ? 'theme-swatch' : 'theme-swatch is-empty' });
+    if (color) el.style.setProperty('--sw', color);
+    return el;
+  }
+
+  function onTheme(ev) {
+    if (!ev.target.checked) return;
+    model = Object.assign({}, model, { theme: ev.target.value });
+    clearSaved();
+    refreshUrl();
+    refreshPreview();
+  }
+
+  function themeCard(card) {
+    const tags = [];
+    if (card.isDefault) tags.push(h('span', { class: 'pill pill-ok' }, t('overlays.theme_default')));
+    if (card.custom) tags.push(h('span', { class: 'pill pill-muted' }, t('overlays.theme_custom')));
+    return h('label', { class: 'theme-card' },
+      h('input', { type: 'radio', class: 'theme-input', name: 'ov-theme', value: card.id, checked: card.selected, onchange: onTheme }),
+      h('span', { class: 'theme-body' },
+        h('span', { class: 'theme-swatches', 'aria-hidden': 'true' },
+          swatch(card.colors.bg), swatch(card.colors.fg), swatch(card.colors.accent)),
+        h('span', { class: 'theme-name' }, card.name),
+        tags.length > 0 && h('span', { class: 'theme-tags' }, tags)));
+  }
+
   function refreshThemeOptions() {
-    ui.theme.replaceChildren.apply(ui.theme, model.themes.map(function (name) {
-      const label = name === model.defaultTheme ? t('overlays.theme_default', { name: name }) : name;
-      return h('option', { value: name, selected: name === model.theme }, label);
-    }));
-    ui.theme.value = model.theme;
+    const cards = tm.buildCards(model.themes, model.theme, model.defaultTheme);
+    ui.grid.replaceChildren.apply(ui.grid, cards.map(themeCard));
   }
 
   function buildCard() {
@@ -184,12 +209,7 @@
       url: h('input', { id: 'ov-url', class: 'url-input', type: 'text', readonly: true, spellcheck: 'false' }),
       copy: h('button', { type: 'button', class: 'btn', 'aria-label': t('overlays.copy_aria'), onclick: onCopy }, t('overlays.copy')),
       copyStatus: h('p', { class: 'muted status-line', role: 'status', 'aria-live': 'polite' }),
-      theme: h('select', { id: 'ov-theme', onchange: function (ev) {
-        model = Object.assign({}, model, { theme: ev.target.value });
-        clearSaved();
-        refreshUrl();
-        refreshPreview();
-      } }),
+      grid: h('div', { class: 'theme-grid' }),
       picker: h('input', { id: 'ov-accent', type: 'color', class: 'picker', oninput: function (ev) {
         setAccent(url.normalizeAccent(ev.target.value), true);
       } }),
@@ -218,7 +238,8 @@
       h('div', { class: 'overlay-body' },
         h('div', { class: 'controls' },
           h('h3', { class: 'card-label' }, t('overlays.appearance')),
-          field('ov-theme', 'overlays.theme', ui.theme),
+          h('fieldset', { class: 'theme-picker' }, h('legend', null, t('overlays.theme')), ui.grid),
+          model.themesDir && h('p', { class: 'muted hint' }, t('overlays.themes_dir_help'), ' ', h('code', null, qsc.pathNodes(model.themesDir))),
           h('div', { class: 'accent-row' },
             field('ov-accent', 'overlays.accent', ui.picker),
             field('ov-hex', 'overlays.accent_hex', ui.hex)),
@@ -248,11 +269,10 @@
       const overlay = (res[1].config && res[1].config.overlay) || {};
       const theme = overlay.theme || FALLBACK_THEME;
       const accent = url.normalizeAccent(overlay.accent || '');
-      const themes = Array.isArray(res[0]) ? res[0].slice() : [];
-      if (themes.indexOf(theme) < 0) themes.unshift(theme);
-      model = { themes: themes, theme: theme, accent: accent, defaultTheme: theme, defaultAccent: accent };
+      model = { themes: Array.isArray(res[0]) ? res[0] : [], themesDir: res[1].themes_dir || '', theme: theme, accent: accent, defaultTheme: theme, defaultAccent: accent };
       root.replaceChildren(buildCard());
-      if (refocus) ui.theme.focus();
+      const target = ui.grid.querySelector('.theme-input:checked') || ui.grid.querySelector('.theme-input');
+      if (refocus && target) target.focus();
     } catch (e) {
       if (id !== mountId) return;
       showFailure(root, e);

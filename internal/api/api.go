@@ -17,6 +17,7 @@ import (
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/diagnose"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/scores"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/state"
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/themes"
 )
 
 const (
@@ -37,9 +38,12 @@ type Deps struct {
 	Detect func() string
 	// PortFlag and QuaverDirFlag tell that the setting came from a command-line flag.
 	PortFlag, QuaverDirFlag bool
-	Themes                  []string
-	SteamRoots              []string
-	Port                    int
+	// Themes lists the selectable overlay themes in display order; it is called per request.
+	Themes func() []themes.Theme
+	// ThemesDir is the custom themes folder shown to the dashboard.
+	ThemesDir  string
+	SteamRoots []string
+	Port       int
 }
 
 type errBody struct {
@@ -146,6 +150,7 @@ func (a api) getConfig(w http.ResponseWriter, r *http.Request) {
 		"effective":        map[string]any{"quaver_dir": a.d.Effective(), "port": a.d.Port},
 		"restart_required": a.restartRequired(c),
 		"overridden":       a.overridden(),
+		"themes_dir":       a.d.ThemesDir,
 	})
 }
 
@@ -171,7 +176,12 @@ func (a api) putConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c = config.Normalize(c)
-	if err := c.Validate(a.d.Themes); err != nil {
+	ids := themes.IDs(a.themeList())
+	// Keep accepting the saved theme while its file is missing, so other settings still save.
+	if saved, e := config.Load(a.d.ConfigPath); e == nil && saved.Overlay.Theme == c.Overlay.Theme && themes.UserID.MatchString(c.Overlay.Theme) {
+		ids = append(ids, c.Overlay.Theme)
+	}
+	if err := c.Validate(ids); err != nil {
 		var fe *config.FieldError
 		if errors.As(err, &fe) {
 			writeError(w, http.StatusBadRequest, fe.Msg, fe.Field)
@@ -246,9 +256,16 @@ func (a api) history(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a api) themes(w http.ResponseWriter, r *http.Request) {
-	themes := a.d.Themes
-	if themes == nil {
-		themes = []string{}
+	list := a.themeList()
+	if list == nil {
+		list = []themes.Theme{}
 	}
-	writeJSON(w, http.StatusOK, themes)
+	writeJSON(w, http.StatusOK, list)
+}
+
+func (a api) themeList() []themes.Theme {
+	if a.d.Themes == nil {
+		return nil
+	}
+	return a.d.Themes()
 }

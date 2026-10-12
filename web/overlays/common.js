@@ -7,6 +7,7 @@
   const root = document.documentElement;
   const params = new URLSearchParams(location.search);
 
+  const isDemo = params.get('demo') === '1';
   const urlTheme = THEME_RE.test(params.get('theme') || '') ? params.get('theme') : '';
   const urlAccent = ACCENT_RE.test(params.get('accent') || '') ? params.get('accent') : '';
 
@@ -24,7 +25,11 @@
     link.rel = 'stylesheet';
     link.href = '/themes/' + theme + '.css';
     link.onload = reveal;
-    link.onerror = reveal;
+    link.onerror = function () {
+      link.remove();
+      if (theme !== FALLBACK_THEME) applyLook(FALLBACK_THEME, accent);
+      else reveal();
+    };
     document.head.appendChild(link);
     if (accent) root.style.setProperty('--accent', '#' + accent);
   }
@@ -48,7 +53,7 @@
 
   let defaults = Promise.resolve({});
   try {
-    if (!(urlTheme && urlAccent)) defaults = fetchDefaults();
+    if (!isDemo && !(urlTheme && urlAccent)) defaults = fetchDefaults();
   } catch (e) {
     reveal();
   }

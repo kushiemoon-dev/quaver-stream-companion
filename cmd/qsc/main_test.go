@@ -8,11 +8,13 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/testutil"
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/themes"
 )
 
 func TestMain(m *testing.M) {
@@ -411,5 +413,53 @@ func TestUnreadableConfigIsNotReportedAsInvalid(t *testing.T) {
 	}
 	if !strings.Contains(errw.String(), "cannot read config") || strings.Contains(errw.String(), "invalid config") {
 		t.Fatalf("stderr = %q", errw.String())
+	}
+}
+
+func TestMissingDefaultThemeNeverBlocksStartup(t *testing.T) {
+	d := testutil.NewQuaverDir(t)
+	cfg := writeConfig(t, `{"overlay": {"theme": "gone-theme"}}`)
+	var errw bytes.Buffer
+	o, code := parseFlags("serve", true, []string{"--config", cfg}, &errw)
+	if code != -1 || o.configPath != cfg {
+		t.Fatalf("code = %d, stderr = %q", code, errw.String())
+	}
+	want := "warning: default theme \"gone-theme\" not found, using neutral-light\n"
+	if errw.String() != want {
+		t.Fatalf("stderr = %q", errw.String())
+	}
+	var out bytes.Buffer
+	errw.Reset()
+	args := []string{"doctor", "--config", cfg, "--quaver-dir", d.Path, "--port", fmt.Sprint(freePort(t))}
+	if code := run(context.Background(), args, &out, &errw); code != 0 || !strings.Contains(errw.String(), "gone-theme") {
+		t.Fatalf("doctor: code = %d\n%s%s", code, out.String(), errw.String())
+	}
+}
+
+func TestSyntaxInvalidDefaultThemeStillFails(t *testing.T) {
+	for _, id := range []string{"../x", "UP", "a b"} {
+		cfg := writeConfig(t, fmt.Sprintf(`{"overlay": {"theme": %q}}`, id))
+		var errw bytes.Buffer
+		if _, code := parseFlags("serve", true, []string{"--config", cfg}, &errw); code != 1 || !strings.Contains(errw.String(), "invalid config") {
+			t.Errorf("%q: code = %d, stderr = %q", id, code, errw.String())
+		}
+	}
+}
+
+func TestStartupAcceptsCustomThemeFromConfigFolder(t *testing.T) {
+	cfg := writeConfig(t, `{"overlay": {"theme": "mine"}}`)
+	themesDir := filepath.Join(filepath.Dir(cfg), "themes")
+	if err := os.Mkdir(themesDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(themesDir, "mine.css"), []byte(":root{--bg:#123}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(themes.IDs(availableThemes(cfg)), "mine") {
+		t.Fatal("availableThemes does not list the custom theme")
+	}
+	var errw bytes.Buffer
+	if _, code := parseFlags("serve", true, []string{"--config", cfg}, &errw); code != -1 || errw.Len() != 0 {
+		t.Fatalf("code = %d, stderr = %q", code, errw.String())
 	}
 }

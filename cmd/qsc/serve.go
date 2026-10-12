@@ -22,6 +22,7 @@ import (
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/scores"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/server"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/state"
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/themes"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/version"
 	"github.com/kushiemoon-dev/quaver-stream-companion/web"
 )
@@ -104,13 +105,14 @@ func serve(ctx context.Context, args []string, out, errw io.Writer) int {
 		},
 		PortFlag:      opts.portFlag,
 		QuaverDirFlag: opts.quaverDirFlag,
-		Themes:        availableThemes,
+		Themes:        func() []themes.Theme { return availableThemes(opts.configPath) },
+		ThemesDir:     themes.UserDir(opts.configPath),
 		SteamRoots:    paths.DefaultSteamRoots(),
 		Port:          opts.port,
 	})
 	srv := &http.Server{
 		Handler: server.New(b, st.Snapshot, web.FS,
-			server.WithAPI(apiHandler, opts.port), server.WithDashboard(dashboard)),
+			server.WithAPI(apiHandler, opts.port), server.WithDashboard(dashboard), server.WithThemesDir(themes.UserDir(opts.configPath))),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 	go func() {

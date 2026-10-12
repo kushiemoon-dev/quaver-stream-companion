@@ -6,13 +6,11 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
-	"path"
 	"slices"
-	"strings"
 
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/config"
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/themes"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/version"
 	"github.com/kushiemoon-dev/quaver-stream-companion/web"
 )
@@ -93,7 +91,13 @@ func parseFlags(name string, serving bool, args []string, errw io.Writer) (optio
 		// The folder is checked later by paths.Find, so a stale saved folder cannot hide a good flag or block doctor.
 		checked := cfg
 		checked.QuaverDir = ""
-		if err = checked.Validate(availableThemes); err != nil {
+		ids := themes.IDs(availableThemes(o.configPath))
+		// A missing default theme only falls back to neutral-light; its syntax is still checked.
+		if t := cfg.Overlay.Theme; themes.UserID.MatchString(t) && !slices.Contains(ids, t) {
+			fmt.Fprintf(errw, "warning: default theme %q not found, using neutral-light\n", t)
+			ids = append(ids, t)
+		}
+		if err = checked.Validate(ids); err != nil {
 			err = fmt.Errorf("%s: %w", o.configPath, err)
 		}
 	}
@@ -110,16 +114,9 @@ func parseFlags(name string, serving bool, args []string, errw io.Writer) (optio
 	return o, -1
 }
 
-// availableThemes lists the overlay themes a config file may select.
-var availableThemes = themeNames(web.FS)
+var builtinThemes = themes.Builtin(web.FS)
 
-// themeNames lists the themes/*.css files of fsys without the extension, sorted.
-func themeNames(fsys fs.FS) []string {
-	files, _ := fs.Glob(fsys, "themes/*.css")
-	names := make([]string, 0, len(files))
-	for _, f := range files {
-		names = append(names, strings.TrimSuffix(path.Base(f), ".css"))
-	}
-	slices.Sort(names)
-	return names
+// availableThemes lists the overlay themes a config file may select: the built-in ones and the custom ones next to the config file.
+func availableThemes(configPath string) []themes.Theme {
+	return themes.Merge(builtinThemes, themes.UserDir(configPath))
 }

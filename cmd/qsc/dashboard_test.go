@@ -13,25 +13,14 @@ import (
 	"strings"
 	"sync"
 	"testing"
-	"testing/fstest"
 	"time"
 
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/testutil"
-	"github.com/kushiemoon-dev/quaver-stream-companion/web"
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/themes"
 )
 
-func TestThemeNamesFromEmbeddedFS(t *testing.T) {
-	if got := themeNames(web.FS); !slices.Equal(got, []string{"neutral-light"}) {
-		t.Fatalf("themes = %v", got)
-	}
-	fsys := fstest.MapFS{
-		"themes/b.css":     {},
-		"themes/a.css":     {},
-		"themes/readme.md": {},
-		"themes/sub/c.css": {},
-		"other/z.css":      {},
-	}
-	if got := themeNames(fsys); !slices.Equal(got, []string{"a", "b"}) {
+func TestAvailableThemesAreTheBuiltInOnes(t *testing.T) {
+	if got := themes.IDs(availableThemes("")); !slices.Equal(got, []string{"neutral-light", "neutral-dark", "catppuccin-mocha", "catppuccin-latte", "tokyo-night", "dracula", "nord", "gruvbox", "rose-pine", "pixel"}) {
 		t.Fatalf("themes = %v", got)
 	}
 }

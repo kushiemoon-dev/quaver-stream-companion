@@ -17,10 +17,10 @@ html, body {
 }
 .card.hidden { display: none; }
 .title {
-  font-size: 20px;
+  font-size: calc(20px * var(--scale, 1));
   font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.sub { margin-top: 2px; font-size: 14px; color: var(--muted); }
+.sub { margin-top: 2px; font-size: calc(14px * var(--scale, 1)); color: var(--muted); }

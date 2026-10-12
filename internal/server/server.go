@@ -1,16 +1,19 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/fs"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/api"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/bus"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/state"
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/themes"
 )
 
 const keepAliveEvery = 15 * time.Second
@@ -19,6 +22,7 @@ type settings struct {
 	api       http.Handler
 	port      int
 	dashboard fs.FS
+	themesDir string
 }
 
 // Option customizes New.
@@ -28,6 +32,11 @@ type Option func(*settings)
 // the whole server against the given port.
 func WithAPI(h http.Handler, port int) Option {
 	return func(s *settings) { s.api, s.port = h, port }
+}
+
+// WithThemesDir serves the custom themes of dir before the embedded ones on /themes/.
+func WithThemesDir(dir string) Option {
+	return func(s *settings) { s.themesDir = dir }
 }
 
 // WithDashboard serves the files of dashboard on /.
@@ -51,7 +60,7 @@ func New(b *bus.Bus, snap func() state.Snapshot, assets fs.FS, opts ...Option) h
 	mux.HandleFunc("GET /events", events(b, snap))
 	files := http.FileServerFS(assets)
 	mux.Handle("GET /overlays/", files)
-	mux.Handle("GET /themes/", files)
+	mux.Handle("GET /themes/", publicAssets(userThemes(cfg.themesDir, files)))
 	if cfg.dashboard != nil {
 		mux.Handle("/", withCSP(readOnly(http.FileServerFS(cfg.dashboard))))
 	}
@@ -125,6 +134,35 @@ func readOnly(next http.Handler) http.Handler {
 			w.Header().Set("Allow", "GET, HEAD")
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// publicAssets opens CORS on static files that sandboxed previews with an opaque origin must load (fonts need it) and forbids content sniffing.
+func publicAssets(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		next.ServeHTTP(w, r)
+	})
+}
+
+// userThemes answers /themes/<id>.css from the custom folder when it has a valid file, and defers to next otherwise.
+func userThemes(dir string, next http.Handler) http.Handler {
+	if dir == "" {
+		return next
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if id, ok := strings.CutPrefix(r.URL.Path, "/themes/"); ok {
+			if id, ok = strings.CutSuffix(id, ".css"); ok {
+				if data, mod, err := themes.ReadUser(dir, id); err == nil {
+					w.Header().Set("Content-Type", "text/css; charset=utf-8")
+					w.Header().Set("Cache-Control", "no-cache")
+					http.ServeContent(w, r, "", mod, bytes.NewReader(data))
+					return
+				}
+			}
 		}
 		next.ServeHTTP(w, r)
 	})

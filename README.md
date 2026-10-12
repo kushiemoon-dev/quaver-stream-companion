@@ -78,11 +78,38 @@ The dashboard is served at `http://127.0.0.1:7878/` and needs nothing but a brow
 | Page | What it does |
 |------|--------------|
 | **Status** | Live game state, current map, and the health of your setup |
-| **Overlays** | Copy the OBS browser source link, pick a theme and accent color, preview the result, and save it as your default look |
+| **Overlays** | Copy the OBS browser source link, pick a theme from the visual theme picker (built-in or your own custom themes) and an accent color, preview the result, and save it as your default look |
 | **History** | Your recent plays: map, difficulty with rate and mods, grade, accuracy, max combo and judgments |
 | **Settings** | Quaver folder, port and dashboard language |
 
 A **Twitch** tab is shown as "coming soon"; nothing behind it exists yet. The dashboard is available in English, French and German.
+
+---
+
+## Themes
+
+The overlay comes with 10 built-in themes, and you can add your own.
+
+<p align="center">
+  <img src="docs/screenshots/themes.png" alt="The ten built-in overlay themes shown side by side on the Overlays page" width="800">
+</p>
+
+| Theme id | Palette |
+|----------|---------|
+| `neutral-light` | Original |
+| `neutral-dark` | Original |
+| `catppuccin-mocha` | Catppuccin |
+| `catppuccin-latte` | Catppuccin |
+| `tokyo-night` | Tokyo Night |
+| `dracula` | Dracula |
+| `nord` | Nord |
+| `gruvbox` | Gruvbox |
+| `rose-pine` | Rose Pine |
+| `pixel` | Original, with the VT323 font |
+
+**Make your own.** A theme is one small CSS file of variables. Drop it in the `themes` folder next to your config file and select it with `?theme=<id>`. See the [theme guide](docs/THEMES.md).
+
+Palettes are credited to Catppuccin, Tokyo Night, Dracula, Nord, Gruvbox and Rose Pine (all MIT). The Pixel theme uses VT323 by Peter Hull (SIL Open Font License 1.1). Details in the [theme guide](docs/THEMES.md#credits-and-licenses).
 
 ---
 
@@ -155,7 +182,7 @@ Overlays take URL parameters:
 
 | Parameter | Example | Effect |
 |-----------|---------|--------|
-| `theme` | `?theme=neutral-light` | Pick a theme (more themes are planned); without it, the default saved on the Overlays page is used |
+| `theme` | `?theme=neutral-light` | Pick a theme by id (a built-in one or your own); without it, the default saved on the Overlays page is used |
 | `accent` | `?accent=ff6ac1` | Override the accent color (hex) |
 
 ---
@@ -207,7 +234,7 @@ The server only answers requests whose Host is `127.0.0.1:<port>` or `localhost:
 - [ ] Replay analysis after each play (timing graph, early / late split)
 - [ ] Quaver public API: profile, rank
 - [ ] Optional Twitch module: chat commands (`!map`, `!last`, `!pb`) and personal best / full combo alerts
-- [ ] 10 ready-made themes (Catppuccin, Tokyo Night, Dracula, Nord, Gruvbox, Rosé Pine, Pixel...) and a guide to make your own
+- [x] 10 ready-made themes (Catppuccin, Tokyo Night, Dracula, Nord, Gruvbox, Rose Pine, Pixel...) and a guide to make your own
 - [ ] Windows `.exe` and Linux AppImage releases
 
 ---

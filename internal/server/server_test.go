@@ -18,6 +18,7 @@ import (
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/bus"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/scores"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/state"
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/themes"
 )
 
 func newServer(t *testing.T) (*httptest.Server, *bus.Bus) {
@@ -153,6 +154,7 @@ func newGuarded(t *testing.T) *httptest.Server {
 	assets := fstest.MapFS{
 		"overlays/x/index.html": {Data: []byte("<p>hello overlay</p>")},
 		"themes/t.css":          {Data: []byte(":root{}")},
+		"themes/fonts/f.ttf":    {Data: []byte("font")},
 	}
 	dash := fstest.MapFS{"index.html": {Data: []byte("<title>dash</title>")}}
 	api := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { io.WriteString(w, "api:"+r.URL.Path) })
@@ -221,7 +223,7 @@ func TestAPIChunkedBodyOverLimitIs413AndWritesNothing(t *testing.T) {
 	cfgPath := filepath.Join(t.TempDir(), "config.json")
 	srv := httptest.NewUnstartedServer(nil)
 	port := srv.Listener.Addr().(*net.TCPAddr).Port
-	h := api.New(api.Deps{ConfigPath: cfgPath, Themes: []string{"dark"}, Port: port})
+	h := api.New(api.Deps{ConfigPath: cfgPath, Themes: func() []themes.Theme { return []themes.Theme{{ID: "dark", Source: themes.SourceBuiltin}} }, Port: port})
 	srv.Config.Handler = New(bus.New(), func() state.Snapshot { return state.Snapshot{} },
 		fstest.MapFS{}, WithAPI(h, port))
 	srv.Start()
@@ -270,5 +272,183 @@ func TestDashboardCSPValue(t *testing.T) {
 		if !strings.Contains(dashboardCSP, d) {
 			t.Errorf("missing %q", d)
 		}
+	}
+}
+
+func TestOnlyThemesAssetsAllowCrossOrigin(t *testing.T) {
+	srv := newGuarded(t)
+	for path, want := range map[string]bool{
+		"/themes/t.css": true, "/themes/fonts/f.ttf": true,
+		"/api/themes": false, "/": false, "/overlays/x/": false,
+	} {
+		resp, err := http.Get(srv.URL + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		got := resp.Header.Get("Access-Control-Allow-Origin")
+		if want && got != "*" || !want && got != "" {
+			t.Errorf("%s: Access-Control-Allow-Origin = %q", path, got)
+		}
+	}
+}
+
+func newThemesServer(t *testing.T, dir string) *httptest.Server {
+	t.Helper()
+	assets := fstest.MapFS{
+		"themes/t.css":        {Data: []byte(":root{--bg:#000}")},
+		"themes/fonts/f.ttf":  {Data: []byte("font")},
+		"overlays/x/index.js": {Data: []byte("x")},
+	}
+	dash := fstest.MapFS{"index.html": {Data: []byte("<html></html>")}}
+	srv := httptest.NewUnstartedServer(nil)
+	port := srv.Listener.Addr().(*net.TCPAddr).Port
+	h := api.New(api.Deps{ConfigPath: filepath.Join(dir, "config.json"), Port: port})
+	srv.Config.Handler = New(bus.New(), func() state.Snapshot { return state.Snapshot{} }, assets,
+		WithAPI(h, port), WithDashboard(dash), WithThemesDir(filepath.Join(dir, "themes")))
+	srv.Start()
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+func TestCustomThemesAreServedWithoutRestartAndOverrideBuiltin(t *testing.T) {
+	dir := t.TempDir()
+	srv := newThemesServer(t, dir)
+	if code, _ := getHost(t, srv.URL+"/themes/mine.css", ""); code != 404 {
+		t.Fatalf("missing folder: %d", code)
+	}
+	if code, body := getHost(t, srv.URL+"/themes/t.css", ""); code != 200 || body != ":root{--bg:#000}" {
+		t.Fatalf("built-in: %d %q", code, body)
+	}
+	themesDir := filepath.Join(dir, "themes")
+	if err := os.Mkdir(themesDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for name, css := range map[string]string{"mine.css": ":root{--bg:#abc}", "t.css": ":root{--bg:#fff}"} {
+		if err := os.WriteFile(filepath.Join(themesDir, name), []byte(css), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if code, body := getHost(t, srv.URL+"/themes/mine.css", ""); code != 200 || body != ":root{--bg:#abc}" {
+		t.Fatalf("new file: %d %q", code, body)
+	}
+	if code, body := getHost(t, srv.URL+"/themes/t.css", ""); code != 200 || body != ":root{--bg:#fff}" {
+		t.Fatalf("override: %d %q", code, body)
+	}
+	if code, body := getHost(t, srv.URL+"/themes/fonts/f.ttf", ""); code != 200 || body != "font" {
+		t.Fatalf("fonts: %d %q", code, body)
+	}
+	resp, err := http.Get(srv.URL + "/themes/mine.css")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.Header.Get("Access-Control-Allow-Origin") != "*" || resp.Header.Get("Content-Security-Policy") != "" {
+		t.Errorf("headers: %v", resp.Header)
+	}
+	if ct := resp.Header.Get("Content-Type"); !strings.HasPrefix(ct, "text/css") {
+		t.Errorf("content type %q", ct)
+	}
+	if cc := resp.Header.Get("Cache-Control"); cc != "no-cache" {
+		t.Errorf("custom theme Cache-Control = %q", cc)
+	}
+	for _, p := range []string{"/themes/mine.css", "/themes/t.css", "/themes/fonts/f.ttf", "/themes/missing.css"} {
+		r, err := http.Get(srv.URL + p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		r.Body.Close()
+		if got := r.Header.Get("X-Content-Type-Options"); got != "nosniff" {
+			t.Errorf("%s: X-Content-Type-Options = %q", p, got)
+		}
+	}
+	if code, _ := getHost(t, srv.URL+"/themes/mine.css", "evil.example"); code != 403 {
+		t.Errorf("host guard: %d", code)
+	}
+}
+
+func TestCustomThemesRefuseTraversalAndUnsafeFiles(t *testing.T) {
+	dir := t.TempDir()
+	themesDir := filepath.Join(dir, "themes")
+	if err := os.Mkdir(themesDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	secret := ":root{--bg:#bad}"
+	files := map[string]string{
+		filepath.Join(dir, "x.css"):         secret,
+		filepath.Join(themesDir, "UP.css"):  secret,
+		filepath.Join(themesDir, "a.b.css"): secret,
+		filepath.Join(themesDir, "big.css"): strings.Repeat("a", 65<<10),
+	}
+	for p, c := range files {
+		if err := os.WriteFile(p, []byte(c), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.Mkdir(filepath.Join(themesDir, "evil.css"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	srv := newThemesServer(t, dir)
+	for _, p := range []string{
+		"/themes/../x.css", "/themes/%2e%2e/x.css", "/themes/%2e%2e%2fx.css", "/themes/UP.css", "/themes/a.b.css",
+		"/themes/x.css%00", "/themes/..%5cx.css", "/themes/%5c..%5cx.css", "/themes/big.css", "/themes/evil.css",
+		"/themes//x.css", "/themes/sub/../../x.css",
+	} {
+		code, body := getHost(t, srv.URL+p, "")
+		if code == 200 || strings.Contains(body, "#bad") || strings.HasPrefix(body, "aaaa") {
+			t.Errorf("%s: %d leaked %.20q", p, code, body)
+		}
+	}
+}
+
+func TestCustomThemeSymlinkIsRefused(t *testing.T) {
+	dir := t.TempDir()
+	themesDir := filepath.Join(dir, "themes")
+	if err := os.Mkdir(themesDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "x.css"), []byte(":root{--bg:#bad}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(dir, "x.css"), filepath.Join(themesDir, "link.css")); err != nil {
+		t.Skipf("symlinks are not available here: %v", err)
+	}
+	srv := newThemesServer(t, dir)
+	if code, body := getHost(t, srv.URL+"/themes/link.css", ""); code == 200 || strings.Contains(body, "#bad") {
+		t.Errorf("symlink served: %d %q", code, body)
+	}
+}
+
+// A hard link to a regular file is a regular file: serving it is intended.
+func TestCustomThemeHardLinkIsServed(t *testing.T) {
+	dir := t.TempDir()
+	themesDir := filepath.Join(dir, "themes")
+	if err := os.Mkdir(themesDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "x.css"), []byte(":root{--bg:#abc}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Link(filepath.Join(dir, "x.css"), filepath.Join(themesDir, "hard.css")); err != nil {
+		t.Skipf("hard links are not available here: %v", err)
+	}
+	srv := newThemesServer(t, dir)
+	if code, body := getHost(t, srv.URL+"/themes/hard.css", ""); code != 200 || body != ":root{--bg:#abc}" {
+		t.Errorf("hard link: %d %q", code, body)
+	}
+}
+
+func TestCustomThemeNeverServedUnderADifferentCaseName(t *testing.T) {
+	dir := t.TempDir()
+	themesDir := filepath.Join(dir, "themes")
+	if err := os.Mkdir(themesDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(themesDir, "UP.css"), []byte(":root{--bg:#bad}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	srv := newThemesServer(t, dir)
+	if code, body := getHost(t, srv.URL+"/themes/up.css", ""); code == 200 || strings.Contains(body, "#bad") {
+		t.Errorf("up.css served the file UP.css: %d %q", code, body)
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -192,6 +193,106 @@ func TestPagesCreateTextOnlyThroughHelper(t *testing.T) {
 			if strings.Contains(string(data), bad) {
 				t.Errorf("%s uses %s", name, bad)
 			}
+		}
+	}
+}
+
+func TestThemeModel(t *testing.T) {
+	runNodeModel(t, "dashboard/pages/theme-model.js", themeModelScript)
+}
+
+const themeModelScript = `
+const assert = require('assert');
+const m = require(process.argv[2]);
+
+const names = { 'neutral-light': 'Neutral Light', 'neutral-dark': 'Neutral Dark', 'catppuccin-mocha': 'Catppuccin Mocha', 'catppuccin-latte': 'Catppuccin Latte', 'tokyo-night': 'Tokyo Night', dracula: 'Dracula', nord: 'Nord', gruvbox: 'Gruvbox', 'rose-pine': 'Rose Pine', pixel: 'Pixel' };
+for (const [id, name] of Object.entries(names)) assert.strictEqual(m.displayName(id), name);
+for (const id of ['my-theme', 'toString', '__proto__', 'constructor']) assert.strictEqual(m.displayName(id), id);
+
+for (const ok of ['#fff', '#FFF', '#112233', '#aBcDeF']) assert.ok(m.isHexColor(ok), ok);
+for (const bad of ['', 'fff', '#ff', '#ffff', '#fffff', '#fffffff', '#ggg', 'red', 'rgb(1,2,3)', '#fff;x', 'url(x)', null, undefined, 5]) assert.ok(!m.isHexColor(bad), String(bad));
+
+const c = (bg) => ({ bg, fg: '#111', accent: '#222' });
+const ids = (l) => m.orderThemes(l).map((t) => t.id);
+const shuffled = Object.keys(names).reverse().map((id) => ({ id, colors: c('#000') }));
+assert.deepStrictEqual(ids(shuffled), Object.keys(names));
+assert.deepStrictEqual(ids([{ id: 'zeta' }, { id: 'pixel' }, { id: 'alpha' }, { id: 'neutral-light' }]), ['neutral-light', 'pixel', 'alpha', 'zeta']);
+assert.deepStrictEqual(ids([{ id: 'a' }, { id: 'a' }, { id: '../x' }, { id: '' }, { id: 'A' }, null, 3, { colors: {} }]), ['a']);
+assert.deepStrictEqual(m.orderThemes(null), []);
+assert.deepStrictEqual(m.orderThemes('nope'), []);
+
+assert.deepStrictEqual(m.orderThemes([{ id: 'x', colors: { bg: 'red', fg: '#abc', accent: 'url(x)' } }])[0].colors, { bg: '', fg: '#abc', accent: '' });
+assert.deepStrictEqual(m.orderThemes([{ id: 'x' }])[0].colors, { bg: '', fg: '', accent: '' });
+assert.deepStrictEqual(m.orderThemes([{ id: 'x', colors: 'bad' }])[0].colors, { bg: '', fg: '', accent: '' });
+
+const list = [{ id: 'nord', colors: c('#2e3440') }, { id: 'mine', colors: c('#000') }];
+const cards = m.buildCards(list, 'mine', 'nord');
+assert.deepStrictEqual(cards.map((x) => x.id), ['nord', 'mine']);
+assert.deepStrictEqual(cards.map((x) => x.name), ['Nord', 'mine']);
+assert.deepStrictEqual(cards.map((x) => x.custom), [false, true]);
+assert.deepStrictEqual(cards.map((x) => x.selected), [false, true]);
+assert.deepStrictEqual(cards.map((x) => x.isDefault), [true, false]);
+assert.strictEqual(cards[0].colors.bg, '#2e3440');
+
+const orphan = m.buildCards(list, 'gone', 'gone');
+assert.deepStrictEqual(orphan.map((x) => x.id), ['nord', 'mine', 'gone']);
+assert.ok(orphan[2].custom && orphan[2].selected && orphan[2].isDefault);
+assert.deepStrictEqual(orphan[2].colors, { bg: '', fg: '', accent: '' });
+assert.deepStrictEqual(m.buildCards(list, '../x', 'nord').map((x) => x.id), ['nord', 'mine']);
+assert.deepStrictEqual(m.buildCards(undefined, 'neutral-light', 'neutral-light').map((x) => x.id), ['neutral-light']);
+assert.ok(!m.buildCards(list, 'nord', 'nord')[0].custom);
+`
+
+func TestThemePickerPage(t *testing.T) {
+	index, err := fs.ReadFile(FS, "dashboard/index.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	model := strings.Index(string(index), `src="pages/theme-model.js"`)
+	page := strings.Index(string(index), `src="pages/overlays.js"`)
+	if model < 0 || page < 0 || model > page {
+		t.Error("index.html must load pages/theme-model.js before pages/overlays.js")
+	}
+	src, err := fs.ReadFile(FS, "dashboard/pages/overlays.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"'fieldset'", "'legend'", "type: 'radio'", "setProperty(", "'aria-hidden': 'true'", "qscThemeModel"} {
+		if !strings.Contains(string(src), want) {
+			t.Errorf("overlays.js is missing %s", want)
+		}
+	}
+	for _, bad := range []string{"h('select'", "h('option'", "style:", "'style'"} {
+		if strings.Contains(string(src), bad) {
+			t.Errorf("overlays.js must not use %s", bad)
+		}
+	}
+	css, err := fs.ReadFile(FS, "dashboard/style.css")
+	if err != nil {
+		t.Fatal(err)
+	}
+	grid := regexp.MustCompile(`\.theme-grid\s*\{[^}]*\}`).FindString(string(css))
+	if !strings.Contains(grid, "auto-fill") || !strings.Contains(grid, "min(") {
+		t.Errorf(".theme-grid must wrap without overflow, got %q", grid)
+	}
+	if !strings.Contains(string(css), ".theme-input:focus-visible + .theme-body") {
+		t.Error("theme cards need a visible focus ring")
+	}
+}
+
+func TestOverlaysPageShowsTheThemesFolder(t *testing.T) {
+	src, err := fs.ReadFile(FS, "dashboard/pages/overlays.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"themes_dir", "overlays.themes_dir_help", "qsc.pathNodes(model.themesDir)"} {
+		if !strings.Contains(string(src), want) {
+			t.Errorf("overlays.js is missing %s", want)
+		}
+	}
+	for _, lang := range []string{"en", "fr", "de"} {
+		if !strings.Contains(loadCatalog(t, lang)["overlays.themes_dir_help"], ".css") {
+			t.Errorf("%s.json is missing overlays.themes_dir_help", lang)
 		}
 	}
 }
