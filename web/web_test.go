@@ -67,7 +67,9 @@ func TestDashboardFilesExist(t *testing.T) {
 		"dashboard/api.js",
 		"dashboard/i18n.js",
 		"dashboard/pages/status.js",
+		"dashboard/pages/overlay-catalog.js",
 		"dashboard/pages/overlay-url.js",
+		"dashboard/pages/overlay-controls.js",
 		"dashboard/pages/theme-model.js",
 		"dashboard/pages/overlays.js",
 		"dashboard/pages/history-model.js",
@@ -147,7 +149,7 @@ var (
 		"game":     {"initialization", "menu", "select", "loading", "gameplay", "results", "closed", "unknown"},
 		"check":    {"quaver_dir", "log", "database", "port"},
 		"judgment": {"marv", "perf", "great", "good", "okay", "miss"},
-		"nav":      {"status", "overlays", "history", "settings", "twitch"},
+		"nav":      {"status", "overlays", "obs", "history", "settings", "twitch"},
 		"status":   {"live", "connecting", "reconnecting"},
 
 		"history.col":    {"map", "difficulty", "result", "accuracy", "combo", "judgments"},
@@ -363,7 +365,7 @@ func loadCatalog(t *testing.T, lang string) map[string]string {
 // game term kept as is in every language.
 func sharedTerm(key string) bool {
 	switch key {
-	case "nav.twitch", "nav.overlays", "status.version", "settings.version", "history.filter.fc",
+	case "nav.twitch", "nav.overlays", "nav.obs", "status.version", "settings.version", "history.filter.fc",
 		"nav.status", "status.problem", "status.keys", "status.pb", "status.fc", "status.ok",
 		"status.live", "status.autoplay", "game.menu", "history.filter.pb", "history.col.map",
 		"settings.port", "settings.lang.en", "settings.lang.fr", "settings.lang.de":

@@ -63,6 +63,40 @@
     applyLook(urlTheme || savedTheme || FALLBACK_THEME, urlAccent || savedAccent);
   });
 
+  const model = window.qscModel;
+  const lang = model.parseLang(params.get('lang'), navigator.language);
+  root.lang = lang;
+  const qscParams = {
+    demo: isDemo,
+    lang: lang,
+    scale: model.parseScale(params.get('scale')),
+    autohide: model.parseAutohide(params.get('autohide')),
+    hide: model.parseHide(params.get('hide')),
+    n: model.parseCount(params.get('n')),
+  };
+  root.style.setProperty('--scale', String(qscParams.scale));
+  window.qscParams = qscParams;
+
+  window.qscT = function (key) {
+    const catalogs = window.qscCatalogs || {};
+    const own = function (c) { return c && Object.prototype.hasOwnProperty.call(c, key) ? c[key] : ''; };
+    return own(catalogs[lang]) || own(catalogs.en) || key;
+  };
+
+  window.qscAutohide = function (onHide) {
+    return model.createAutohide(qscParams.autohide, {
+      setTimeout: function (fn, ms) { return setTimeout(fn, ms); },
+      clearTimeout: function (id) { clearTimeout(id); },
+    }, onHide);
+  };
+
+  window.qscEl = function (tag, cls, text) {
+    const el = document.createElement(tag);
+    if (cls) el.className = cls;
+    if (text !== undefined) el.textContent = text;
+    return el;
+  };
+
   window.qscConnect = function (handlers) {
     const es = new EventSource('/events');
     Object.keys(handlers).forEach(function (name) {

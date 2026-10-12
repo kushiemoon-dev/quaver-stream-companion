@@ -357,6 +357,17 @@ input:disabled, select:disabled { opacity: 0.65; cursor: not-allowed; }
   background-position: 0 0, 10px 10px;
 }
 .preview-frame { display: block; width: 100%; height: 160px; border: 0; background: transparent; color-scheme: light; }
+.preview-frame.size-result { height: 250px; }
+.preview-frame.size-history { height: 200px; }
+.preview-frame.size-state { height: 84px; }
+.overlay-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); }
+.overlay-desc { font-size: 13px; }
+.overlay-options [hidden] { display: none; }
+.overlay-options input[type="number"] { max-width: 160px; }
+.size-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1); margin-bottom: 6px; }
+.check-list { display: flex; flex-wrap: wrap; gap: 6px var(--s2); }
+.check { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; }
+.check input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
 
 .controls-row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--s2); margin-bottom: var(--s2); }
 .controls-row .field { margin-bottom: 0; min-width: 140px; }
@@ -447,3 +458,19 @@ input:disabled, select:disabled { opacity: 0.65; cursor: not-allowed; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+.obs-card { max-width: 860px; }
+.obs-steps { margin: 0; padding-left: var(--s3); display: grid; gap: var(--s3); }
+.obs-step > h3 { margin-bottom: 6px; }
+.obs-step p, .obs-step ul { margin: 0 0 var(--s1); }
+.obs-step ul { padding-left: var(--s3); }
+.table-wrap { overflow-x: auto; max-width: 100%; margin: var(--s1) 0; }
+.obs-table { border-collapse: collapse; width: 100%; }
+.obs-table th, .obs-table td { text-align: left; padding: 8px var(--s1); border-bottom: 1px solid var(--border); vertical-align: middle; }
+.obs-table .url-row { min-width: 260px; }
+.obs-size { white-space: nowrap; font-family: var(--mono); }
+.obs-trouble { margin-bottom: var(--s2); }
+.obs-trouble h4 { margin-bottom: 2px; }
+.obs-checks { list-style: none; padding: 0; margin: var(--s1) 0; }
+.obs-ok { color: var(--ok); }
+.obs-bad { color: var(--bad); }

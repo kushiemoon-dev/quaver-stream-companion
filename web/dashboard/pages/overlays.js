@@ -4,6 +4,8 @@
   const h = qsc.h;
   const url = window.qscOverlayUrl;
   const tm = window.qscThemeModel;
+  const cat = window.qscOverlayCatalog;
+  const controls = window.qscOverlayControls;
   const FALLBACK_THEME = 'neutral-light';
   const PICKER_START = '#a855f7';
   const TIMEOUT_MS = 8000;
@@ -68,6 +70,39 @@
   function refreshUrl() {
     ui.url.value = url.buildOverlayUrl(model, false, location.origin);
     ui.copyStatus.textContent = '';
+  }
+
+  function update(patch) {
+    model = Object.assign({}, model, patch);
+    refreshUrl();
+    refreshPreview();
+  }
+
+  function selectOverlay(id) {
+    const overlay = cat.byId(id);
+    const name = t(overlay.nameKey);
+    model = Object.assign({}, model, { overlay: overlay.id });
+    ui.name.textContent = name;
+    ui.desc.textContent = t(overlay.descKey);
+    ui.size.textContent = cat.sizeText(overlay);
+    ui.sizeStatus.textContent = '';
+    ui.frame.className = 'preview-frame size-' + overlay.id;
+    ui.frame.setAttribute('title', t('overlays.preview_title', { name: name }));
+    ui.copy.setAttribute('aria-label', t('overlays.copy_aria', { name: name }));
+    ui.options.sync(overlay);
+    refreshUrl();
+    refreshPreview();
+  }
+
+  function onCopySize() {
+    const text = cat.sizeText(cat.byId(model.overlay));
+    const done = function (msg) { if (ui) ui.sizeStatus.textContent = msg; };
+    if (!navigator.clipboard || !navigator.clipboard.writeText) {
+      done(t('overlays.size_manual', { size: text }));
+      return;
+    }
+    navigator.clipboard.writeText(text).then(function () { done(t('overlays.size_copied')); },
+      function () { done(t('overlays.size_manual', { size: text })); });
   }
 
   function setAccent(hex, fromPicker) {
@@ -207,7 +242,7 @@
   function buildCard() {
     ui = {
       url: h('input', { id: 'ov-url', class: 'url-input', type: 'text', readonly: true, spellcheck: 'false' }),
-      copy: h('button', { type: 'button', class: 'btn', 'aria-label': t('overlays.copy_aria'), onclick: onCopy }, t('overlays.copy')),
+      copy: h('button', { type: 'button', class: 'btn', onclick: onCopy }, t('overlays.copy')),
       copyStatus: h('p', { class: 'muted status-line', role: 'status', 'aria-live': 'polite' }),
       grid: h('div', { class: 'theme-grid' }),
       picker: h('input', { id: 'ov-accent', type: 'color', class: 'picker', oninput: function (ev) {
@@ -221,22 +256,31 @@
       save: h('button', { type: 'button', class: 'btn btn-primary', onclick: onSave }, t('overlays.save')),
       reload: h('button', { type: 'button', class: 'btn', hidden: true, onclick: onReload }, t('overlays.reload')),
       saveStatus: h('p', { class: 'save-status', role: 'status', 'aria-live': 'polite' }),
-      frame: h('iframe', { class: 'preview-frame', title: t('overlays.preview_title'), loading: 'lazy',
+      name: h('h2', { id: 'ov-name', class: 'overlay-name' }),
+      desc: h('p', { class: 'muted' }),
+      size: h('strong', { id: 'ov-size' }),
+      copySize: h('button', { type: 'button', class: 'btn', 'aria-label': t('overlays.copy_size_aria'), 'aria-describedby': 'ov-size', onclick: onCopySize }, t('overlays.copy')),
+      sizeStatus: h('p', { class: 'muted status-line', role: 'status', 'aria-live': 'polite' }),
+      options: controls.options(model, update),
+      frame: h('iframe', { class: 'preview-frame', title: '', loading: 'lazy',
         sandbox: 'allow-scripts' }),
     };
     refreshThemeOptions();
     ui.hex.value = model.accent;
     ui.picker.value = pickerValue(model.accent);
     refreshUrl();
+    ui.picked = controls.picker(model.overlay, selectOverlay);
+    selectOverlay(model.overlay);
+    clearTimeout(previewTimer);
     ui.frame.setAttribute('src', url.buildOverlayUrl(model, true, location.origin));
 
     return h('section', { class: 'card overlay-card', 'aria-labelledby': 'ov-name' },
-      h('h2', { id: 'ov-name', class: 'overlay-name' }, t('overlays.now_playing.name')),
-      h('p', { class: 'muted' }, t('overlays.now_playing.description')),
+      ui.picked, ui.name, ui.desc,
       h('div', { class: 'field' }, h('label', { for: 'ov-url' }, t('overlays.url')),
         h('div', { class: 'url-row' }, ui.url, ui.copy), ui.copyStatus),
       h('div', { class: 'overlay-body' },
         h('div', { class: 'controls' },
+          ui.options.el,
           h('h3', { class: 'card-label' }, t('overlays.appearance')),
           h('fieldset', { class: 'theme-picker' }, h('legend', null, t('overlays.theme')), ui.grid),
           model.themesDir && h('p', { class: 'muted hint' }, t('overlays.themes_dir_help'), ' ', h('code', null, qsc.pathNodes(model.themesDir))),
@@ -247,6 +291,7 @@
           ui.hexError,
           h('div', { class: 'save-row' }, ui.save, ui.reload, ui.saveStatus)),
         h('div', { class: 'preview' },
+          h('div', { class: 'size-row' }, h('span', null, t('overlays.size')), ui.size, ui.copySize), ui.sizeStatus,
           h('h3', { class: 'card-label' }, t('overlays.preview')),
           h('div', { class: 'checker' }, ui.frame))));
   }
@@ -269,7 +314,7 @@
       const overlay = (res[1].config && res[1].config.overlay) || {};
       const theme = overlay.theme || FALLBACK_THEME;
       const accent = url.normalizeAccent(overlay.accent || '');
-      model = { themes: Array.isArray(res[0]) ? res[0] : [], themesDir: res[1].themes_dir || '', theme: theme, accent: accent, defaultTheme: theme, defaultAccent: accent };
+      model = { overlay: cat.OVERLAYS[0].id, autohide: '', scale: '', lang: 'auto', n: '', hide: [], themes: Array.isArray(res[0]) ? res[0] : [], themesDir: res[1].themes_dir || '', theme: theme, accent: accent, defaultTheme: theme, defaultAccent: accent };
       root.replaceChildren(buildCard());
       const target = ui.grid.querySelector('.theme-input:checked') || ui.grid.querySelector('.theme-input');
       if (refocus && target) target.focus();

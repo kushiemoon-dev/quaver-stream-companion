@@ -38,7 +38,7 @@ func TestDocsMentionThemesAndTokens(t *testing.T) {
 }
 
 func TestDocsHaveNoDashes(t *testing.T) {
-	for _, rel := range []string{"README.md", "docs/THEMES.md"} {
+	for _, rel := range []string{"README.md", "docs/THEMES.md", "docs/OBS.md"} {
 		if strings.ContainsAny(readDoc(t, rel), string([]rune{0x2014, 0x2013})) {
 			t.Errorf("%s contains an em or en dash", rel)
 		}

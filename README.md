@@ -39,7 +39,7 @@ QuaverStreamCompanion only reads files that Quaver already writes itself:
 | `Logs/runtime.log` | Live game state (menu, select, loading, gameplay, results) and the "score saved" signal |
 | `quaver.db` | Map being played and the result of each play (opened **read-only**) |
 
-It never reads game memory, never modifies or injects into the game, never talks to the game's internal ports, and never writes anything to the Quaver folder. There is no telemetry, and the server listens on `127.0.0.1` only (requests with another `Host` header are rejected). `qsc` never opens a browser by itself: it only does so with `--open`, so it can run hidden at startup.
+It never reads game memory, never modifies or injects into the game, never talks to the game's internal ports, and never writes anything to the Quaver folder. There is no telemetry, and the server listens on `127.0.0.1` only (requests with another `Host` header are rejected). `qsc` never opens a browser by itself: it only does so with `--open`.
 
 ---
 
@@ -59,7 +59,7 @@ qsc doctor
 qsc --open
 ```
 
-This opens `http://127.0.0.1:7878/` in your browser. Without `--open`, `qsc` only starts the server and never opens a browser, so you can run it hidden at startup.
+This opens `http://127.0.0.1:7878/` in your browser. Without `--open`, `qsc` only starts the server and never opens a browser.
 
 **4. Add the overlay to OBS.** On the **Overlays** page, copy the overlay link and paste it into an OBS *Browser* source. The link looks like this:
 
@@ -68,6 +68,27 @@ http://127.0.0.1:7878/overlays/now-playing/
 ```
 
 Then play a map. The overlay appears when you start playing and hides in the menu.
+
+The full walkthrough, with troubleshooting, is in the [OBS setup guide](docs/OBS.md) and on the dashboard OBS page. To build an overlay of your own, see the [overlay guide](docs/OVERLAYS.md).
+
+### Overlays
+
+| Overlay | Recommended size | Link |
+|---------|------------------|------|
+| Now playing | 540 x 140 | `/overlays/now-playing/` |
+| Result | 520 x 230 | `/overlays/result/` |
+| History | 520 x 180 | `/overlays/history/` |
+| State | 280 x 64 | `/overlays/state/` |
+
+Each link starts with `http://127.0.0.1:7878`. Use the size as the width and height of the OBS Browser source.
+
+### Run at startup
+
+`qsc` never opens a browser unless you pass `--open`, so it can start with your computer without opening anything. It is a console program, so its window stays open: set the shortcut to run minimized. If it cannot find the Quaver folder it exits with an error, so pass `--quaver-dir <folder>` (or set `quaver_dir` in the config file) when auto-detection does not work.
+
+- **Windows:** press Win+R, run `shell:startup`, and put a shortcut to `qsc.exe` in that folder. In the shortcut properties set Run to Minimized.
+- **Linux:** run it from a systemd user service, or from your desktop autostart entries.
+- **macOS:** add `qsc` to Login Items in System Settings.
 
 ---
 
@@ -79,6 +100,7 @@ The dashboard is served at `http://127.0.0.1:7878/` and needs nothing but a brow
 |------|--------------|
 | **Status** | Live game state, current map, and the health of your setup |
 | **Overlays** | Copy the OBS browser source link, pick a theme from the visual theme picker (built-in or your own custom themes) and an accent color, preview the result, and save it as your default look |
+| **OBS** | A step by step guide to add the overlays to OBS, with the recommended sizes, copyable links and a connection check |
 | **History** | Your recent plays: map, difficulty with rate and mods, grade, accuracy, max combo and judgments |
 | **Settings** | Quaver folder, port and dashboard language |
 

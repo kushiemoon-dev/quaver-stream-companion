@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QSC game state</title>
+<link rel="stylesheet" href="/overlays/overlay.css">
+<script src="/overlays/i18n.js"></script>
+<script src="/overlays/model.js"></script>
+<script src="/overlays/common.js"></script>
+</head>
+<body>
+<div id="pill" class="pill hidden"><span id="dot" class="dot"></span><span id="label"></span></div>
+<script>
+  const params = qscParams;
+  let game = 'unknown';
+  const pill = document.getElementById('pill');
+  const dot = document.getElementById('dot');
+  document.title = qscT('state.title');
+
+  function render() {
+    if (qscModel.isHiddenState(game, params.hide)) {
+      pill.classList.add('hidden');
+      return;
+    }
+    document.getElementById('label').textContent = qscT(qscModel.stateKey(game));
+    dot.className = 'dot ' + qscModel.stateTone(game) + (game === 'gameplay' ? ' pulse' : '');
+    pill.classList.remove('hidden');
+  }
+
+  if (params.demo) {
+    game = 'gameplay';
+    render();
+  } else {
+    render();
+    qscConnect({
+      'snapshot': function (d) { game = d.game; render(); },
+      'game.state': function (d) { game = d.state; render(); },
+    });
+  }
+</script>
+</body>
+</html>
