@@ -26,7 +26,19 @@ It runs next to the game, keeps everything on your machine, and gives OBS a read
 
 > **Unofficial project.** Not affiliated with Quaver, and not related to the osu! StreamCompanion tool despite the similar name.
 
-> **Status: early development (v0).** The core (game state, maps, scores, local server, a first overlay) is being built first. Everything under [Roadmap](#roadmap) is planned, not shipped yet.
+> **Status: release pending.** The features below are built and tested on Windows; the first tagged release has not been published yet, so build from source until it is. What is planned is listed under [Roadmap](#roadmap).
+
+---
+
+## Features
+
+- **Seven overlays** for OBS browser sources: now playing, result, history, state, alert, lane keys and judgment curve (see [Overlays](#overlays))
+- **11 built-in themes** and an accent color, plus [custom themes](docs/THEMES.md) and [custom overlays](docs/OVERLAYS.md) you drop in a folder
+- **A local dashboard**: live status, overlay links with a theme picker, an OBS setup guide, your play history and settings, in English, French and German
+- **A JSON and live-event API** for your own overlays and scripts
+- **Judgment timeline**: the accuracy curve of a saved play, built from the score database
+- **Degraded mode**: if Quaver is not found, `qsc` still starts and tells you what to fix
+- **Opt-in lane keys and KPS** (Windows only), off by default
 
 ---
 
@@ -39,7 +51,19 @@ QuaverStreamCompanion only reads files that Quaver already writes itself:
 | `Logs/runtime.log` | Live game state (menu, select, loading, gameplay, results) and the "score saved" signal |
 | `quaver.db` | Map being played and the result of each play (opened **read-only**) |
 
-The one optional exception is the lane keys overlay (see [Lane keys](#lane-keys)), which is off by default. Apart from it, `qsc` never reads game memory, never modifies or injects into the game, never talks to the game's internal ports, and never writes anything to the Quaver folder. There is no telemetry, and the server listens on `127.0.0.1` only (requests with another `Host` header are rejected). `qsc` never opens a browser by itself: it only does so with `--open`.
+The one optional exception is the lane keys overlay (see [Lane keys](#lane-keys)), which is off by default and works on Windows only. Apart from it, `qsc` never reads game memory, never modifies or injects into the game, never talks to the game's internal ports, and never writes anything to the Quaver folder. There is no telemetry, no account and no online service: nothing is ever sent anywhere, and the server listens on `127.0.0.1` only (requests with another `Host` header are rejected). `qsc` never opens a browser by itself: it only does so with `--open`.
+
+---
+
+## Compatibility
+
+| Platform | Status |
+|----------|--------|
+| Windows 10 and later | Tested |
+| Linux with Steam and Proton | Best effort. Steam layouts (native, Flatpak, Snap, extra libraries) are covered by tests that simulate them, but it has not been run on a real Linux machine yet |
+| macOS | Untested |
+
+Lane keys and KPS work on Windows only for now. See the [installation guide](docs/INSTALL.md#linux-and-proton) for the Linux details.
 
 ---
 
@@ -105,7 +129,7 @@ The dashboard is served at `http://127.0.0.1:7878/` and needs nothing but a brow
 | **Overlays** | Copy the OBS browser source link, pick a theme from the visual theme picker (built-in or your own custom themes) and an accent color, preview the result, and save it as your default look |
 | **OBS** | A step by step guide to add the overlays to OBS, with the recommended sizes, copyable links and a connection check |
 | **History** | Your recent plays: map, difficulty with rate and mods, grade, accuracy, max combo and judgments |
-| **Settings** | Quaver folder, port and dashboard language |
+| **Settings** | Quaver folder, port, dashboard language and the opt-in lane keys card |
 
 A **Twitch** tab is shown as "coming soon"; nothing behind it exists yet. The dashboard is available in English, French and German.
 
@@ -113,10 +137,10 @@ A **Twitch** tab is shown as "coming soon"; nothing behind it exists yet. The da
 
 ## Themes
 
-The overlay comes with 11 built-in themes, and you can add your own.
+Overlays come with 11 built-in themes, and you can add your own.
 
 <p align="center">
-  <img src="docs/screenshots/themes.png" alt="The built-in overlay themes shown side by side on the Overlays page" width="800">
+  <img src="docs/screenshots/themes.png" alt="The result overlay in each of the 11 built-in themes" width="800">
 </p>
 
 | Theme id | Palette |
@@ -141,17 +165,25 @@ Palettes are credited to Catppuccin, Tokyo Night, Dracula, Nord, Gruvbox and Ros
 
 ## Screenshots
 
+All screenshots use synthetic data.
+
 <p align="center">
-  <img src="docs/screenshots/status.png" alt="Status page showing the live game state, the current map and the setup checks" width="800">
+  <img src="docs/screenshots/status.png" alt="Status page showing the live game state, the last play and the setup checks" width="800">
 </p>
 <p align="center">
-  <img src="docs/screenshots/overlays.png" alt="Overlays page with the browser source link, theme and accent color choices, and a preview" width="800">
+  <img src="docs/screenshots/overlays.png" alt="Overlays page with the browser source link, the theme picker, accent color and a preview" width="800">
+</p>
+<p align="center">
+  <img src="docs/screenshots/overlays-together.png" alt="Now playing, result, judgment curve, lane keys, alert and history overlays shown together" width="800">
+</p>
+<p align="center">
+  <img src="docs/screenshots/obs.png" alt="OBS page with the step by step guide and the link and size of every overlay" width="800">
 </p>
 <p align="center">
   <img src="docs/screenshots/history.png" alt="History page listing recent plays with accuracy, max combo and judgments" width="800">
 </p>
 <p align="center">
-  <img src="docs/screenshots/settings.png" alt="Settings page with the Quaver folder, port and language" width="800">
+  <img src="docs/screenshots/settings.png" alt="Settings page with the Quaver folder, port, language and the lane keys card" width="800">
 </p>
 
 ---
@@ -267,9 +299,11 @@ The server only answers requests whose Host is `127.0.0.1:<port>` or `localhost:
 
 - [x] Game state, map and score events, local server, first overlay
 - [x] Settings dashboard in the browser
-- [ ] Replay analysis after each play (timing graph, early / late split)
-- [ ] Quaver public API: profile, rank
+- [x] Judgment curve of the last play, from the score database
+- [ ] Replay analysis after each play (early / late split). Parked: it needs reading replay files
+- [ ] Quaver public API: profile, rank (parked: it would be the first online feature, so it needs an explicit opt-in design)
 - [ ] Optional Twitch module: chat commands (`!map`, `!last`, `!pb`) and personal best / full combo alerts
+- [x] Custom overlays folder, lane keys and KPS overlay (Windows), degraded mode without Quaver
 - [x] 11 ready-made themes (Catppuccin, Tokyo Night, Dracula, Nord, Gruvbox, Rose Pine, Pixel, Neon Cosy...) and a guide to make your own
 - [ ] Windows `.exe`, Linux binaries and AppImage releases (release workflow added, first release pending)
 
@@ -294,6 +328,23 @@ go test ./...
 
 ---
 
-## License
+## Guides
 
-MIT. See [LICENSE](LICENSE).
+| Guide | What it covers |
+|-------|----------------|
+| [Installation](docs/INSTALL.md) | Download, checksums, startup on Windows and Linux, updating, uninstalling |
+| [OBS setup](docs/OBS.md) | Adding the overlays to OBS, sizes, troubleshooting |
+| [Overlays](docs/OVERLAYS.md) | Overlay options, the data reference and how to build your own overlay |
+| [Themes](docs/THEMES.md) | Making a theme, the tokens, credits and licenses |
+
+---
+
+## Contributing
+
+Issues and pull requests are welcome. Run `gofmt -l .`, `go vet ./...` and `go test ./...` before sending a change. To add a built-in theme, follow [Contributing a built-in theme](docs/THEMES.md#contributing-a-built-in-theme). The web files are plain HTML, CSS and JavaScript with no build step and no remote resources.
+
+---
+
+## License and credits
+
+`qsc` is MIT licensed. See [LICENSE](LICENSE). Theme palettes come from Catppuccin, Tokyo Night, Dracula, Nord, Gruvbox and Rose Pine (all MIT), and the Pixel theme uses the VT323 font by Peter Hull under the SIL Open Font License 1.1 ([license text](web/themes/fonts/OFL.txt)). The full table is in the [theme guide](docs/THEMES.md#credits-and-licenses).
