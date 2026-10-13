@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=QuaverStreamCompanion
+Comment=Live Quaver data for stream overlays
+Exec=qsc
+Icon=qsc
+Terminal=false
+Categories=Utility;

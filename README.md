@@ -45,7 +45,7 @@ The one optional exception is the lane keys overlay (see [Lane keys](#lane-keys)
 
 ## Quick Start
 
-**1. Download `qsc` for your platform** (releases are coming; for now [build from source](#build-from-source))
+**1. Download `qsc` for your platform** from the [releases page](https://github.com/kushiemoon-dev/quaver-stream-companion/releases) (see [Install](#install)), or [build from source](#build-from-source)
 
 **2. Check that it finds your game**
 
@@ -271,7 +271,13 @@ The server only answers requests whose Host is `127.0.0.1:<port>` or `localhost:
 - [ ] Quaver public API: profile, rank
 - [ ] Optional Twitch module: chat commands (`!map`, `!last`, `!pb`) and personal best / full combo alerts
 - [x] 11 ready-made themes (Catppuccin, Tokyo Night, Dracula, Nord, Gruvbox, Rose Pine, Pixel, Neon Cosy...) and a guide to make your own
-- [ ] Windows `.exe` and Linux AppImage releases
+- [ ] Windows `.exe`, Linux binaries and AppImage releases (release workflow added, first release pending)
+
+---
+
+## Install
+
+Releases come as a Windows zip, Linux `.tar.gz` archives (amd64 and arm64), a Linux AppImage and a `checksums.txt` file. There is no installer: unzip, check the checksum, run `qsc`. The [installation guide](docs/INSTALL.md) covers verification, starting with your computer on Windows and Linux, updating and uninstalling. The AppImage is built by the release workflow and has not been run by the author on Linux yet.
 
 ---
 

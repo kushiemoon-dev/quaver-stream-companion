@@ -1,0 +1,10 @@
+[Unit]
+Description=QuaverStreamCompanion
+
+[Service]
+# Replace with the full path of your qsc binary; %h is your home folder.
+ExecStart=%h/.local/bin/qsc serve
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
