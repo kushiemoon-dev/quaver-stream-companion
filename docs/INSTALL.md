@@ -35,6 +35,17 @@ sha256sum --ignore-missing -c checksums.txt
 
 The line for your file must say `OK`.
 
+## First launch on Windows
+
+Windows may stop the program the first time because it is unsigned. A code signing certificate costs money every year and this is a free, spare time project, so the binary is not signed. Check that the download is the real one with the SHA-256 steps above, then:
+
+1. Before you unzip: right click the zip, choose Properties, tick Unblock at the bottom of the General tab, click OK. This removes the "downloaded from the internet" mark from every file inside.
+2. If a blue SmartScreen window says Windows protected your PC, click More info, then Run anyway.
+3. Double click `qsc.exe`. A console window stays open while qsc runs. If it cannot start, it prints why and waits for Enter so you can read it.
+4. Open the dashboard at `http://127.0.0.1:7878/`, go to the OBS page, and add the overlays.
+
+If the port is used, qsc says whether another qsc is running (open its dashboard or run `qsc stop`) or another program holds it (choose another port with `--port` or in the config file, then update your OBS links). A damaged config file is never overwritten: qsc prints its path, and deleting that file resets the settings.
+
 ## Run
 
 Windows: unzip the archive anywhere you like, for example `C:\Tools\qsc`, then open a terminal in that folder:
@@ -125,7 +136,7 @@ Lane key sampling (the opt-in keys overlay) is Windows only for now. On Linux th
 
 ## Update
 
-Stop `qsc`, replace the program (or the AppImage) with the new one, start it again. Your settings are kept because they live in the config folder, not next to the program. A change of version is shown by `qsc version`.
+Quit `qsc` first (the Quit button in Settings, or `qsc stop`), then replace the program (or the AppImage) with the new one, start it again. Your settings are kept because they live in the config folder, not next to the program. A change of version is shown by `qsc version`.
 
 ## Where files live
 
@@ -142,3 +153,13 @@ Stop `qsc`, replace the program (or the AppImage) with the new one, start it aga
 1. Stop `qsc`.
 2. Windows: delete the shortcut from the `shell:startup` folder and the folder you unzipped. Linux: run `systemctl --user disable --now qsc.service`, then delete `~/.config/systemd/user/qsc.service` and the program or AppImage.
 3. To also remove your settings, delete the `quaver-stream-companion` folder shown in the table above.
+
+What `qsc` leaves behind: that config folder (`config.json`, `qsc.log` and its older copy `qsc.log.1`, and your custom `themes` and `overlays` folders) and, on Linux, the service file you copied. Nothing is written to the registry or to the Quaver folder.
+
+## Reporting a problem
+
+Run `qsc doctor --report` (or press Copy diagnostics on the Status page). It prints the version, your system, the settings without key bindings, the doctor checks, the names of your custom themes and overlays, and the last 50 lines of `qsc.log` and of Quaver's `runtime.log`. Your user folder name is replaced by `~`.
+
+**Review the report before you share it.** The Quaver `runtime.log` excerpt is copied as the game wrote it and can contain your Quaver player name, map titles and replay paths. `qsc` cannot filter those, so read the report and delete any line you do not want to publish before you paste it into a new issue on the repository. Your user folder is replaced by `~` in paths, but other names are kept. If `qsc` crashed it says so and points to `qsc.log`; the report includes that log.
+
+A crash in `qsc` itself, in a background task or while answering a request, is written to `qsc.log` with its stack. Only a crash of the program before the log file is open, or one forced by the system (for example running out of memory), is not.

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"log/slog"
 	"os"
 	"strings"
 	"time"
@@ -46,6 +47,9 @@ func Tail(ctx context.Context, path string, poll time.Duration, out chan<- strin
 func (t *tailer) step() []string {
 	f, err := os.Open(t.path)
 	if err != nil {
+		if !t.seenMissing || t.offset >= 0 {
+			slog.Info("runtime.log is missing; waiting for it")
+		}
 		t.offset, t.pending, t.prevHead, t.seenMissing = -1, nil, nil, true
 		return nil
 	}
@@ -66,9 +70,11 @@ func (t *tailer) step() []string {
 			t.offset, t.prevHead = size, head
 			return nil
 		}
+		slog.Info("runtime.log found; reading it from the start")
 		t.offset = 0
 	}
 	if size < t.offset || !bytes.HasPrefix(head, t.prevHead) {
+		slog.Info("runtime.log was rewritten; reading it from the start")
 		t.offset, t.pending = 0, nil
 	}
 	t.prevHead = head

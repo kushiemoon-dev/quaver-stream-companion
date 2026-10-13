@@ -65,11 +65,13 @@ func (a *App) process(ctx context.Context, raw string, minPlayedMS int64) {
 	}
 	switch ln.Kind {
 	case gamestate.KindState:
+		slog.Info("game state", "state", ln.State)
 		a.bus.Publish(bus.TypeGameState, bus.GameState{State: ln.State})
 		if ln.State == "gameplay" {
 			a.publishMap(ctx, minPlayedMS)
 		}
 	case gamestate.KindExit:
+		slog.Info("game state", "state", "closed")
 		a.bus.Publish(bus.TypeGameState, bus.GameState{State: "closed"})
 	case gamestate.KindScoreSaved:
 		a.publishScore(ctx, ln.ScoreID)
@@ -82,6 +84,7 @@ func (a *App) publishMap(ctx context.Context, minPlayedMS int64) {
 		m, err := a.src.LastPlayedMap(ctx)
 		lastErr = err
 		if err == nil && m.LastPlayedMS >= minPlayedMS {
+			slog.Info("map started", "md5", m.MD5, "keys", m.Keys)
 			a.bus.Publish(bus.TypeMapStarted, m)
 			return
 		}
@@ -97,6 +100,7 @@ func (a *App) publishScore(ctx context.Context, id int64) {
 	for i := 0; i < a.tries; i++ {
 		r, err := a.src.ScoreByID(ctx, id)
 		if err == nil {
+			slog.Info("score saved", "id", id)
 			a.bus.Publish(bus.TypeScoreSaved, r)
 			return
 		}

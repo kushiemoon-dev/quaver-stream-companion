@@ -66,8 +66,23 @@ func stop(args []string, out, errw io.Writer) int {
 	return 1
 }
 
+// lenientPort reads only the port field of a config file that failed validation, else gives the default port.
+func lenientPort(path string) int {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return config.DefaultPort
+	}
+	var f struct {
+		Port int `json:"port"`
+	}
+	if json.Unmarshal(bytes.TrimPrefix(data, []byte{0xEF, 0xBB, 0xBF}), &f) != nil || f.Port < 1 || f.Port > 65535 {
+		return config.DefaultPort
+	}
+	return f.Port
+}
+
 // stopPort returns the port to stop and -1, or 0 and the exit code to use.
-// The port flag wins; the config file is only read (and must be valid) when it is absent.
+// The port flag wins, then the config port when the file can be read; a broken config never blocks stopping.
 func stopPort(args []string, errw io.Writer) (int, int) {
 	fs := flag.NewFlagSet("qsc stop", flag.ContinueOnError)
 	fs.SetOutput(errw)
@@ -101,14 +116,10 @@ func stopPort(args []string, errw io.Writer) (int, int) {
 		path = p
 	}
 	cfg, err := config.Load(path)
-	var pathErr *os.PathError
-	if errors.As(err, &pathErr) {
-		fmt.Fprintf(errw, "error: cannot read config %s: %v\n", path, pathErr.Err)
-		return 0, 1
-	}
 	if err != nil {
-		fmt.Fprintf(errw, "error: invalid config %s: %v\n", path, err)
-		return 0, 1
+		port := lenientPort(path)
+		fmt.Fprintf(errw, "note: cannot use the config file %s (%v); stopping qsc on port %d\n", path, err, port)
+		return port, -1
 	}
 	return cfg.Port, -1
 }

@@ -178,7 +178,6 @@
   "settings.about": "About this install",
   "settings.config_file": "Config file",
   "settings.version": "Version",
-  "settings.info_unavailable": "The config file path and version are not available right now.",
   "check.detail.readable": "Readable",
   "check.detail.owned": "In use by this qsc",
   "check.detail.free": "Free",
@@ -258,5 +257,18 @@
   "settings.quit.now": "Quit now",
   "settings.quit.stopping": "Stopping qsc...",
   "settings.quit.stopped": "qsc is stopped, you can close this tab.",
-  "settings.quit.failed": "Could not stop qsc: {message}"
+  "settings.quit.failed": "Could not stop qsc: {message}",
+  "settings.themes_dir": "Themes folder",
+  "settings.overlays_dir": "Overlays folder",
+  "settings.releases": "Releases",
+  "settings.copy": "Copy",
+  "settings.copied": "Copied",
+  "settings.copy_aria": "Copy {name}",
+  "settings.copied_live": "{name} copied.",
+  "settings.copy_manual": "Copying is not available here. The text is selected: copy it yourself.",
+  "settings.port_obs_note": "Your OBS links contain the port: update them after the restart.",
+  "status.copy_diag": "Copy diagnostics",
+  "status.copy_diag_done": "Diagnostics copied. Review them before you share them.",
+  "status.copy_diag_failed": "Could not copy the diagnostics: {message}",
+  "status.copy_diag_hint": "Settings, checks and the end of the log files, with your user folder hidden. Review before sharing."
 }

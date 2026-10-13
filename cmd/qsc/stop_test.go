@@ -250,8 +250,7 @@ func TestStopPortFlagIgnoresAnInvalidConfig(t *testing.T) {
 	if want := fmt.Sprintf("qsc is not running on port %d", port); code != 0 || strings.TrimSpace(out) != want {
 		t.Fatalf("code = %d, out = %q", code, out)
 	}
-	code, out, errw := runStop("--config", cfg)
-	if code != 1 || out != "" || !strings.Contains(errw, "invalid config") {
-		t.Fatalf("without --port: code = %d, out = %q, err = %q", code, out, errw)
+	if got, code := stopPort([]string{"--config", cfg}, &bytes.Buffer{}); code != -1 || got != 7878 {
+		t.Fatalf("without --port: port = %d, code = %d", got, code)
 	}
 }

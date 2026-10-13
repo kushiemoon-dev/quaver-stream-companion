@@ -13,6 +13,7 @@
   let current = null;
   let overridden = [];
   let savedNotice = false;
+  let effectivePort = null;
 
   function call(fn) {
     const life = lifetime;
@@ -80,10 +81,17 @@
       f[name].note.hidden = !locked;
       f[name].control.setAttribute('aria-describedby', describedBy(name));
     });
+    effectivePort = Number(effective.port);
+    updatePortNote();
     const dir = String(effective.quaver_dir || '');
     ui.dirHelp.replaceChildren(dir ? t('settings.dir_effective') + ' ' : t('settings.dir_none'));
     if (dir) ui.dirHelp.appendChild(h('code', null, qsc.pathNodes(dir)));
     showBanner(res.restart_required === true);
+  }
+
+  function updatePortNote() {
+    const v = m.validatePort(ui.fields.port.control.value);
+    ui.portNote.hidden = !(v.ok && v.value !== effectivePort);
   }
 
   function readForm() {
@@ -200,41 +208,18 @@
     ui.save = h('button', { type: 'submit', class: 'btn btn-primary' }, t('settings.save'));
     ui.reload = h('button', { type: 'button', class: 'btn', hidden: true, onclick: onReload }, t('settings.reload'));
     const dir = h('input', { id: 'set-dir', type: 'text', autocomplete: 'off', spellcheck: 'false' });
-    const port = h('input', { id: 'set-port', type: 'text', inputmode: 'numeric', autocomplete: 'off' });
+    const port = h('input', { id: 'set-port', type: 'text', inputmode: 'numeric', autocomplete: 'off', oninput: updatePortNote });
+    ui.portNote = h('p', { id: 'set-port-note', class: 'muted hint', role: 'status', hidden: true }, t('settings.port_obs_note'));
     const lang = h('select', { id: 'set-lang' }, m.LANGUAGES.map(function (code) {
       return h('option', { value: code, lang: LANG_ATTR[code] }, t('settings.lang.' + (code || 'auto')));
     }));
     return h('form', { class: 'card settings-form', onsubmit: onSubmit },
       ui.banner,
       field('quaver_dir', 'set-dir', 'settings.dir', dir, ui.dirHelp),
-      field('port', 'set-port', 'settings.port', port, h('p', { id: 'set-port-help', class: 'muted hint' }, t('settings.port_help'))),
+      field('port', 'set-port', 'settings.port', port, h('div', { id: 'set-port-help' }, h('p', { class: 'muted hint' }, t('settings.port_help')), ui.portNote)),
       field('language', 'set-lang', 'settings.language', lang, h('p', { id: 'set-lang-help', class: 'muted hint' }, t('settings.language_help'))),
       ui.general,
       h('div', { class: 'save-row' }, ui.save, ui.reload, ui.status));
-  }
-
-  function buildInfo() {
-    ui.info = h('dl', { class: 'info-list' });
-    return h('section', { class: 'card', 'aria-labelledby': 'set-info-title' },
-      h('h2', { id: 'set-info-title', class: 'card-label' }, t('settings.about')), ui.info);
-  }
-
-  function renderInfo(status) {
-    const rows = [];
-    if (status.config_path) rows.push([t('settings.config_file'), h('code', null, qsc.pathNodes(status.config_path))]);
-    if (status.version) rows.push([t('settings.version'), status.version]);
-    ui.info.replaceChildren.apply(ui.info, rows.map(function (r) {
-      return h('div', { class: 'info-row' }, h('dt', { class: 'muted' }, r[0]), h('dd', null, r[1]));
-    }));
-  }
-
-  async function loadInfo(id) {
-    try {
-      const status = await call(function (s) { return qsc.api.get('/api/status', s); });
-      if (id === mountId) renderInfo(status || {});
-    } catch (e) {
-      if (id === mountId) ui.info.replaceChildren(h('p', { class: 'muted' }, t('settings.info_unavailable')));
-    }
   }
 
   function showFailure(root, e) {
@@ -253,14 +238,13 @@
     try {
       const res = await call(function (s) { return qsc.api.get('/api/config', s); });
       if (id !== mountId) return;
-      root.replaceChildren(buildForm(), window.qscSettingsKeys.build({ call: call, alive: function () { return id === mountId; } }, res.config.keys), buildInfo(), window.qscSettingsQuit.build({ call: call, alive: function () { return id === mountId; } }));
+      root.replaceChildren(buildForm(), window.qscSettingsKeys.build({ call: call, alive: function () { return id === mountId; } }, res.config.keys), window.qscSettingsInfo.build(res), window.qscSettingsQuit.build({ call: call, alive: function () { return id === mountId; } }));
       fillForm(res);
       if (refocus) ui.fields.quaver_dir.control.focus();
       if (notice) {
         showStatus('ok', t('settings.saved'));
         ui.save.focus();
       }
-      loadInfo(id);
     } catch (e) {
       if (id !== mountId) return;
       showFailure(root, e);

@@ -44,8 +44,8 @@ func TestDoctorPrintsKeysWhenEnabled(t *testing.T) {
 func TestDoctorRejectsBadKeysConfig(t *testing.T) {
 	cfg := writeConfig(t, `{"keys": {"k4": ["A","S"]}}`)
 	var out, errw bytes.Buffer
-	if code := run(context.Background(), []string{"doctor", "--config", cfg}, &out, &errw); code != 1 || !strings.Contains(errw.String(), "keys.k4") {
-		t.Fatalf("code %d stderr %q", code, errw.String())
+	if code := run(context.Background(), []string{"doctor", "--config", cfg}, &out, &errw); code != 1 || !strings.Contains(out.String(), "keys.k4") {
+		t.Fatalf("code %d stdout %q", code, out.String())
 	}
 }
 

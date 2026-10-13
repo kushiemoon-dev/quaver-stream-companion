@@ -178,7 +178,6 @@
   "settings.about": "Über diese Installation",
   "settings.config_file": "Konfigurationsdatei",
   "settings.version": "Version",
-  "settings.info_unavailable": "Pfad der Konfigurationsdatei und Version sind derzeit nicht verfügbar.",
   "check.detail.readable": "Lesbar",
   "check.detail.owned": "Von diesem qsc verwendet",
   "check.detail.free": "Frei",
@@ -258,5 +257,18 @@
   "settings.quit.now": "Jetzt beenden",
   "settings.quit.stopping": "qsc wird beendet...",
   "settings.quit.stopped": "qsc ist beendet, du kannst diesen Tab schließen.",
-  "settings.quit.failed": "qsc konnte nicht beendet werden: {message}"
+  "settings.quit.failed": "qsc konnte nicht beendet werden: {message}",
+  "settings.themes_dir": "Themes-Ordner",
+  "settings.overlays_dir": "Overlays-Ordner",
+  "settings.releases": "Veröffentlichungen",
+  "settings.copy": "Kopieren",
+  "settings.copied": "Kopiert",
+  "settings.copy_aria": "Kopieren: {name}",
+  "settings.copied_live": "{name} kopiert.",
+  "settings.copy_manual": "Kopieren ist hier nicht möglich. Der Text ist markiert: kopieren Sie ihn selbst.",
+  "settings.port_obs_note": "Ihre OBS-Links enthalten den Port: aktualisieren Sie sie nach dem Neustart.",
+  "status.copy_diag": "Diagnose kopieren",
+  "status.copy_diag_done": "Diagnose kopiert. Prüfen Sie sie, bevor Sie sie teilen.",
+  "status.copy_diag_failed": "Diagnose konnte nicht kopiert werden: {message}",
+  "status.copy_diag_hint": "Einstellungen, Prüfungen und das Ende der Protokolldateien, ohne Ihren Benutzerordner. Vor dem Teilen prüfen."
 }

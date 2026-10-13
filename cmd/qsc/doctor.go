@@ -6,12 +6,23 @@ import (
 	"io"
 
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/diagnose"
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/overlays"
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/themes"
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/version"
 )
 
 func doctor(args []string, out, errw io.Writer) int {
-	opts, code := parseFlags("qsc doctor", false, args, errw)
+	opts, problem, code := parseOptions("qsc doctor", false, args, errw)
 	if code >= 0 {
 		return code
+	}
+
+	if opts.report {
+		dir := opts.quaverDir
+		fmt.Fprint(out, diagnose.Collect(context.Background(), diagnose.Source{Version: version.Version, QuaverDir: dir, ConfigPath: opts.configPath,
+			ThemesDir: themes.UserDir(opts.configPath), OverlaysDir: overlays.Dir(opts.configPath), SteamRoots: steamRoots(),
+			Port: opts.port, KeysEnabled: opts.keys.Enabled}))
+		return 0
 	}
 
 	names := map[string]string{
@@ -28,7 +39,13 @@ func doctor(args []string, out, errw io.Writer) int {
 		KeysEnabled: opts.keys.Enabled,
 	})
 
-	healthy := true
+	healthy := problem == nil
+	if problem != nil {
+		fmt.Fprintf(out, "[FAIL] Config file: %s\n", problem.headline)
+		if problem.fix != "" {
+			fmt.Fprintln(out, " ", problem.fix)
+		}
+	}
 	for i, c := range checks {
 		// Without a Quaver folder the dependent checks add only noise.
 		if i > 0 && i < 3 && !checks[0].OK {

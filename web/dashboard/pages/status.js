@@ -21,6 +21,7 @@
   let retryTimer = null;
   let mountId = 0;
   let inflight = false;
+  let copying = false;
   let ui = null;
   let state = { game: 'unknown', map: null, last_score: null };
   let diag = { checks: null, error: false, version: '', configPath: '' };
@@ -182,6 +183,49 @@
     renderDiag();
   }
 
+  function showManualReport(text) {
+    ui.copyBox.replaceChildren(h('textarea', { class: 'copy-area', readonly: true, rows: 8, 'aria-label': t('status.copy_diag') }, text));
+    ui.copyBox.hidden = false;
+    const area = ui.copyBox.firstChild;
+    area.focus();
+    area.select();
+  }
+
+  // The button stays enabled (aria-disabled only) so keyboard focus is never lost.
+  async function onCopyDiag() {
+    if (copying) return;
+    copying = true;
+    const id = mountId;
+    ui.copyDiag.setAttribute('aria-disabled', 'true');
+    ui.copyStatus.textContent = '';
+    ui.copyBox.hidden = true;
+    const ctl = new AbortController();
+    const timeout = setTimeout(function () { ctl.abort(); }, DIAG_TIMEOUT_MS);
+    let message;
+    let manual = null;
+    try {
+      const res = await qsc.api.get('/api/diagnostics', ctl.signal);
+      const report = String((res && res.report) || '');
+      try {
+        await window.qscCopy.copy(report);
+        message = t('status.copy_diag_done');
+      } catch (e) {
+        manual = report;
+        message = t('settings.copy_manual');
+      }
+    } catch (e) {
+      const why = e && e.name === 'AbortError' ? t('settings.timeout') : e && e.status ? e.message : t('status.unreachable');
+      message = t('status.copy_diag_failed', { message: why });
+    } finally {
+      clearTimeout(timeout);
+      copying = false;
+    }
+    if (id !== mountId) return;
+    ui.copyDiag.removeAttribute('aria-disabled');
+    if (manual !== null) showManualReport(manual);
+    requestAnimationFrame(function () { if (ui) ui.copyStatus.textContent = message; });
+  }
+
   function isObject(v) {
     return v !== null && typeof v === 'object' && !Array.isArray(v);
   }
@@ -263,6 +307,9 @@
       last: h('section', { class: 'card card-last' }),
       degraded: h('section', { class: 'banner banner-degraded', role: 'status', hidden: '' }),
       diag: h('div', { class: 'grid grid-4' }),
+      copyDiag: h('button', { type: 'button', class: 'btn', onclick: onCopyDiag }, t('status.copy_diag')),
+      copyBox: h('div', { class: 'copy-box', hidden: '' }),
+      copyStatus: h('p', { class: 'muted status-line', role: 'status', 'aria-live': 'polite' }),
       foot: h('footer', { class: 'footer' }),
     };
     root.appendChild(h('header', { class: 'page-head' },
@@ -273,9 +320,13 @@
     root.appendChild(h('h2', { class: 'section-label' }, t('status.diagnostics')));
     root.appendChild(ui.diag);
     root.appendChild(ui.diagErr);
+    root.appendChild(h('div', { class: 'save-row' }, ui.copyDiag, h('p', { class: 'muted hint' }, t('status.copy_diag_hint'))));
+    root.appendChild(ui.copyStatus);
+    root.appendChild(ui.copyBox);
     root.appendChild(ui.foot);
     mountId++;
     inflight = false;
+    copying = false;
     connection = 'connecting';
     state = { game: 'unknown', map: null, last_score: null };
     diag = { checks: null, error: false, version: '', configPath: '' };

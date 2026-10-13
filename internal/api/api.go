@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"path/filepath"
 	"reflect"
@@ -57,6 +58,8 @@ type Deps struct {
 	KeysConfig keys.Config
 	SteamRoots []string
 	Port       int
+	// Diagnostics returns the redacted support report text.
+	Diagnostics func(ctx context.Context) string
 	// Quit stops the whole app; the API calls it at most once, after answering POST /api/quit.
 	Quit func()
 }
@@ -88,12 +91,13 @@ type api struct {
 func New(d Deps) http.Handler {
 	a := api{d, new(atomic.Bool)}
 	routes := map[string]map[string]http.HandlerFunc{
-		"/api/status":   {http.MethodGet: a.status},
-		"/api/config":   {http.MethodGet: a.getConfig, http.MethodPut: a.putConfig},
-		"/api/history":  {http.MethodGet: a.history},
-		"/api/themes":   {http.MethodGet: a.themes},
-		"/api/overlays": {http.MethodGet: a.overlays},
-		"/api/quit":     {http.MethodPost: a.quit},
+		"/api/status":      {http.MethodGet: a.status},
+		"/api/diagnostics": {http.MethodGet: a.diagnostics},
+		"/api/config":      {http.MethodGet: a.getConfig, http.MethodPut: a.putConfig},
+		"/api/history":     {http.MethodGet: a.history},
+		"/api/themes":      {http.MethodGet: a.themes},
+		"/api/overlays":    {http.MethodGet: a.overlays},
+		"/api/quit":        {http.MethodPost: a.quit},
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, scoresPrefix) {
@@ -124,6 +128,7 @@ func (a api) quit(w http.ResponseWriter, r *http.Request) {
 		f.Flush()
 	}
 	if a.d.Quit != nil && a.quitting.CompareAndSwap(false, true) {
+		slog.Info("quit requested")
 		a.d.Quit()
 	}
 }
@@ -198,6 +203,9 @@ func (a api) getConfig(w http.ResponseWriter, r *http.Request) {
 		"restart_required": a.restartRequired(c),
 		"overridden":       a.overridden(),
 		"themes_dir":       a.d.ThemesDir,
+		"overlays_dir":     a.d.OverlaysDir,
+		"config_path":      a.d.ConfigPath,
+		"version":          a.d.Version,
 	})
 }
 
@@ -241,6 +249,7 @@ func (a api) putConfig(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "could not save the config file", "")
 		return
 	}
+	slog.Info("config saved")
 	writeJSON(w, http.StatusOK, map[string]any{"config": c, "restart_required": a.restartRequired(c), "overridden": a.overridden()})
 }
 

@@ -481,3 +481,5 @@ input:disabled, select:disabled { opacity: 0.65; cursor: not-allowed; }
 .banner-degraded p { margin: 6px 0; }
 .degraded-steps { margin: 8px 0; padding-left: 20px; }
 .degraded-steps li { margin: 4px 0; overflow-wrap: anywhere; }
+.copy-box[hidden] { display: none; }
+.copy-area { width: 100%; box-sizing: border-box; font: inherit; font-family: ui-monospace, Consolas, monospace; font-size: 0.85em; }

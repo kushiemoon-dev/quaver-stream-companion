@@ -199,6 +199,7 @@ All screenshots use synthetic data.
 | `GET /events` | Live event stream (Server-Sent Events) |
 | `GET /overlays/now-playing/` | Ready-made overlay: title, artist, difficulty, key count |
 | `GET /api/status` | Setup health: Quaver folder, files and version |
+| `GET /api/diagnostics` | The support report shown by the Copy diagnostics button (same-origin only, no CORS) |
 | `GET /api/config`, `PUT /api/config` | Read and save the settings file |
 | `GET /api/history` | Recent plays (`?limit=`, 1 to 200) |
 | `GET /api/scores/{id}/timeline` | Accuracy curve of one saved play, from the score database |
@@ -286,12 +287,17 @@ Precedence: command-line flag, then config file, then defaults. Use `--config <p
 qsc                      start the server
 qsc doctor               check the Quaver folder, files and port
 qsc stop                 stop a running qsc (--port N and --config <path> as for serve)
-qsc version              print the version
+qsc version              print the version (also qsc --version)
+qsc -h                   list the commands and flags (also --help)
+qsc doctor --report      print a redacted support report for a bug report
+qsc -v                   also write debug lines to qsc.log (--verbose)
 qsc --quaver-dir <dir>   use a specific Quaver folder (auto-detected from your Steam libraries otherwise)
 qsc --port 7878          change the local port
 qsc --config <path>      use another config file
 qsc --open               also open the dashboard in your browser
 ```
+
+`qsc` writes a log file, `qsc.log`, next to the config file (1 MiB at most, one older copy kept). It records start and stop, the game state, ids and settings events, never player names, key names or paths outside the Quaver and config folders. See [docs/INSTALL.md](docs/INSTALL.md#reporting-a-problem) for what to share in a bug report.
 
 The server only answers requests whose Host is `127.0.0.1:<port>` or `localhost:<port>`, so port forwarding or a reverse proxy gets a 403.
 

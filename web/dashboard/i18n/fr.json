@@ -178,7 +178,6 @@
   "settings.about": "À propos de cette installation",
   "settings.config_file": "Fichier de configuration",
   "settings.version": "Version",
-  "settings.info_unavailable": "Le chemin du fichier de configuration et la version ne sont pas disponibles pour le moment.",
   "check.detail.readable": "Lisible",
   "check.detail.owned": "Utilisé par ce qsc",
   "check.detail.free": "Libre",
@@ -258,5 +257,18 @@
   "settings.quit.now": "Quitter maintenant",
   "settings.quit.stopping": "Arrêt de qsc...",
   "settings.quit.stopped": "qsc est arrêté, vous pouvez fermer cet onglet.",
-  "settings.quit.failed": "Impossible d'arrêter qsc : {message}"
+  "settings.quit.failed": "Impossible d'arrêter qsc : {message}",
+  "settings.themes_dir": "Dossier des thèmes",
+  "settings.overlays_dir": "Dossier des overlays",
+  "settings.releases": "Versions publiées",
+  "settings.copy": "Copier",
+  "settings.copied": "Copié",
+  "settings.copy_aria": "Copier : {name}",
+  "settings.copied_live": "{name} copié.",
+  "settings.copy_manual": "La copie n'est pas disponible ici. Le texte est sélectionné : copiez-le vous-même.",
+  "settings.port_obs_note": "Vos liens OBS contiennent le port : mettez-les à jour après le redémarrage.",
+  "status.copy_diag": "Copier le diagnostic",
+  "status.copy_diag_done": "Diagnostic copié. Relisez-le avant de le partager.",
+  "status.copy_diag_failed": "Impossible de copier le diagnostic : {message}",
+  "status.copy_diag_hint": "Réglages, vérifications et fin des fichiers journaux, sans le nom de votre dossier utilisateur. Relisez avant de partager."
 }

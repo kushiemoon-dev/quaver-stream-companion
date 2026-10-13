@@ -92,3 +92,12 @@ func TestAllDocsHaveNoDashes(t *testing.T) {
 		}
 	}
 }
+
+func TestInstallWarnsAboutTheRuntimeLogExcerpt(t *testing.T) {
+	src := readDoc(t, "docs/INSTALL.md")
+	for _, want := range []string{"player name", "map titles", "replay paths"} {
+		if !strings.Contains(src, want) {
+			t.Errorf("INSTALL.md must warn about %q in the runtime.log excerpt", want)
+		}
+	}
+}
