@@ -451,3 +451,51 @@ function fakeClock() {
   off.touch(); assert.strictEqual(clock.pending(), 0); clock.advance(1e6); assert.strictEqual(hidden, 0);
 }
 `
+
+func TestEventStreamReconnects(t *testing.T) {
+	runNodeModel(t, "overlays/model.js", `
+const assert = require('assert');
+const m = require(process.argv[2]);
+const made = [];
+function fake(url) {
+  const es = { url, readyState: 1, closed: false, handlers: {}, addEventListener(n, f) { this.handlers[n] = f; }, close() { this.closed = true; this.readyState = 2; } };
+  made.push(es);
+  return es;
+}
+const timers = { pending: [], setTimeout(fn, ms) { this.pending.push({ fn, ms }); return this.pending.length; }, clearTimeout() { this.pending = []; } };
+const got = [];
+const h = m.createConnection(fake, '/events?keys=1', { 'score.saved': (d) => got.push(d) }, timers);
+assert.strictEqual(made.length, 1);
+assert.strictEqual(made[0].url, '/events?keys=1');
+made[0].handlers['score.saved']({ data: JSON.stringify({ data: { id: 1 } }) });
+assert.deepStrictEqual(got, [{ id: 1 }]);
+let opened = 0; h.onopen = () => opened++;
+made[0].onopen(); assert.strictEqual(opened, 1);
+made[0].readyState = 0; made[0].onerror();
+assert.strictEqual(timers.pending.length, 0, 'a stream the browser retries itself is left alone');
+for (const want of [5000, 10000, 20000, 30000, 30000]) {
+  const cur = made[made.length - 1];
+  cur.readyState = 2; cur.onerror(); cur.onerror();
+  assert.strictEqual(timers.pending.length, 1, 'one timer only');
+  assert.strictEqual(timers.pending[0].ms, want);
+  const t = timers.pending.shift(); timers.pending = []; t.fn();
+}
+assert.strictEqual(made.length, 6);
+assert.ok(made.slice(0, 5).every((e) => e.closed), 'old streams are closed');
+made[5].onopen(); assert.strictEqual(opened, 2, 'onopen is forwarded after a reconnect');
+made[5].readyState = 2; made[5].onerror();
+assert.strictEqual(timers.pending[0].ms, 5000, 'delay starts over after a successful open');
+h.close();
+assert.strictEqual(timers.pending.length, 0);
+assert.ok(made[5].closed);
+`)
+}
+
+func TestCommonJSConnectsThroughTheReconnectingModel(t *testing.T) {
+	src := readWeb(t, "overlays/common.js")
+	for _, want := range []string{"model.createConnection(", "'/events?keys=1'", "'/events'"} {
+		if !strings.Contains(src, want) {
+			t.Errorf("common.js lacks %q", want)
+		}
+	}
+}

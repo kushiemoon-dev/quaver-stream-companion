@@ -2,6 +2,7 @@ package server
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"io"
 	"net"
@@ -10,12 +11,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"testing/fstest"
 	"time"
 
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/api"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/bus"
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/keys"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/scores"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/state"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/themes"
@@ -250,7 +253,7 @@ func TestDashboardHasContentSecurityPolicyOnly(t *testing.T) {
 	srv := newGuarded(t)
 	for path, want := range map[string]bool{
 		"/": true, "/index.html": true, "/missing": true,
-		"/overlays/x/": false, "/themes/t.css": false, "/state": false, "/api/status": false,
+		"/themes/t.css": false, "/state": false, "/api/status": false,
 	} {
 		resp, err := http.Get(srv.URL + path)
 		if err != nil {
@@ -510,5 +513,203 @@ func TestSnapshotKeepsKeysFieldForEveryClient(t *testing.T) {
 	_, data := readEvent(t, bufio.NewScanner(resp.Body))
 	if !strings.Contains(data, `"keys":null`) {
 		t.Fatalf("snapshot = %s", data)
+	}
+}
+
+func getWithOrigin(t *testing.T, url, origin string) *http.Response {
+	t.Helper()
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if origin != "" {
+		req.Header.Set("Origin", origin)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { resp.Body.Close() })
+	return resp
+}
+
+func newKeysServer(t *testing.T) (*httptest.Server, *bus.Bus) {
+	t.Helper()
+	b := bus.New()
+	snap := func() state.Snapshot {
+		return state.Snapshot{Game: "gameplay", Keys: &keys.Frame{Layout: "4k", Lanes: 4, Down: []bool{true, false, false, false}, Presses: []int{1, 0, 0, 0}, KPS: 3, Peak: 4}}
+	}
+	srv := httptest.NewServer(New(b, snap, fstest.MapFS{}))
+	t.Cleanup(srv.Close)
+	return srv, b
+}
+
+func TestCrossOriginStateHasNoKeys(t *testing.T) {
+	srv, _ := newKeysServer(t)
+	host := strings.TrimPrefix(srv.URL, "http://")
+	for _, c := range []struct {
+		name, origin string
+		wantKeys     bool
+	}{
+		{"no origin", "", true},
+		{"same origin", "http://" + host, true},
+		{"foreign origin", "http://evil.example", false},
+		{"opaque origin", "null", false},
+		{"other port", "http://127.0.0.1:1", false},
+	} {
+		raw, err := io.ReadAll(getWithOrigin(t, srv.URL+"/state", c.origin).Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var m map[string]json.RawMessage
+		if err := json.Unmarshal(raw, &m); err != nil {
+			t.Fatalf("%s: %v", c.name, err)
+		}
+		if _, has := m["keys"]; has != c.wantKeys {
+			t.Errorf("%s: keys present = %v, want %v (%s)", c.name, has, c.wantKeys, raw)
+		}
+		if string(m["game"]) != `"gameplay"` {
+			t.Errorf("%s: other fields must stay: %s", c.name, raw)
+		}
+	}
+}
+
+func TestCrossOriginEventsKeysStreamIsForbidden(t *testing.T) {
+	srv, _ := newKeysServer(t)
+	host := strings.TrimPrefix(srv.URL, "http://")
+	for _, origin := range []string{"http://evil.example", "null"} {
+		resp := getWithOrigin(t, srv.URL+"/events?keys=1", origin)
+		if resp.StatusCode != http.StatusForbidden {
+			t.Errorf("origin %q: status = %d, want 403", origin, resp.StatusCode)
+		}
+	}
+	for _, origin := range []string{"", "http://" + host} {
+		resp := getWithOrigin(t, srv.URL+"/events?keys=1", origin)
+		if resp.StatusCode != 200 {
+			t.Fatalf("origin %q: status = %d", origin, resp.StatusCode)
+		}
+		if got := resp.Header.Get("Access-Control-Allow-Origin"); got != "" {
+			t.Errorf("origin %q: keys stream sends Access-Control-Allow-Origin %q", origin, got)
+		}
+		_, data := readEvent(t, bufio.NewScanner(resp.Body))
+		if !strings.Contains(data, `"kps":3`) {
+			t.Errorf("origin %q: snapshot lost the keys: %s", origin, data)
+		}
+	}
+}
+
+func TestCrossOriginPlainEventsSnapshotHasNoKeys(t *testing.T) {
+	srv, _ := newKeysServer(t)
+	resp := getWithOrigin(t, srv.URL+"/events", "http://evil.example")
+	if resp.StatusCode != 200 || resp.Header.Get("Access-Control-Allow-Origin") != "*" {
+		t.Fatalf("status=%d cors=%q", resp.StatusCode, resp.Header.Get("Access-Control-Allow-Origin"))
+	}
+	_, data := readEvent(t, bufio.NewScanner(resp.Body))
+	if strings.Contains(data, `"keys"`) || !strings.Contains(data, `"game":"gameplay"`) {
+		t.Fatalf("cross-origin snapshot = %s", data)
+	}
+}
+
+func TestEventsCapsConcurrentSubscribers(t *testing.T) {
+	srv, _ := newServer(t)
+	for i := 0; i < maxEventClients; i++ {
+		openEvents(t, srv.URL+"/events")
+	}
+	resp, err := http.Get(srv.URL + "/events")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("client %d: status = %d, want 503", maxEventClients+1, resp.StatusCode)
+	}
+}
+
+type deadlineWriter struct {
+	*httptest.ResponseRecorder
+	mu        sync.Mutex
+	deadlines []time.Time
+}
+
+func (d *deadlineWriter) SetWriteDeadline(t time.Time) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.deadlines = append(d.deadlines, t)
+	return nil
+}
+
+func (d *deadlineWriter) count() int {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return len(d.deadlines)
+}
+
+func TestEventsRefreshesWriteDeadlineOnEveryWrite(t *testing.T) {
+	b := bus.New()
+	h := New(b, func() state.Snapshot { return state.Snapshot{Game: "menu"} }, fstest.MapFS{})
+	ctx, cancel := context.WithCancel(context.Background())
+	w := &deadlineWriter{ResponseRecorder: httptest.NewRecorder()}
+	done := make(chan struct{})
+	go func() {
+		h.ServeHTTP(w, httptest.NewRequest("GET", "/events", nil).WithContext(ctx))
+		close(done)
+	}()
+	waitFor(t, func() bool { return w.count() >= 1 })
+	b.Publish(bus.TypeGameState, bus.GameState{State: "gameplay"})
+	waitFor(t, func() bool { return w.count() >= 2 })
+	cancel()
+	<-done
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	for _, d := range w.deadlines {
+		if left := time.Until(d); left < 20*time.Second || left > 31*time.Second {
+			t.Errorf("deadline is %v away, want about 30s", left)
+		}
+	}
+}
+
+func waitFor(t *testing.T, ok func() bool) {
+	t.Helper()
+	for i := 0; i < 200; i++ {
+		if ok() {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatal("condition not reached")
+}
+
+type stuckWriter struct {
+	*httptest.ResponseRecorder
+	release chan struct{}
+	once    sync.Once
+}
+
+func (s *stuckWriter) Write(p []byte) (int, error) {
+	s.once.Do(func() { <-s.release })
+	return s.ResponseRecorder.Write(p)
+}
+
+func TestOverflowingSubscriberIsClosedSoItResyncs(t *testing.T) {
+	b := bus.New()
+	h := New(b, func() state.Snapshot { return state.Snapshot{Game: "menu"} }, fstest.MapFS{})
+	w := &stuckWriter{ResponseRecorder: httptest.NewRecorder(), release: make(chan struct{})}
+	done := make(chan struct{})
+	go func() {
+		h.ServeHTTP(w, httptest.NewRequest("GET", "/events", nil))
+		close(done)
+	}()
+	waitFor(t, func() bool { return b.Subscribers() == 1 })
+	for i := 0; i < 500; i++ {
+		b.Publish(bus.TypeGameState, bus.GameState{State: "gameplay"})
+	}
+	close(w.release)
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the stream stayed open after the queue overflowed")
+	}
+	if b.Dropped() == 0 {
+		t.Error("the overflow was not counted")
 	}
 }

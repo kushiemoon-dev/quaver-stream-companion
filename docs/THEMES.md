@@ -64,11 +64,11 @@ Readable text matters on a stream. Aim for at least 4.5:1 for `--fg` on `--bg`, 
 
 ## Privacy
 
-A custom theme is your own CSS. An `@import` or a `url()` that points to a remote host makes OBS fetch that address every time the overlay loads, which lets that host see your requests. Prefer local-only themes with no remote resources.
+A custom theme is your own CSS. Overlays now block every remote resource with a Content Security Policy, so a remote host can no longer see your requests. A remote `@import` in a custom theme is blocked, the theme counts as failed to load and the overlay falls back to the `neutral-light` theme. A remote `url()` inside `@font-face` (or for an image) is blocked too, and only that font or image is lost. Keep custom themes free of remote resources.
 
 ## Fonts
 
-Custom themes cannot ship font files in this version. Use fonts installed on your system, or the system font stack shown above.
+Custom themes cannot ship font files in this version: the themes folder only serves `.css` files, and overlays only load fonts from their own address (`font-src 'self'`), so a `data:` URI font or a font on another site is blocked. The fonts that work are the ones installed on your system (list them in `--font`, or use `src: local("Font Name")` in an `@font-face`), the system font stack shown above, and the bundled VT323 font at `/themes/fonts/VT323-Regular.ttf`.
 
 ## Contributing a built-in theme
 

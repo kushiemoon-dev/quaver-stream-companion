@@ -31,7 +31,7 @@ Replace the port if you changed it. Options such as `scale`, `autohide` or `lang
 
 ### Lane keys overlay
 
-The lane keys overlay needs the Keys card of the dashboard Settings page: turn it on, pick your keys and restart `qsc`. Lane keys are off by default. Only the lane keys you choose are read, and only while a map is being played. Nothing is stored or logged: no key names, no key history. The key state is read system wide, regardless of the focused window, so lane key timing may be sampled while you type elsewhere during gameplay. It works on Windows only for now, and a tap shorter than the polling interval may be missed. Until then the overlay shows a short hint saying why it is empty.
+The lane keys overlay needs the Keys card of the dashboard Settings page: turn it on, pick your keys and restart `qsc`. Lane keys are off by default. Only the lane keys you choose are read, and only while a map is being played. Nothing is stored or logged: no key names, no key history. The key state is read system wide, regardless of the focused window, so lane key timing may be sampled while you type elsewhere during gameplay. It works on Windows only for now, and a tap shorter than the polling interval may be missed. The key data is only served to pages loaded from `qsc` and to OBS; other web pages cannot read it. Until then the overlay shows a short hint saying why it is empty.
 
 ## Troubleshooting
 

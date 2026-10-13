@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"os"
+	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -441,5 +443,46 @@ func TestRecentScoreWithoutMapRow(t *testing.T) {
 	}
 	if len(got) != 1 || got[0].Score.ID != id || got[0].Map.MD5 != "ghost" || got[0].Map.Title != "" {
 		t.Fatalf("got = %+v", got)
+	}
+}
+
+func TestOpenAcceptsUnusualFolderNames(t *testing.T) {
+	src := testutil.NewQuaverDir(t)
+	src.AddMap(t, testutil.MapRow{MD5: "m1", Title: "Odd", Mode: 1, LastPlayedMS: 7})
+	raw, err := os.ReadFile(filepath.Join(src.Path, "quaver.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"a#b", "c%d", "100%41", "e f", "g&h;i", "j%2523k", "q?r"} {
+		t.Run(name, func(t *testing.T) {
+			if strings.Contains(name, "?") && runtime.GOOS == "windows" {
+				t.Skip("a question mark cannot be part of a Windows folder name")
+			}
+			dir := filepath.Join(t.TempDir(), name)
+			if err := os.MkdirAll(dir, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(dir, "quaver.db"), raw, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			st, err := Open(dir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer st.Close()
+			m, err := st.LastPlayedMap(context.Background())
+			if err != nil || m.Title != "Odd" {
+				t.Fatalf("map = %+v err = %v", m, err)
+			}
+		})
+	}
+}
+
+func TestReadOnlyDSNRefusesNetworkPaths(t *testing.T) {
+	bs := string(rune(92))
+	for _, p := range []string{bs + bs + "host" + bs + "share" + bs + "quaver.db", "//host/share/quaver.db"} {
+		if dsn, err := readOnlyDSN(p); err == nil {
+			t.Errorf("readOnlyDSN(%q) = %q, want an error", p, dsn)
+		}
 	}
 }

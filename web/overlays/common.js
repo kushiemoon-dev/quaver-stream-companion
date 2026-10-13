@@ -105,12 +105,9 @@
 
   // options.keys asks the server for lane key frames, which are not sent otherwise.
   window.qscConnect = function (handlers, options) {
-    const es = new EventSource(options && options.keys ? '/events?keys=1' : '/events');
-    Object.keys(handlers).forEach(function (name) {
-      es.addEventListener(name, function (ev) {
-        handlers[name](JSON.parse(ev.data).data);
-      });
+    return model.createConnection(function (url) { return new EventSource(url); }, options && options.keys ? '/events?keys=1' : '/events', handlers, {
+      setTimeout: function (fn, ms) { return setTimeout(fn, ms); },
+      clearTimeout: function (id) { clearTimeout(id); },
     });
-    return es;
   };
 })();

@@ -13,9 +13,25 @@ import (
 var vdfPath = regexp.MustCompile(`"path"\s+"([^"]+)"`)
 var plainDrive = regexp.MustCompile(`^[A-Za-z]:$`)
 
+var evalSymlinks = filepath.EvalSymlinks
+
+// resolved follows links and junctions in dir; a folder that cannot be resolved is returned as is, so later stats report it.
+func resolved(dir string) string {
+	if r, err := evalSymlinks(dir); err == nil {
+		return r
+	}
+	return dir
+}
+
+// ResolvesToUNC reports whether dir, or the folder a link inside it leads to, is a network path.
+func ResolvesToUNC(dir string) bool {
+	return IsUNC(dir) || IsUNC(resolved(dir))
+}
+
 // IsQuaverDir reports whether dir looks like a Quaver install folder.
+// Links are followed and the target is checked for network paths too.
 func IsQuaverDir(dir string) bool {
-	if IsUNC(dir) {
+	if ResolvesToUNC(dir) {
 		return false
 	}
 	_, err := os.Stat(filepath.Join(dir, "Quaver.exe"))
@@ -160,7 +176,7 @@ func IsUNC(p string) bool {
 // and returned as is; otherwise the Steam libraries are searched.
 func Find(override string, steamRoots []string) (string, error) {
 	if override != "" {
-		if IsUNC(override) {
+		if ResolvesToUNC(override) {
 			return "", fmt.Errorf("%q is a network path; use a folder on a local drive", override)
 		}
 		if IsQuaverDir(override) {

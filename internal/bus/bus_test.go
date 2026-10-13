@@ -100,3 +100,39 @@ func TestFilteredSubscriberNeverQueuesRejectedTypes(t *testing.T) {
 		t.Fatalf("got %+v, want map.started (rejected frames must not fill the queue)", e)
 	}
 }
+
+func TestFullQueueClosesTheSubscriberAndCountsTheDrop(t *testing.T) {
+	b := New()
+	ch, unsub := b.Subscribe() // never read
+	defer unsub()
+	for i := 0; i < subscriberQueue+1; i++ {
+		b.Publish(TypeGameState, GameState{State: "menu"})
+	}
+	if got := b.Dropped(); got != 1 {
+		t.Fatalf("Dropped = %d, want 1", got)
+	}
+	if b.Subscribers() != 0 {
+		t.Fatalf("Subscribers = %d, the overflowing one must be removed", b.Subscribers())
+	}
+	n := 0
+	for range ch {
+		n++
+	}
+	if n != subscriberQueue {
+		t.Fatalf("drained %d queued events before the close, want %d", n, subscriberQueue)
+	}
+	unsub() // still safe
+}
+
+func TestHealthySubscriberIsNeverClosed(t *testing.T) {
+	b := New()
+	ch, unsub := b.Subscribe()
+	defer unsub()
+	for i := 0; i < 10*subscriberQueue; i++ {
+		b.Publish(TypeGameState, GameState{State: "menu"})
+		<-ch
+	}
+	if b.Dropped() != 0 || b.Subscribers() != 1 {
+		t.Fatalf("dropped=%d subscribers=%d", b.Dropped(), b.Subscribers())
+	}
+}

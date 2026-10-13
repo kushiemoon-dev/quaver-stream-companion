@@ -1,11 +1,13 @@
 package server
 
 import (
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -13,6 +15,7 @@ import (
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/api"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/bus"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/state"
+	"github.com/kushiemoon-dev/quaver-stream-companion/web"
 )
 
 func newOverlaysServer(t *testing.T, dir string) *httptest.Server {
@@ -129,7 +132,7 @@ func TestBuiltInOverlaysWinAndKeepTheirHeaders(t *testing.T) {
 		if resp.StatusCode != 200 || body != want {
 			t.Errorf("%s: %d %q", path, resp.StatusCode, body)
 		}
-		if resp.Header.Get("Content-Security-Policy") != "" || resp.Header.Get("Access-Control-Allow-Origin") != "" {
+		if resp.Header.Get("Content-Security-Policy") != overlayCSP || resp.Header.Get("Access-Control-Allow-Origin") != "" {
 			t.Errorf("%s: built-in got custom headers: %v", path, resp.Header)
 		}
 	}
@@ -230,5 +233,62 @@ func TestOverlaysDirThatIsAFileNeverBreaksServing(t *testing.T) {
 	}
 	if resp, body := fetch(t, srv.URL+"/overlays/x/"); resp.StatusCode != 200 || body != "builtin x" {
 		t.Errorf("built-in: %d %q", resp.StatusCode, body)
+	}
+}
+
+const builtinOverlayCSP = "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'"
+
+func TestBuiltInOverlaysSendTheirCSPAndEveryReferencedFileLoads(t *testing.T) {
+	srv := httptest.NewServer(New(bus.New(), func() state.Snapshot { return state.Snapshot{} }, web.FS, WithOverlaysDir(t.TempDir())))
+	defer srv.Close()
+	ref := regexp.MustCompile(`(?:src|href)="(/[^"]+)"`)
+	for _, name := range []string{"now-playing", "result", "history", "state", "alert", "keys", "curve"} {
+		resp, err := http.Get(srv.URL + "/overlays/" + name + "/")
+		if err != nil {
+			t.Fatal(err)
+		}
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if resp.StatusCode != 200 || resp.Header.Get("Content-Security-Policy") != builtinOverlayCSP {
+			t.Errorf("%s: status %d, CSP %q", name, resp.StatusCode, resp.Header.Get("Content-Security-Policy"))
+		}
+		for _, m := range ref.FindAllStringSubmatch(string(body), -1) {
+			r, err := http.Get(srv.URL + m[1])
+			if err != nil {
+				t.Fatal(err)
+			}
+			r.Body.Close()
+			if r.StatusCode != 200 {
+				t.Errorf("%s: %s answers %d", name, m[1], r.StatusCode)
+			}
+		}
+	}
+	r, err := http.Get(srv.URL + "/themes/fonts/VT323-Regular.ttf")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.Body.Close()
+	if r.StatusCode != 200 {
+		t.Errorf("theme font answers %d", r.StatusCode)
+	}
+}
+
+func TestCustomOverlaysKeepTheirSandboxCSP(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "mine"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "mine", "index.html"), []byte("<p>x</p>"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	srv := httptest.NewServer(New(bus.New(), func() state.Snapshot { return state.Snapshot{} }, web.FS, WithOverlaysDir(dir)))
+	defer srv.Close()
+	resp, err := http.Get(srv.URL + "/overlays/mine/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if got := resp.Header.Get("Content-Security-Policy"); got != "sandbox allow-scripts" {
+		t.Errorf("custom overlay CSP = %q", got)
 	}
 }

@@ -7,9 +7,11 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	_ "modernc.org/sqlite"
 
@@ -83,7 +85,10 @@ func Open(quaverDir string) (*Store, error) {
 	if _, err := os.Stat(path); err != nil {
 		return nil, fmt.Errorf("quaver.db not found in %s: %w", quaverDir, err)
 	}
-	dsn := "file:" + filepath.ToSlash(path) + "?mode=ro&_pragma=busy_timeout(3000)"
+	dsn, err := readOnlyDSN(path)
+	if err != nil {
+		return nil, err
+	}
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open quaver.db: %w", err)
@@ -93,6 +98,19 @@ func Open(quaverDir string) (*Store, error) {
 		return nil, fmt.Errorf("open quaver.db read-only: %w", err)
 	}
 	return &Store{db: db}, nil
+}
+
+// readOnlyDSN builds a file: URL so characters such as #, %, ? and spaces in the folder name stay part of the path.
+func readOnlyDSN(path string) (string, error) {
+	if paths.IsUNC(path) {
+		return "", fmt.Errorf("quaver.db path %q is a network path", path)
+	}
+	p := filepath.ToSlash(path)
+	if !strings.HasPrefix(p, "/") {
+		p = "/" + p
+	}
+	q := url.Values{"mode": {"ro"}, "_pragma": {"busy_timeout(3000)"}}
+	return (&url.URL{Scheme: "file", Path: p, RawQuery: q.Encode()}).String(), nil
 }
 
 // Close closes the database.

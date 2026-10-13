@@ -294,7 +294,48 @@
     };
   }
 
+  const RECONNECT_FIRST_MS = 5000;
+  const RECONNECT_MAX_MS = 30000;
+  const EVENT_SOURCE_CLOSED = 2;
+
+  // createConnection opens an event stream with open(url) and, when the browser gives up on it
+  // (a 503 when the server is full ends an EventSource for good), opens a new one after a delay
+  // that doubles from 5 s up to 30 s and starts over once a stream is open again.
+  // The returned handle forwards onopen and close() to whichever stream is current.
+  function createConnection(open, url, handlers, timers) {
+    let es = null;
+    let timer = null;
+    let delay = RECONNECT_FIRST_MS;
+    let stopped = false;
+    const handle = { onopen: null, close: function () {
+      stopped = true;
+      if (timer !== null) timers.clearTimeout(timer);
+      if (es) es.close();
+    } };
+    function connect() {
+      timer = null;
+      const cur = open(url);
+      es = cur;
+      Object.keys(handlers).forEach(function (name) {
+        cur.addEventListener(name, function (ev) { handlers[name](JSON.parse(ev.data).data); });
+      });
+      cur.onopen = function () {
+        delay = RECONNECT_FIRST_MS;
+        if (typeof handle.onopen === 'function') handle.onopen();
+      };
+      cur.onerror = function () {
+        if (stopped || cur.readyState !== EVENT_SOURCE_CLOSED || timer !== null) return;
+        cur.close();
+        timer = timers.setTimeout(connect, delay);
+        delay = Math.min(delay * 2, RECONNECT_MAX_MS);
+      };
+    }
+    connect();
+    return handle;
+  }
+
   const api = {
+    createConnection: createConnection,
     gradeClass: gradeClass, gradeText: gradeText, formatAccuracy: formatAccuracy, formatRate: formatRate,
     formatStars: formatStars, modList: modList, judgments: judgments, parseCount: parseCount,
     parseScale: parseScale, parseAutohide: parseAutohide, parseLang: parseLang, parseHide: parseHide,

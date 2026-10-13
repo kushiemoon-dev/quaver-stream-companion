@@ -133,7 +133,7 @@ func (c Config) Validate(themes []string) error {
 	if c.Port < 1 || c.Port > 65535 {
 		return &FieldError{"port", "must be between 1 and 65535"}
 	}
-	if paths.IsUNC(c.QuaverDir) {
+	if paths.ResolvesToUNC(c.QuaverDir) {
 		return &FieldError{"quaver_dir", "must be a folder on a local drive, not a network path"}
 	}
 	if c.QuaverDir != "" && !paths.IsQuaverDir(c.QuaverDir) {

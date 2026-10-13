@@ -32,7 +32,7 @@ func TestIsUNCSpellings(t *testing.T) {
 		{`/host/share`, win},
 		{`/home/user/Quaver`, win},
 		{`C:` + bs + `Games` + bs + `Quaver`, false},
-		{`G:/SteamLibrary/steamapps/common/Quaver`, false},
+		{`D:/SteamLibrary/steamapps/common/Quaver`, false},
 		{`Quaver`, false},
 		{`..` + bs + `Quaver`, false},
 		{``, false},

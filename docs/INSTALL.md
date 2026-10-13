@@ -12,7 +12,7 @@
 | `qsc_<version>_linux_x86_64.AppImage` | Linux, 64 bit Intel or AMD, no extraction needed |
 | `checksums.txt` | SHA-256 of every file above |
 
-Each archive holds the program, the license, the README, the guides in `docs/` and, on Linux, the `qsc.service` file.
+Each archive holds the program, the license, the third party notices, the README, the guides in `docs/` and, on Linux, the `qsc.service` file.
 
 ## Download and verify
 

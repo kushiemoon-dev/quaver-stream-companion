@@ -129,7 +129,11 @@ The game can report other screen names. They are passed through in lower case, s
 
 Lane keys are off by default. Only the lane keys you choose are read, and only while a map is being played. Nothing is stored or logged: no key names, no key history. The key state is read system wide, regardless of the focused window, so lane key timing may be sampled while you type elsewhere during gameplay. It works on Windows only for now, and a tap shorter than the polling interval may be missed. Only per lane booleans, press counters and keys per second are published, never key names. Turn it on in the Keys card of the dashboard settings or with `keys.enabled` in the config file (see the README).
 
-`keys.frame` is not sent to every client: open the stream with `GET /events?keys=1` to receive it. A plain `GET /events` (or `keys=0`) never carries these frames. The `snapshot` event and `GET /state` always have the `keys` member: the last frame, or `null` until one exists. A custom overlay that wants live lane data connects with `new EventSource("/events?keys=1")`; the built-in overlays use `qscConnect(handlers, { keys: true })`.
+`keys.frame` is not sent to every client: open the stream with `GET /events?keys=1` to receive it. A plain `GET /events` (or `keys=0`) never carries these frames. The `snapshot` event and `GET /state` have the `keys` member (except for cross-origin readers, see below): the last frame, or `null` until one exists. The lane key data is same-origin only: a request that carries an `Origin` header different from its `Host` (any other web page, and a custom overlay, which runs in an opaque origin) gets `403` on `GET /events?keys=1`, receives no `keys` member in `GET /state` or in the `snapshot` event, and the `?keys=1` response never has `Access-Control-Allow-Origin`. Requests with no `Origin` header (OBS browser sources loading a built-in overlay, curl) are not affected. The built-in lane keys overlay uses `qscConnect(handlers, { keys: true })`.
+
+A custom overlay therefore cannot read the keys stream. This is on purpose: it keeps other web pages in your browser from reading what you press.
+
+`qsc` accepts at most 64 event streams (`/events`) at once and answers `503` beyond that. The built-in overlays reconnect on their own after 5 seconds, then 10, 20 and 30 seconds, until a slot is free. A custom overlay that uses `EventSource` directly must recreate it after a `503`, because the browser does not retry a stream that ended with an error status. A stream that cannot keep up is closed by the server, and `EventSource` reconnects with a fresh `snapshot`.
 
 `keys.frame` is sent at most 30 times per second and only when something changed, with one final frame when you leave `gameplay`; counters and peak restart on every `map.started`.
 
@@ -297,7 +301,7 @@ This overlay is served at `http://127.0.0.1:7878/overlays/mini-card/`. Files are
 
 Each file of a custom overlay is served with `Content-Security-Policy: sandbox allow-scripts`. The page runs scripts, but it has an opaque origin. In practice:
 
-- `fetch('/state')` and `new EventSource('/events')` work, because those routes allow cross-origin reads.
+- `fetch('/state')` and `new EventSource('/events')` work, because those routes allow cross-origin reads. The lane keys data does not: the `keys` field is left out and `/events?keys=1` answers `403` for a sandboxed page.
 - The `/api/` routes cannot be read, and the write API is unreachable. A custom overlay cannot change your settings.
 - `localStorage`, `sessionStorage`, cookies and IndexedDB are not available (using them throws an error).
 - Forms and pop-ups are blocked, and so is top-level navigation from the sandboxed page (it cannot send the source to another address).

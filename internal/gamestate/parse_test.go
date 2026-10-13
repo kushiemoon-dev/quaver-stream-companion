@@ -23,8 +23,8 @@ func TestParseLine(t *testing.T) {
 		},
 		{
 			name: "replay saved",
-			in:   "[1:06:06] - RUNTIME - IMPORTANT: Successfully saved replay to path: G:\\SteamLibrary\\steamapps\\common\\Quaver/Data/r/78.qr",
-			want: Line{Kind: KindReplaySaved, ReplayPath: "G:\\SteamLibrary\\steamapps\\common\\Quaver/Data/r/78.qr"},
+			in:   "[1:06:06] - RUNTIME - IMPORTANT: Successfully saved replay to path: D:\\SteamLibrary\\steamapps\\common\\Quaver/Data/r/78.qr",
+			want: Line{Kind: KindReplaySaved, ReplayPath: "D:\\SteamLibrary\\steamapps\\common\\Quaver/Data/r/78.qr"},
 			ok:   true,
 		},
 		{

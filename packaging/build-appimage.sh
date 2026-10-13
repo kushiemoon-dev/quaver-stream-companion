@@ -20,6 +20,8 @@ CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath \
   -o "$appdir/usr/bin/qsc" ./cmd/qsc
 install -m 755 packaging/appimage/AppRun "$appdir/AppRun"
 install -m 644 packaging/appimage/qsc.desktop "$appdir/qsc.desktop"
+install -m 644 LICENSE "$appdir/LICENSE"
+install -m 644 THIRD_PARTY_NOTICES.md "$appdir/THIRD_PARTY_NOTICES.md"
 install -m 644 web/dashboard/favicon.svg "$appdir/qsc.svg"
 ln -s qsc.svg "$appdir/.DirIcon"
 

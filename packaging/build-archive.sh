@@ -23,7 +23,7 @@ mkdir -p "$stage/docs"
 CGO_ENABLED=0 GOOS=$goos GOARCH=$goarch go build -trimpath \
   -ldflags "-s -w -X github.com/kushiemoon-dev/quaver-stream-companion/internal/version.Version=$tag" \
   -o "$stage/$bin" ./cmd/qsc
-cp LICENSE README.md "$stage/"
+cp LICENSE THIRD_PARTY_NOTICES.md README.md "$stage/"
 cp docs/*.md "$stage/docs/"
 [[ $goos == linux ]] && cp packaging/qsc.service "$stage/"
 
