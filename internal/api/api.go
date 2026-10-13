@@ -34,6 +34,7 @@ type Deps struct {
 	Started    time.Time
 	Snapshot   func() state.Snapshot
 	History    func(ctx context.Context, limit int) ([]scores.Result, error)
+	Timeline   func(ctx context.Context, id int64) (scores.Timeline, error)
 	ConfigPath string
 	// Effective returns the Quaver folder actually in use.
 	Effective func() (quaverDir string)
@@ -83,6 +84,10 @@ func New(d Deps) http.Handler {
 		"/api/overlays": {http.MethodGet: a.overlays},
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, scoresPrefix) {
+			a.timeline(w, r)
+			return
+		}
 		methods, ok := routes[r.URL.Path]
 		if !ok {
 			writeError(w, http.StatusNotFound, "not found", "")

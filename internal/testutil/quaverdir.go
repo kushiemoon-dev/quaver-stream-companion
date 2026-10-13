@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	_ "modernc.org/sqlite"
@@ -12,7 +13,7 @@ import (
 
 const (
 	mapTable   = `CREATE TABLE Map (Id integer primary key autoincrement not null, Md5Checksum varchar, Artist varchar, Title varchar, DifficultyName varchar, LastTimePlayed integer, Mode integer, Difficulty10X float, Difficulty09X float, Difficulty115X float)`
-	scoreTable = `CREATE TABLE Score (Id integer primary key autoincrement not null, MapMd5 varchar, TotalScore integer, Grade integer, Accuracy float, MaxCombo integer, CountMarv integer, CountPerf integer, CountGreat integer, CountGood integer, CountOkay integer, CountMiss integer, Mods integer, DateTime varchar, PerformanceRating float)`
+	scoreTable = `CREATE TABLE Score (Id integer primary key autoincrement not null, MapMd5 varchar, TotalScore integer, Grade integer, Accuracy float, MaxCombo integer, CountMarv integer, CountPerf integer, CountGreat integer, CountGood integer, CountOkay integer, CountMiss integer, Mods integer, DateTime varchar, PerformanceRating float, JudgementBreakdown varchar)`
 )
 
 // FakeDir is a temporary Quaver folder with a synthetic quaver.db.
@@ -34,10 +35,18 @@ type ScoreRow struct {
 	Accuracy, Rating                              float64
 	MaxCombo, Marv, Perf, Great, Good, Okay, Miss int
 	Mods                                          int64
+	Breakdown                                     string
 }
 
 // NewQuaverDir creates Quaver.exe, an empty Logs/runtime.log and quaver.db.
-func NewQuaverDir(t testing.TB) *FakeDir {
+func NewQuaverDir(t testing.TB) *FakeDir { return newDir(t, scoreTable) }
+
+// NewLegacyQuaverDir is like NewQuaverDir but its Score table has no JudgementBreakdown column.
+func NewLegacyQuaverDir(t testing.TB) *FakeDir {
+	return newDir(t, strings.Replace(scoreTable, ", JudgementBreakdown varchar", "", 1))
+}
+
+func newDir(t testing.TB, scoreSchema string) *FakeDir {
 	t.Helper()
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "Quaver.exe"), nil, 0o644); err != nil {
@@ -51,7 +60,7 @@ func NewQuaverDir(t testing.TB) *FakeDir {
 		t.Fatal(err)
 	}
 	d.Exec(t, mapTable)
-	d.Exec(t, scoreTable)
+	d.Exec(t, scoreSchema)
 	return d
 }
 
@@ -100,8 +109,8 @@ func (d *FakeDir) AddMap(t testing.TB, m MapRow) {
 // AddScore inserts a score row and returns its id.
 func (d *FakeDir) AddScore(t testing.TB, s ScoreRow) int64 {
 	t.Helper()
-	res := d.exec(t, `INSERT INTO Score (MapMd5, TotalScore, Grade, Accuracy, MaxCombo, CountMarv, CountPerf, CountGreat, CountGood, CountOkay, CountMiss, Mods, DateTime, PerformanceRating) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'2026-10-12 13:06:06',?)`,
-		s.MapMD5, s.Total, s.Grade, s.Accuracy, s.MaxCombo, s.Marv, s.Perf, s.Great, s.Good, s.Okay, s.Miss, s.Mods, s.Rating)
+	res := d.exec(t, `INSERT INTO Score (MapMd5, TotalScore, Grade, Accuracy, MaxCombo, CountMarv, CountPerf, CountGreat, CountGood, CountOkay, CountMiss, Mods, DateTime, PerformanceRating, JudgementBreakdown) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'2026-10-12 13:06:06',?,?)`,
+		s.MapMD5, s.Total, s.Grade, s.Accuracy, s.MaxCombo, s.Marv, s.Perf, s.Great, s.Good, s.Okay, s.Miss, s.Mods, s.Rating, s.Breakdown)
 	id, err := res.LastInsertId()
 	if err != nil {
 		t.Fatal(err)

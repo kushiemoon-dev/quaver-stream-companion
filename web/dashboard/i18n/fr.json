@@ -216,6 +216,8 @@
   "obs.custom.link": "Lire le guide",
   "overlays.keys.name": "Touches des pistes",
   "overlays.keys.description": "Barres de pistes qui s'allument quand une touche est enfoncée, compteurs d'appuis et touches par seconde. Demande d'activer les touches des pistes dans les Réglages. Utilisez 480 x 200 en 4K et 560 x 200 en 7K.",
+  "overlays.curve.name": "Courbe des jugements",
+  "overlays.curve.description": "Trace la précision de la dernière partie jugement par jugement, avec un repère pour chaque raté. Elle apparaît quand une partie est enregistrée. Utilise 520 x 180.",
   "overlays.counts": "Compteurs d'appuis",
   "overlays.counts_hint": "Affiche le nombre d'appuis sous chaque piste. Activé par défaut.",
   "overlays.peak": "Pic de touches par seconde",

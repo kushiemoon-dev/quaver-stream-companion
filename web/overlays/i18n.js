@@ -37,6 +37,9 @@
       'keys.lane': 'Lane',
       'keys.off': 'Lane keys are off. Turn them on in the dashboard settings.',
       'keys.unsupported': 'Lane keys are not available on this system.',
+      'curve.title': 'QSC judgment curve',
+      'curve.label': 'Accuracy over the judgments of the last play',
+      'curve.misses': 'Misses',
     },
     fr: {
       'state.initialization': 'Démarrage',
@@ -75,6 +78,9 @@
       'keys.lane': 'Piste',
       'keys.off': 'Les touches des pistes sont désactivées. Activez-les dans les réglages du tableau de bord.',
       'keys.unsupported': 'Les touches des pistes ne sont pas disponibles sur ce système.',
+      'curve.title': 'QSC courbe des jugements',
+      'curve.label': 'Précision au fil des jugements de la dernière partie',
+      'curve.misses': 'Ratés',
     },
     de: {
       'state.initialization': 'Startet',
@@ -113,6 +119,9 @@
       'keys.lane': 'Spur',
       'keys.off': 'Die Lane-Tasten sind aus. Aktiviere sie in den Einstellungen des Dashboards.',
       'keys.unsupported': 'Die Lane-Tasten sind auf diesem System nicht verfügbar.',
+      'curve.title': 'QSC Wertungsverlauf',
+      'curve.label': 'Genauigkeit im Verlauf der Wertungen der letzten Runde',
+      'curve.misses': 'Fehler',
     },
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = catalogs;

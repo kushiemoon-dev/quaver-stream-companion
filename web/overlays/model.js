@@ -216,6 +216,38 @@
     return { y: top.y, x1: c.left, x2: c.right, text: formatAccuracy(top.accuracy), label: label };
   }
 
+  const MAX_POINTS = 200;
+  const MAX_MISSES = 500;
+  const MAX_TOTAL = 100000;
+  const WARMUP = 0.1;
+
+  // The first tenth of the points is left out of the axis range so the first judgments do not flatten the curve.
+  function timelineView(tl, width, height) {
+    const src = obj(tl);
+    const points = (Array.isArray(src.points) ? src.points : []).slice(0, MAX_POINTS).map(accuracyValue).filter(isFinite);
+    if (points.length === 0) return null;
+    const t = Math.floor(num(src.total));
+    const total = isFinite(t) ? clamp(t, points.length, MAX_TOTAL) : points.length;
+    const innerW = width - PAD.l - PAD.r;
+    const innerH = height - PAD.t - PAD.b;
+    const lowest = Math.min.apply(null, points.slice(Math.floor(points.length * WARMUP)));
+    const yMin = Math.min(90, Math.floor(lowest / 5) * 5);
+    const yOf = function (acc) { return PAD.t + ((100 - clamp(acc, yMin, 100)) / (100 - yMin)) * innerH; };
+    const misses = (Array.isArray(src.misses) ? src.misses : []).slice(0, MAX_MISSES).map(num)
+      .filter(function (i) { return Number.isInteger(i) && i >= 0 && i < total; });
+    return {
+      yMin: yMin,
+      yMax: 100,
+      yTop: PAD.t,
+      yBottom: height - PAD.b,
+      left: PAD.l,
+      right: width - PAD.r,
+      points: points.map(function (acc, i) { return { x: PAD.l + (innerW * (i + 1)) / points.length, y: yOf(acc) }; }),
+      misses: misses.map(function (i) { return PAD.l + (innerW * (i + 0.5)) / total; }),
+      final: formatAccuracy(points[points.length - 1]),
+    };
+  }
+
   function keysCounter(v, max) {
     const n = Math.floor(num(v));
     return isFinite(n) ? clamp(n, 0, max) : 0;
@@ -268,7 +300,7 @@
     parseScale: parseScale, parseAutohide: parseAutohide, parseLang: parseLang, parseHide: parseHide,
     isHiddenState: isHiddenState, stateKey: stateKey, stateTone: stateTone, resultView: resultView,
     curve: curve, createAutohide: createAutohide, alertView: alertView, bestLine: bestLine,
-    lastLabel: lastLabel, keysView: keysView, keysHint: keysHint,
+    lastLabel: lastLabel, keysView: keysView, keysHint: keysHint, timelineView: timelineView,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else window.qscModel = api;

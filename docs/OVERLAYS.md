@@ -1,6 +1,6 @@
 # Build your own overlay
 
-An overlay is a web page that OBS shows in a Browser source. QuaverStreamCompanion serves six of them and lets you add your own: a folder with an `index.html` is enough. This guide lists the built-in overlays and their options, describes the data the companion publishes, and walks through two complete examples.
+An overlay is a web page that OBS shows in a Browser source. QuaverStreamCompanion serves seven of them and lets you add your own: a folder with an `index.html` is enough. This guide lists the built-in overlays and their options, describes the data the companion publishes, and walks through two complete examples.
 
 Everything below uses the default port. Replace `7878` if you changed it in the settings.
 
@@ -14,6 +14,7 @@ Everything below uses the default port. Replace `7878` if you changed it in the 
 | State | `http://127.0.0.1:7878/overlays/state/` | 280 x 64 |
 | Alert | `http://127.0.0.1:7878/overlays/alert/` | 520 x 120 |
 | Lane keys | `http://127.0.0.1:7878/overlays/keys/` | 480 x 200 (560 x 200 for 7K) |
+| Judgment curve | `http://127.0.0.1:7878/overlays/curve/` | 520 x 180 |
 
 Options go in the query string, for example `/overlays/result/?theme=nord&autohide=20&scale=1.2`. A value that cannot be read is ignored and the default is used (`theme`, `accent`, `lang`, `autohide`, `hide`, `demo`). A number outside its range is clamped to the nearest limit (`scale`, `n`), and a `scale` or `n` that is not a number uses the default.
 
@@ -24,7 +25,7 @@ Options go in the query string, for example `/overlays/result/?theme=nord&autohi
 | `lang` | all | `en`, `fr` or `de` | The browser language, else `en` |
 | `scale` | all | A number from 0.5 to 3 | 1 |
 | `demo` | all | `1` shows example data and does not connect | off |
-| `autohide` | now playing, result, alert | Seconds from 1 to 3600 until the card hides | never (alert: 8) |
+| `autohide` | now playing, result, alert, curve | Seconds from 1 to 3600 until the card hides | never (alert: 8) |
 | `n` | history | Number of plays from 5 to 50 | 20 |
 | `best` | history | `1` draws a dashed line at the best accuracy of the plays shown | off |
 | `sound` | alert | `1` plays a short synthesized chime when an alert appears | off |
@@ -35,6 +36,8 @@ Options go in the query string, for example `/overlays/result/?theme=nord&autohi
 The lane keys overlay draws 4 or 7 lane bars (one per lane, lit while the key is down, with a smooth release), a press counter per lane, the KPS and the peak. It is hidden until lane data arrives (except with `demo=1`). When the feature is off or unsupported it shows a short hint line instead. Use 480 x 200 for 4K and 560 x 200 for 7K. It needs lane keys turned on in the settings, see Lane keys below.
 
 The alert overlay stays hidden until a saved play is a personal best or a full combo (and was not failed, paused or played with autoplay). It then shows "New personal best", "Full combo" or both, with the map title and accuracy. It never replays an old play when it connects.
+
+The curve overlay stays hidden until a play is saved. It then reads the judgment timeline of that play (see `GET /api/scores/{id}/timeline`) and draws the accuracy after each judgment as a line, with a red tick at the bottom for every miss and the final accuracy at the top right. The horizontal axis is the judgment index, not time: the database stores no timestamps. It never replays an old play when it connects. Use 520 x 180.
 
 ## 2. Combining overlays and sizes
 
@@ -53,6 +56,7 @@ The companion publishes read-only data on `127.0.0.1`. All numbers are JSON numb
 | `GET /state` | yes | The current snapshot as JSON |
 | `GET /events` | yes | A live stream of events (Server-Sent Events) |
 | `GET /api/history` | no, same-origin pages only | The latest plays |
+| `GET /api/scores/{id}/timeline` | no, same-origin pages only | The judgment timeline of one saved play |
 | `GET /api/status` | no, same-origin pages only | Version and health checks |
 | `GET /api/overlays` | no, same-origin pages only | The custom overlays folder and its overlays |
 
@@ -186,7 +190,7 @@ The score object:
 
 #### What is not available
 
-There is no per-note data and no live judgment, combo or accuracy while a map is being played. The companion reads only the game log and the score database, and a score is written to the database when the play ends. So you get the map when it starts and the full result when it is saved, but nothing in between. An overlay that needs live judgments cannot be built on this data.
+There is no per-note data and no live judgment, combo or accuracy while a map is being played. The companion reads only the game log and the score database, and a score is written to the database when the play ends. So you get the map when it starts and the full result when it is saved, but nothing in between. An overlay that needs live judgments cannot be built on this data. The one thing available afterwards is the judgment timeline of a saved play, see `GET /api/scores/{id}/timeline`.
 
 ### GET /api/history
 
@@ -216,6 +220,27 @@ For pages served by the companion itself (the built-in History overlay uses it).
 ```
 
 The fields mean the same as in the result object, but the map and score fields are flattened into one object.
+
+### GET /api/scores/{id}/timeline
+
+Same-origin only. `id` is the `score.id` of a saved play (the `id` of an `/api/history` entry). It returns the judgments of that play as an accuracy curve:
+
+```json
+{
+  "score_id": 12,
+  "total": 1200,
+  "points": [100, 99.13, 98.5],
+  "misses": [140, 410, 411],
+  "counts": [[6, 2, 1, 0, 0, 1], [8, 1, 0, 1, 0, 0], [9, 0, 1, 0, 0, 0]]
+}
+```
+
+- `total` is the number of judgments of the play.
+- `points` holds at most 200 values. Each one is the accuracy in percent after a segment of judgments: segment `i` ends at judgment `(i + 1) * total / len(points)`. Accuracy uses Quaver's standard weights (Marvelous 100, Perfect 98.25, Great 65, Good 25, Okay -100, Miss -50), divided by the number of judgments so far and never below 0. It is the formula behind the accuracy stored in `quaver.db`, so the last point equals the final accuracy of the play.
+- `counts` has one entry per point: the judgments inside that segment, in the order Marvelous, Perfect, Great, Good, Okay, Miss.
+- `misses` lists the 0-based judgment indexes of misses, at most 500 (evenly thinned when there are more).
+
+The judgments come in the order they were recorded, and the database keeps no timestamps, so the curve is labeled by judgment index, not time. The answer is a 404 with `{"error": "..."}` when the score does not exist or has no usable judgment data (older scores, or an unreadable value), and a 405 for any method other than GET.
 
 ### GET /api/status
 
@@ -260,7 +285,7 @@ This overlay is served at `http://127.0.0.1:7878/overlays/mini-card/`. Files are
 
 ### Rules and limits
 
-- The folder name uses only lowercase letters, digits and hyphens. A name used by a built-in overlay (`now-playing`, `result`, `history`, `state`, `alert`, `keys`) is ignored: the built-in one always wins.
+- The folder name uses only lowercase letters, digits and hyphens. A name used by a built-in overlay (`now-playing`, `result`, `history`, `state`, `alert`, `keys`, `curve`) is ignored: the built-in one always wins.
 - `index.html` is required. At most 100 overlays are listed.
 - An overlay holds at most 200 files and folders, nested at most 3 levels deep (for example `index.html`, `css/style.css`, `img/icons/star.svg`).
 - A file is at most 2 MiB. Names use only letters, digits, `.`, `_` and `-`, and do not start with a dot.

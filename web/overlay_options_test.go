@@ -15,7 +15,7 @@ const O = 'http://127.0.0.1:7878';
 const base = { theme: 'neutral-light', accent: '', defaultTheme: 'neutral-light', defaultAccent: '' };
 const link = function (m, demo) { return u.buildOverlayUrl({ ...base, ...m }, !!demo, O); };
 
-assert.deepStrictEqual(cat.OVERLAYS.map(function (o) { return o.id; }), ['now-playing', 'result', 'history', 'state', 'alert', 'keys']);
+assert.deepStrictEqual(cat.OVERLAYS.map(function (o) { return o.id; }), ['now-playing', 'result', 'history', 'state', 'alert', 'keys', 'curve']);
 assert.strictEqual(cat.sizeText(cat.byId('now-playing')), '540 x 140');
 assert.strictEqual(cat.byId('nope').id, 'now-playing');
 for (const o of cat.OVERLAYS) {
@@ -116,6 +116,6 @@ func TestOverlayRecommendedSizes(t *testing.T) {
 const assert = require('assert');
 const cat = require(process.argv[2]);
 const sizes = cat.OVERLAYS.map(function (o) { return o.id + ' ' + cat.sizeText(o); });
-assert.deepStrictEqual(sizes, ['now-playing 540 x 140', 'result 520 x 230', 'history 520 x 180', 'state 280 x 64', 'alert 520 x 120', 'keys 480 x 200']);
+assert.deepStrictEqual(sizes, ['now-playing 540 x 140', 'result 520 x 230', 'history 520 x 180', 'state 280 x 64', 'alert 520 x 120', 'keys 480 x 200', 'curve 520 x 180']);
 `)
 }

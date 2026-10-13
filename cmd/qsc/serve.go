@@ -104,6 +104,7 @@ func serve(ctx context.Context, args []string, out, errw io.Writer) int {
 		Started:    time.Now(),
 		Snapshot:   st.Snapshot,
 		History:    store.Recent,
+		Timeline:   store.Timeline,
 		ConfigPath: opts.configPath,
 		Effective:  func() string { return dir },
 		Detect: func() string {

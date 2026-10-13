@@ -216,6 +216,8 @@
   "obs.custom.link": "Anleitung lesen",
   "overlays.keys.name": "Lane-Tasten",
   "overlays.keys.description": "Spurbalken, die leuchten, solange eine Taste gehalten wird, dazu Tastenzähler und Tasten pro Sekunde. Die Lane-Tasten müssen in den Einstellungen aktiviert sein. Nimm 480 x 200 für 4K und 560 x 200 für 7K.",
+  "overlays.curve.name": "Wertungsverlauf",
+  "overlays.curve.description": "Zeichnet die Genauigkeit der letzten Runde Wertung für Wertung, mit einer Markierung für jeden Fehler. Sie erscheint, sobald eine Runde gespeichert wird. Nimm 520 x 180.",
   "overlays.counts": "Tastenzähler",
   "overlays.counts_hint": "Zeigt die Anzahl der Anschläge unter jeder Spur. Standardmäßig an.",
   "overlays.peak": "Spitze Tasten pro Sekunde",

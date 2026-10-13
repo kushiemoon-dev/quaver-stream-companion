@@ -125,3 +125,7 @@ html, body { overflow: hidden; }
 .keys-stats { display: flex; flex-wrap: wrap; gap: calc(4px * var(--scale, 1)) calc(16px * var(--scale, 1)); font-size: calc(16px * var(--scale, 1)); font-weight: 700; font-variant-numeric: tabular-nums; }
 .keys-stats span span { color: var(--muted); font-weight: 400; margin-right: 6px; }
 @media (prefers-reduced-motion: reduce) { .keys-bar { transition: none; } }
+.curve .miss { stroke: var(--c-red); stroke-width: 1.5; opacity: 0.8; }
+.curve text.final { font-weight: 700; }
+.card.fit { height: 100vh; display: flex; flex-direction: column; }
+.card.fit .curve { flex: 1 1 0; min-height: 0; }

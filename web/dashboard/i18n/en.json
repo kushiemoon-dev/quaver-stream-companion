@@ -216,6 +216,8 @@
   "obs.custom.link": "Read the guide",
   "overlays.keys.name": "Lane keys",
   "overlays.keys.description": "Lane bars that light up while a key is held, press counters and keys per second. Needs lane keys turned on in Settings. Use 480 x 200 for 4K and 560 x 200 for 7K.",
+  "overlays.curve.name": "Judgment curve",
+  "overlays.curve.description": "Draws the accuracy of the last play judgment by judgment, with a tick for each miss. It appears when a play is saved. Use 520 x 180.",
   "overlays.counts": "Press counters",
   "overlays.counts_hint": "Shows the number of presses under each lane. On by default.",
   "overlays.peak": "Peak keys per second",

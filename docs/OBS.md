@@ -25,6 +25,7 @@ The overlays are web pages served by `qsc`. In OBS each one is a Browser source.
 | State | 280 x 64 | `http://127.0.0.1:7878/overlays/state/` |
 | Alert | 520 x 120 | `http://127.0.0.1:7878/overlays/alert/` |
 | Lane keys | 480 x 200 (560 x 200 for 7K) | `http://127.0.0.1:7878/overlays/keys/` |
+| Judgment curve | 520 x 180 | `http://127.0.0.1:7878/overlays/curve/` |
 
 Replace the port if you changed it. Options such as `scale`, `autohide` or `lang` are added by the Overlays page.
 

@@ -81,6 +81,7 @@ The full walkthrough, with troubleshooting, is in the [OBS setup guide](docs/OBS
 | State | 280 x 64 | `/overlays/state/` |
 | Alert | 520 x 120 | `/overlays/alert/` |
 | Lane keys | 480 x 200 (560 x 200 for 7K) | `/overlays/keys/` |
+| Judgment curve | 520 x 180 | `/overlays/curve/` |
 
 Each link starts with `http://127.0.0.1:7878`. Use the size as the width and height of the OBS Browser source.
 
@@ -168,6 +169,7 @@ Palettes are credited to Catppuccin, Tokyo Night, Dracula, Nord, Gruvbox and Ros
 | `GET /api/status` | Setup health: Quaver folder, files and version |
 | `GET /api/config`, `PUT /api/config` | Read and save the settings file |
 | `GET /api/history` | Recent plays (`?limit=`, 1 to 200) |
+| `GET /api/scores/{id}/timeline` | Accuracy curve of one saved play, from the score database |
 | `GET /api/themes` | Available overlay themes |
 
 ### Events

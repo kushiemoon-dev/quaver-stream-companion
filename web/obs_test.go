@@ -79,7 +79,7 @@ func TestObsSizesMatchPlan(t *testing.T) {
 const assert = require('assert');
 const c = require(process.argv[2]);
 const got = c.OVERLAYS.map((o) => o.id + ':' + c.sizeText(o)).join(',');
-assert.strictEqual(got, 'now-playing:540 x 140,result:520 x 230,history:520 x 180,state:280 x 64,alert:520 x 120,keys:480 x 200');
+assert.strictEqual(got, 'now-playing:540 x 140,result:520 x 230,history:520 x 180,state:280 x 64,alert:520 x 120,keys:480 x 200,curve:520 x 180');
 `)
 }
 

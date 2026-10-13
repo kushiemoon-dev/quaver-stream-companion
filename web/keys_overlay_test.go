@@ -35,7 +35,7 @@ func TestKeysOverlayParamsAndOptIn(t *testing.T) {
 			t.Errorf("common.js is missing %q", want)
 		}
 	}
-	for _, name := range []string{"now-playing", "result", "history", "state", "alert"} {
+	for _, name := range []string{"now-playing", "result", "history", "state", "alert", "curve"} {
 		if strings.Contains(readWeb(t, "overlays/"+name+"/index.html"), "keys: true") {
 			t.Errorf("%s must not ask for key frames", name)
 		}
@@ -206,7 +206,7 @@ func TestDocsStatePrivacyOfLaneKeys(t *testing.T) {
 		}
 	}
 	guide := readDoc(t, "docs/OVERLAYS.md")
-	for _, want := range []string{"/overlays/keys/", "?keys=1", "keys.frame", "480 x 200", "560 x 200", "`counts`", "`peak`", "serves six"} {
+	for _, want := range []string{"/overlays/keys/", "?keys=1", "keys.frame", "480 x 200", "560 x 200", "`counts`", "`peak`", "serves seven"} {
 		if !strings.Contains(guide, want) {
 			t.Errorf("docs/OVERLAYS.md must mention %q", want)
 		}
