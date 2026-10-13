@@ -9,26 +9,32 @@ import (
 	"time"
 )
 
+// bs is built from its code point so no editor can collapse doubled backslashes in the cases below.
+var bs = string(rune(92))
+
+// uncPath joins parts with backslashes after a leading double backslash.
+func uncPath(parts ...string) string { return bs + bs + strings.Join(parts, bs) }
+
 func TestIsUNCSpellings(t *testing.T) {
 	win := runtime.GOOS == "windows"
 	cases := []struct {
 		in   string
 		want bool
 	}{
-		{`\host\share`, true},
+		{uncPath("host", "share"), true},
 		{`//host/share`, true},
-		{`\/host\share`, true},
-		{`/\host/share`, true},
-		{`\?\UNC\h\s`, true},
-		{`\.\pipe\x`, true},
-		{`\??\UNC\h\s`, win},
-		{`\host\share`, win},
+		{bs + `/host` + bs + `share`, true},
+		{`/` + bs + `host/share`, true},
+		{uncPath("?", "UNC", "h", "s"), true},
+		{uncPath(".", "pipe", "x"), true},
+		{bs + `??` + bs + `UNC` + bs + `h` + bs + `s`, win},
+		{bs + `host` + bs + `share`, win},
 		{`/host/share`, win},
 		{`/home/user/Quaver`, win},
-		{`C:\Games\Quaver`, false},
+		{`C:` + bs + `Games` + bs + `Quaver`, false},
 		{`G:/SteamLibrary/steamapps/common/Quaver`, false},
 		{`Quaver`, false},
-		{`..\Quaver`, false},
+		{`..` + bs + `Quaver`, false},
 		{``, false},
 	}
 	for _, c := range cases {
@@ -40,7 +46,13 @@ func TestIsUNCSpellings(t *testing.T) {
 
 func TestIsQuaverDirRejectsUNCWithoutStat(t *testing.T) {
 	start := time.Now()
-	for _, p := range []string{`\invalid-host-xyz\share`, `//invalid-host-xyz/share`, `\/invalid-host-xyz\share`, `/\invalid-host-xyz/share`, `\?\UNC\invalid-host-xyz\share`} {
+	for _, p := range []string{
+		uncPath("invalid-host-xyz", "share"),
+		`//invalid-host-xyz/share`,
+		bs + `/invalid-host-xyz` + bs + `share`,
+		`/` + bs + `invalid-host-xyz/share`,
+		uncPath("?", "UNC", "invalid-host-xyz", "share"),
+	} {
 		if IsQuaverDir(p) {
 			t.Errorf("IsQuaverDir(%q) = true", p)
 		}
@@ -52,11 +64,8 @@ func TestIsQuaverDirRejectsUNCWithoutStat(t *testing.T) {
 
 func TestFindSkipsUNCLibraries(t *testing.T) {
 	root := t.TempDir()
-	vdf := "\"libraryfolders\"\n{\n\t\"1\"\n\t{\n\t\t\"path\"\t\t\"\\\\invalid-host-xyz\\share\"\n\t}\n\t\"2\"\n\t{\n\t\t\"path\"\t\t\"//invalid-host-xyz/share\"\n\t}\n}\n"
+	writeVDF(t, root, uncPath("invalid-host-xyz", "share"), `//invalid-host-xyz/share`)
 	if err := os.MkdirAll(filepath.Join(root, "steamapps"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(root, "steamapps", "libraryfolders.vdf"), []byte(vdf), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	for _, l := range libraries(root) {
@@ -65,7 +74,7 @@ func TestFindSkipsUNCLibraries(t *testing.T) {
 		}
 	}
 	start := time.Now()
-	_, err := Find("", []string{root, `\invalid-host-xyz\steam`})
+	_, err := Find("", []string{root, uncPath("invalid-host-xyz", "steam")})
 	if err == nil || !strings.Contains(err.Error(), "not found") {
 		t.Fatalf("err = %v", err)
 	}
@@ -78,7 +87,11 @@ func TestFindSkipsUNCLibraries(t *testing.T) {
 }
 
 func TestFindOverrideRejectsUNCSpellings(t *testing.T) {
-	for _, p := range []string{`\/host\share`, `/\host/share`} {
+	for _, p := range []string{
+		bs + `/host` + bs + `share`,
+		`/` + bs + `host/share`,
+		uncPath("host", "share"),
+	} {
 		if _, err := Find(p, nil); err == nil || !strings.Contains(err.Error(), "network path") {
 			t.Errorf("Find(%q) err = %v", p, err)
 		}

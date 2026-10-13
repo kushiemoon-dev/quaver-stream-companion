@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"sync"
 	"syscall"
 	"time"
@@ -124,7 +123,7 @@ func serve(ctx context.Context, args []string, out, errw io.Writer) int {
 		be.set(dir, store)
 		a := app.New(b, store)
 		lines := make(chan string, 64)
-		logPath := filepath.Join(dir, "Logs", "runtime.log")
+		logPath := paths.LogPath(dir)
 		if seed, ok := gamestate.LastStateLine(logPath, seedMaxAge); ok {
 			a.Seed(ctx, seed)
 		}

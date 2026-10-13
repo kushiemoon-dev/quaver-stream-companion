@@ -147,3 +147,30 @@ func TestAdviceNamesBothPlatformsAndTheWaysToSetTheFolder(t *testing.T) {
 		}
 	}
 }
+
+func TestAdviceCoversLinuxSteamVariantsAndUnverifiedProton(t *testing.T) {
+	text := strings.Join(Advice(), "\n")
+	for _, want := range []string{"Flatpak", "snap", "Proton", "not verified"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("advice lacks %q:\n%s", want, text)
+		}
+	}
+}
+
+func TestFolderChecksAcceptCaseVariantsOfLogAndDatabase(t *testing.T) {
+	fake := testutil.NewQuaverDir(t)
+	logs, db := filepath.Join(fake.Path, "Logs"), filepath.Join(fake.Path, "quaver.db")
+	if err := os.Rename(logs, filepath.Join(fake.Path, "logs.tmp")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(filepath.Join(fake.Path, "logs.tmp"), filepath.Join(fake.Path, "LOGS")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(db, filepath.Join(fake.Path, "QUAVER.DB")); err != nil {
+		t.Fatal(err)
+	}
+	dir, checks := Folder(context.Background(), fake.Path, nil)
+	if dir != fake.Path {
+		t.Fatalf("dir = %q, checks = %+v", dir, checks)
+	}
+}

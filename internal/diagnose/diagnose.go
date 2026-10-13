@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"path/filepath"
 
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/keys"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/paths"
@@ -63,7 +62,7 @@ func folderChecks(ctx context.Context, override string, steamRoots []string) (st
 			Check{ID: "log", Detail: dirNotFound},
 			Check{ID: "database", Detail: dirNotFound})
 	}
-	logPath := filepath.Join(dir, "Logs", "runtime.log")
+	logPath := paths.LogPath(dir)
 	_, statErr := os.Stat(logPath)
 	return dir, append(checks,
 		result("log", statErr, logPath),
@@ -74,7 +73,9 @@ func folderChecks(ctx context.Context, override string, steamRoots []string) (st
 func Advice() []string {
 	return []string{
 		`Steam usually installs Quaver in C:\Program Files (x86)\Steam\steamapps\common\Quaver on Windows,`,
-		"and in ~/.local/share/Steam/steamapps/common/Quaver on Linux (also under Proton).",
+		"and in ~/.local/share/Steam/steamapps/common/Quaver on Linux, where Quaver runs through Proton.",
+		"Flatpak and snap Steam use their own Steam library folders under ~/.var/app/com.valvesoftware.Steam and ~/snap/steam.",
+		"Where Proton keeps Quaver files outside the game folder is not verified: qsc reads the game folder only.",
 		"Install and start Quaver once, or set its folder in the dashboard Settings,",
 		"with quaver_dir in the config file, or with --quaver-dir <folder>.",
 	}
@@ -114,7 +115,8 @@ func checkKeys() Check {
 	ok := keys.Supported()
 	detail := "enabled"
 	if !ok {
-		detail = keys.ErrUnsupported.Error()
+		_, err := keys.NewSampler()
+		detail = err.Error()
 	}
 	return Check{ID: "keys", OK: ok, Detail: detail}
 }

@@ -98,6 +98,23 @@ journalctl --user -u qsc.service
 
 The service does not open a browser. If Quaver is not found yet when you log in, `qsc` keeps looking for it and picks it up within 15 seconds once it appears. These unit instructions have not been tried on a real Linux machine by the author.
 
+## Linux and Proton
+
+Quaver is a Windows game, so on Linux it runs through Proton. Steam still keeps the game folder at `steamapps/common/Quaver` inside a Steam library, and `qsc` finds Quaver by that folder (it must contain `Quaver.exe`). It looks in these Steam folders, plus every local library listed in their `steamapps/libraryfolders.vdf`:
+
+- `~/.steam/steam`
+- `~/.local/share/Steam`
+- `~/.var/app/com.valvesoftware.Steam/.local/share/Steam` (Flatpak)
+- `~/snap/steam/common/.local/share/Steam` (snap)
+
+Symlinked Steam folders are followed once and a folder reached by two paths is only searched once. Library entries that are relative, contain `..`, or point to a network share are ignored. If Quaver is somewhere else, set `quaver_dir` in Settings or the config file, or start `qsc` with `--quaver-dir <folder>`.
+
+Linux file systems tell `Logs` from `logs`. `qsc` first looks for `Logs/runtime.log` and `quaver.db` with the exact spelling Quaver uses on Windows, then falls back to a case-insensitive match (ASCII letters only) for `Logs`, `runtime.log` and `quaver.db` only, reading at most 4096 directory entries.
+
+What is not verified: the author has not run Quaver under Proton and has not confirmed where Proton places `Logs`, `quaver.db`, `Data` or `quaver.cfg`. The detection assumes they sit in the game folder, as in the Windows install. If your install keeps them elsewhere (for example inside the Wine prefix under `steamapps/compatdata`), point `quaver_dir` at the folder that holds them, or open an issue. This layout code is covered by tests on simulated Steam trees, not by a run on a real Linux machine.
+
+Lane key sampling (the opt-in keys overlay) is Windows only for now. On Linux the Settings card and `qsc doctor` report it as not supported, and everything else works. A Linux version based on evdev is not implemented.
+
 ## Update
 
 Stop `qsc`, replace the program (or the AppImage) with the new one, start it again. Your settings are kept because they live in the config folder, not next to the program. A change of version is shown by `qsc version`.

@@ -12,6 +12,8 @@ import (
 	"strconv"
 
 	_ "modernc.org/sqlite"
+
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/paths"
 )
 
 // ErrNotFound is returned when the requested row does not exist.
@@ -77,7 +79,7 @@ type Store struct {
 
 // Open opens quaverDir/quaver.db read-only.
 func Open(quaverDir string) (*Store, error) {
-	path := filepath.Join(quaverDir, "quaver.db")
+	path := paths.DBPath(quaverDir)
 	if _, err := os.Stat(path); err != nil {
 		return nil, fmt.Errorf("quaver.db not found in %s: %w", quaverDir, err)
 	}
