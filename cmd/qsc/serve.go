@@ -175,6 +175,7 @@ func serve(ctx context.Context, args []string, out, errw io.Writer) int {
 		KeysConfig:       opts.keys,
 		SteamRoots:       steamRoots(),
 		Port:             opts.port,
+		Quit:             cancel,
 	})
 	srv := &http.Server{
 		Handler: server.New(b, st.Snapshot, web.FS,

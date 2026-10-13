@@ -253,7 +253,7 @@
     try {
       const res = await call(function (s) { return qsc.api.get('/api/config', s); });
       if (id !== mountId) return;
-      root.replaceChildren(buildForm(), window.qscSettingsKeys.build({ call: call, alive: function () { return id === mountId; } }, res.config.keys), buildInfo());
+      root.replaceChildren(buildForm(), window.qscSettingsKeys.build({ call: call, alive: function () { return id === mountId; } }, res.config.keys), buildInfo(), window.qscSettingsQuit.build({ call: call, alive: function () { return id === mountId; } }));
       fillForm(res);
       if (refocus) ui.fields.quaver_dir.control.focus();
       if (notice) {

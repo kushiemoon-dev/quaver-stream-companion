@@ -25,5 +25,6 @@
   window.qscApi = {
     get: function (path, signal) { return request('GET', path, undefined, signal); },
     put: function (path, body, signal) { return request('PUT', path, body, signal); },
+    post: function (path, body, signal) { return request('POST', path, body, signal); },
   };
 })();

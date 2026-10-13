@@ -35,6 +35,8 @@ func run(ctx context.Context, args []string, out, errw io.Writer) int {
 		switch args[0] {
 		case "serve":
 			return serve(ctx, args[1:], out, errw)
+		case "stop":
+			return stop(args[1:], out, errw)
 		case "doctor":
 			return doctor(args[1:], out, errw)
 		case "version", "--version":

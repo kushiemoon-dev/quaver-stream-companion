@@ -249,5 +249,14 @@
   "settings.keys.k7": "Touches pour le 7K",
   "settings.keys.lane": "Piste {n} en {layout}",
   "settings.keys.save": "Enregistrer les touches",
-  "settings.keys.saved": "Réglages des touches enregistrés."
+  "settings.keys.saved": "Réglages des touches enregistrés.",
+  "settings.quit.title": "Quitter qsc",
+  "settings.quit.help": "Arrête le programme. Vos overlays restent vides jusqu'à ce que vous relanciez qsc.",
+  "settings.quit.button": "Quitter qsc",
+  "settings.quit.confirm": "Quitter qsc maintenant ?",
+  "settings.quit.cancel": "Annuler",
+  "settings.quit.now": "Quitter maintenant",
+  "settings.quit.stopping": "Arrêt de qsc...",
+  "settings.quit.stopped": "qsc est arrêté, vous pouvez fermer cet onglet.",
+  "settings.quit.failed": "Impossible d'arrêter qsc : {message}"
 }

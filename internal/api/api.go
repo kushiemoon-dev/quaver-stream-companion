@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/config"
@@ -56,6 +57,8 @@ type Deps struct {
 	KeysConfig keys.Config
 	SteamRoots []string
 	Port       int
+	// Quit stops the whole app; the API calls it at most once, after answering POST /api/quit.
+	Quit func()
 }
 
 // ErrUnavailable is returned by data sources while no Quaver folder is in use; the API answers 503.
@@ -76,17 +79,21 @@ func writeError(w http.ResponseWriter, status int, msg, field string) {
 	writeJSON(w, status, errBody{Error: msg, Field: field})
 }
 
-type api struct{ d Deps }
+type api struct {
+	d        Deps
+	quitting *atomic.Bool
+}
 
 // New returns the handler for every /api/ route. Wrap it with GuardHost.
 func New(d Deps) http.Handler {
-	a := api{d}
+	a := api{d, new(atomic.Bool)}
 	routes := map[string]map[string]http.HandlerFunc{
 		"/api/status":   {http.MethodGet: a.status},
 		"/api/config":   {http.MethodGet: a.getConfig, http.MethodPut: a.putConfig},
 		"/api/history":  {http.MethodGet: a.history},
 		"/api/themes":   {http.MethodGet: a.themes},
 		"/api/overlays": {http.MethodGet: a.overlays},
+		"/api/quit":     {http.MethodPost: a.quit},
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, scoresPrefix) {
@@ -105,6 +112,20 @@ func New(d Deps) http.Handler {
 		}
 		h(w, r)
 	})
+}
+
+func (a api) quit(w http.ResponseWriter, r *http.Request) {
+	body := []byte(`{"status":"stopping"}` + "\n")
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Length", strconv.Itoa(len(body)))
+	w.WriteHeader(http.StatusAccepted)
+	_, _ = w.Write(body)
+	if f, ok := w.(http.Flusher); ok {
+		f.Flush()
+	}
+	if a.d.Quit != nil && a.quitting.CompareAndSwap(false, true) {
+		a.d.Quit()
+	}
 }
 
 func (a api) status(w http.ResponseWriter, r *http.Request) {

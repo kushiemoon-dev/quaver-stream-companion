@@ -249,5 +249,14 @@
   "settings.keys.k7": "Keys for 7K",
   "settings.keys.lane": "{layout} lane {n}",
   "settings.keys.save": "Save lane keys",
-  "settings.keys.saved": "Lane key settings saved."
+  "settings.keys.saved": "Lane key settings saved.",
+  "settings.quit.title": "Quit qsc",
+  "settings.quit.help": "Stops the companion. Your overlays go blank until you start qsc again.",
+  "settings.quit.button": "Quit qsc",
+  "settings.quit.confirm": "Quit qsc now?",
+  "settings.quit.cancel": "Cancel",
+  "settings.quit.now": "Quit now",
+  "settings.quit.stopping": "Stopping qsc...",
+  "settings.quit.stopped": "qsc is stopped, you can close this tab.",
+  "settings.quit.failed": "Could not stop qsc: {message}"
 }

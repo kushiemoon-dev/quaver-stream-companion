@@ -249,5 +249,14 @@
   "settings.keys.k7": "Tasten für 7K",
   "settings.keys.lane": "{layout} Spur {n}",
   "settings.keys.save": "Lane-Tasten speichern",
-  "settings.keys.saved": "Lane-Tasten-Einstellungen gespeichert."
+  "settings.keys.saved": "Lane-Tasten-Einstellungen gespeichert.",
+  "settings.quit.title": "qsc beenden",
+  "settings.quit.help": "Hält das Programm an. Deine Overlays bleiben leer, bis du qsc wieder startest.",
+  "settings.quit.button": "qsc beenden",
+  "settings.quit.confirm": "qsc jetzt beenden?",
+  "settings.quit.cancel": "Abbrechen",
+  "settings.quit.now": "Jetzt beenden",
+  "settings.quit.stopping": "qsc wird beendet...",
+  "settings.quit.stopped": "qsc ist beendet, du kannst diesen Tab schließen.",
+  "settings.quit.failed": "qsc konnte nicht beendet werden: {message}"
 }

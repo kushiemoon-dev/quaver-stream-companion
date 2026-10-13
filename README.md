@@ -129,7 +129,7 @@ The dashboard is served at `http://127.0.0.1:7878/` and needs nothing but a brow
 | **Overlays** | Copy the OBS browser source link, pick a theme from the visual theme picker (built-in or your own custom themes) and an accent color, preview the result, and save it as your default look |
 | **OBS** | A step by step guide to add the overlays to OBS, with the recommended sizes, copyable links and a connection check |
 | **History** | Your recent plays: map, difficulty with rate and mods, grade, accuracy, max combo and judgments |
-| **Settings** | Quaver folder, port, dashboard language and the opt-in lane keys card |
+| **Settings** | Quaver folder, port, dashboard language, the opt-in lane keys card and a Quit button |
 
 A **Twitch** tab is shown as "coming soon"; nothing behind it exists yet. The dashboard is available in English, French and German.
 
@@ -203,6 +203,7 @@ All screenshots use synthetic data.
 | `GET /api/history` | Recent plays (`?limit=`, 1 to 200) |
 | `GET /api/scores/{id}/timeline` | Accuracy curve of one saved play, from the score database |
 | `GET /api/themes` | Available overlay themes |
+| `POST /api/quit` | Stop `qsc` cleanly (same guards as saving the settings: used by the dashboard Quit button and `qsc stop`) |
 
 ### Events
 
@@ -284,6 +285,7 @@ Precedence: command-line flag, then config file, then defaults. Use `--config <p
 ```
 qsc                      start the server
 qsc doctor               check the Quaver folder, files and port
+qsc stop                 stop a running qsc (--port N and --config <path> as for serve)
 qsc version              print the version
 qsc --quaver-dir <dir>   use a specific Quaver folder (auto-detected from your Steam libraries otherwise)
 qsc --port 7878          change the local port

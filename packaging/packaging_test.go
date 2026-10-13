@@ -73,6 +73,9 @@ func TestPackagingFiles(t *testing.T) {
 			t.Errorf("qsc.service does not contain %q", want)
 		}
 	}
+	if !strings.Contains(unit, "Restart=on-failure") || strings.Contains(unit, "Restart=always") {
+		t.Error("qsc.service must restart only on failure so a clean quit stays stopped")
+	}
 	if strings.Contains(unit, "--open") {
 		t.Error("qsc.service must not open a browser")
 	}

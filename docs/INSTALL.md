@@ -115,6 +115,14 @@ What is not verified: the author has not run Quaver under Proton and has not con
 
 Lane key sampling (the opt-in keys overlay) is Windows only for now. On Linux the Settings card and `qsc doctor` report it as not supported, and everything else works. A Linux version based on evdev is not implemented.
 
+## Stopping qsc
+
+- Dashboard: open Settings, press Quit qsc at the bottom, then Quit now. The page says when qsc is stopped and the tab can be closed. The OBS overlays go blank until you start qsc again.
+- Command line: `qsc stop` asks the running qsc on this computer to stop and waits until the port is free. It prints `qsc stopped`, or `qsc is not running on port N` when nothing was running. Use `--port` or `--config` if you changed the port. It only talks to `127.0.0.1`.
+- Console: press `Ctrl+C` in the terminal window that runs `qsc`.
+- Linux service: `systemctl --user stop qsc`. A quit from the dashboard or from `qsc stop` ends the program cleanly, and the unit uses `Restart=on-failure`, so systemd does not restart it. It starts again at your next login or with `systemctl --user start qsc`.
+- Windows Startup shortcut: the Quit button or `qsc stop` closes the minimized window by itself. The shortcut is not touched, so `qsc` starts again at your next login. Delete the shortcut from the Startup folder (`shell:startup`) to stop that.
+
 ## Update
 
 Stop `qsc`, replace the program (or the AppImage) with the new one, start it again. Your settings are kept because they live in the config folder, not next to the program. A change of version is shown by `qsc version`.
