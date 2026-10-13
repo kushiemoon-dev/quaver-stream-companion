@@ -49,6 +49,8 @@ func (a api) timeline(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "score not found", "")
 	case errors.Is(err, scores.ErrNoTimeline):
 		writeError(w, http.StatusNotFound, timelineMissing, "")
+	case errors.Is(err, ErrUnavailable):
+		writeError(w, http.StatusServiceUnavailable, err.Error(), "")
 	case err != nil:
 		writeError(w, http.StatusInternalServerError, "could not read the judgment timeline", "")
 	default:

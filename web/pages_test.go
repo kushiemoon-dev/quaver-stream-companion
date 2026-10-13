@@ -296,3 +296,15 @@ func TestOverlaysPageShowsTheThemesFolder(t *testing.T) {
 		}
 	}
 }
+
+func TestHistoryPageExplainsUnavailableQuaver(t *testing.T) {
+	data, err := fs.ReadFile(FS, "dashboard/pages/history.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"e.status === 503", "history.unavailable", "#/status"} {
+		if !strings.Contains(string(data), want) {
+			t.Errorf("history.js lacks %q", want)
+		}
+	}
+}

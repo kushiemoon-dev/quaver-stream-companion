@@ -87,7 +87,7 @@ Each link starts with `http://127.0.0.1:7878`. Use the size as the width and hei
 
 ### Run at startup
 
-`qsc` never opens a browser unless you pass `--open`, so it can start with your computer without opening anything. It is a console program, so its window stays open: set the shortcut to run minimized. If it cannot find the Quaver folder it exits with an error, so pass `--quaver-dir <folder>` (or set `quaver_dir` in the config file) when auto-detection does not work.
+`qsc` never opens a browser unless you pass `--open`, so it can start with your computer without opening anything. It is a console program, so its window stays open: set the shortcut to run minimized. If it cannot find the Quaver folder it still starts in a degraded mode: the dashboard, the overlays and the settings work, the game state stays `unknown`, and the Status page explains what to do. Set the folder in Settings, with `quaver_dir` in the config file or with `--quaver-dir <folder>`; `qsc` re-checks every 15 seconds and starts reading Quaver by itself as soon as the folder is valid. `qsc doctor` still exits with an error in that case and prints the same advice.
 
 - **Windows:** press Win+R, run `shell:startup`, and put a shortcut to `qsc.exe` in that folder. In the shortcut properties set Run to Minimized.
 - **Linux:** run it from a systemd user service, or from your desktop autostart entries.
@@ -233,7 +233,7 @@ Settings are stored in a JSON file, written by the Settings and Overlays pages o
 }
 ```
 
-An empty `quaver_dir` means auto-detection from your Steam libraries. `language` is `en`, `fr` or `de`. `accent` is a hex color without `#`. A missing file gives the defaults. A change of port or Quaver folder takes effect the next time `qsc` starts. In a hand-edited JSON path, double each backslash (`\\`) or use forward slashes.
+An empty `quaver_dir` means auto-detection from your Steam libraries. `language` is `en`, `fr` or `de`. `accent` is a hex color without `#`. A missing file gives the defaults. A change of port, or of the Quaver folder once it is in use, takes effect the next time `qsc` starts; a folder saved while `qsc` is still looking for Quaver is picked up within 15 seconds. In a hand-edited JSON path, double each backslash (`\\`) or use forward slashes.
 
 #### Lane keys
 

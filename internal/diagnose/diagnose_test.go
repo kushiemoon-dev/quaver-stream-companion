@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -113,5 +114,36 @@ func TestKeysCheckOnlyWhenEnabled(t *testing.T) {
 	}
 	if checks[4].OK != keys.Supported() {
 		t.Fatalf("keys check ok = %v, platform support = %v", checks[4].OK, keys.Supported())
+	}
+}
+
+func TestFolderReturnsDirOnlyWhenEverythingPasses(t *testing.T) {
+	d := testutil.NewQuaverDir(t)
+	dir, checks := Folder(context.Background(), d.Path, nil)
+	if dir != d.Path || len(checks) != 3 {
+		t.Fatalf("dir = %q, checks = %+v", dir, checks)
+	}
+
+	os.Remove(d.LogPath())
+	if dir, checks = Folder(context.Background(), d.Path, nil); dir != "" || checks[1].OK {
+		t.Fatalf("missing log: dir = %q, checks = %+v", dir, checks)
+	}
+
+	os.Remove(filepath.Join(d.Path, "quaver.db"))
+	if dir, checks = Folder(context.Background(), d.Path, nil); dir != "" || checks[2].OK || !strings.Contains(checks[2].Detail, "quaver.db") {
+		t.Fatalf("missing db: dir = %q, checks = %+v", dir, checks)
+	}
+
+	if dir, checks = Folder(context.Background(), t.TempDir(), nil); dir != "" || checks[0].OK {
+		t.Fatalf("bad folder: dir = %q, checks = %+v", dir, checks)
+	}
+}
+
+func TestAdviceNamesBothPlatformsAndTheWaysToSetTheFolder(t *testing.T) {
+	text := strings.Join(Advice(), "\n")
+	for _, want := range []string{`steamapps\common\Quaver`, "steamapps/common/Quaver", "Settings", "--quaver-dir"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("advice lacks %q:\n%s", want, text)
+		}
 	}
 }

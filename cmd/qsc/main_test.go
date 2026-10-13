@@ -385,28 +385,6 @@ func TestStaleSavedFolderDoesNotBlockFlagOrDoctor(t *testing.T) {
 	}
 }
 
-func TestServeStaleSavedFolderReportsFolderError(t *testing.T) {
-	cfg := writeConfig(t, fmt.Sprintf(`{"quaver_dir": "%s", "port": %d}`, jsonPath(filepath.Join(t.TempDir(), "moved")), freePort(t)))
-	var out, errw bytes.Buffer
-	if code := run(context.Background(), []string{"--config", cfg}, &out, &errw); code != 1 {
-		t.Fatalf("code = %d", code)
-	}
-	if strings.Contains(errw.String(), "invalid config") || !strings.Contains(errw.String(), "is not a Quaver folder") {
-		t.Fatalf("stderr = %q", errw.String())
-	}
-}
-
-func TestServeRejectsUNCQuaverDirFlag(t *testing.T) {
-	var out, errw bytes.Buffer
-	args := []string{"--quaver-dir", "\x5c\x5cserver\x5cshare\x5cQuaver", "--port", fmt.Sprint(freePort(t))}
-	if code := run(context.Background(), args, &out, &errw); code != 1 {
-		t.Fatalf("code = %d", code)
-	}
-	if !strings.Contains(errw.String(), "network") {
-		t.Fatalf("stderr = %q", errw.String())
-	}
-}
-
 func TestUnreadableConfigIsNotReportedAsInvalid(t *testing.T) {
 	var out, errw bytes.Buffer
 	if code := run(context.Background(), []string{"doctor", "--config", t.TempDir()}, &out, &errw); code != 1 {

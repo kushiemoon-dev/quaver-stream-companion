@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/keys"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/testutil"
@@ -222,6 +223,33 @@ func TestValidateKeysFields(t *testing.T) {
 		var fe *FieldError
 		if err := c.Validate([]string{"neutral-light"}); !errors.As(err, &fe) || fe.Field != tc.field {
 			t.Errorf("%s: err = %v, want field %q", tc.name, err, tc.field)
+		}
+	}
+}
+
+func TestSaveWhileAnotherGoroutineLoads(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "config.json")
+	if err := Save(p, Defaults()); err != nil {
+		t.Fatal(err)
+	}
+	stop := make(chan struct{})
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for {
+			select {
+			case <-stop:
+				return
+			default:
+				Load(p)
+				time.Sleep(time.Millisecond)
+			}
+		}
+	}()
+	defer func() { close(stop); <-done }()
+	for i := 0; i < 50; i++ {
+		if err := Save(p, Defaults()); err != nil {
+			t.Fatalf("save %d: %v", i, err)
 		}
 	}
 }

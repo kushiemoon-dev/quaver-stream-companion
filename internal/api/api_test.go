@@ -639,3 +639,39 @@ func TestOverlaysListingMissingFolderAndNoDir(t *testing.T) {
 		t.Errorf("no deps: %d %s", w.Code, w.Body.String())
 	}
 }
+
+func TestDegradedAppliesQuaverDirLive(t *testing.T) {
+	other := testutil.NewQuaverDir(t).Path
+	degraded := true
+	e := newEnv(t, func(d *Deps) {
+		d.Effective = func() string { return "" }
+		d.Degraded = func() bool { return degraded }
+	})
+	var got cfgResp
+	decode(t, e.put(`{"port":5555,"quaver_dir":"`+jsonPath(other)+`"}`, nil), &got)
+	if got.RestartRequired {
+		t.Fatal("a folder saved while degraded is picked up live")
+	}
+	decode(t, e.put(`{"port":6000,"quaver_dir":"`+jsonPath(other)+`"}`, nil), &got)
+	if !got.RestartRequired {
+		t.Fatal("a port change still needs a restart")
+	}
+	degraded = false
+	decode(t, e.put(`{"port":5555,"quaver_dir":"`+jsonPath(other)+`"}`, nil), &got)
+	if !got.RestartRequired {
+		t.Fatal("once running, the folder change needs a restart")
+	}
+}
+
+func TestHistoryAndTimelineAnswer503WhileUnavailable(t *testing.T) {
+	e := newEnv(t, func(d *Deps) {
+		d.History = func(context.Context, int) ([]scores.Result, error) { return nil, ErrUnavailable }
+		d.Timeline = func(context.Context, int64) (scores.Timeline, error) { return scores.Timeline{}, ErrUnavailable }
+	})
+	for _, p := range []string{"/api/history", "/api/scores/1/timeline"} {
+		w := e.get(p)
+		if w.Code != 503 || !strings.Contains(w.Body.String(), "not available yet") {
+			t.Errorf("%s = %d %s", p, w.Code, w.Body.String())
+		}
+	}
+}

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"time"
 
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/keys"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/paths"
@@ -111,7 +112,7 @@ func Save(path string, c Config) error {
 		os.Remove(tmp.Name())
 		return err
 	}
-	if err := os.Rename(tmp.Name(), path); err != nil {
+	if err := renameWithRetry(tmp.Name(), path); err != nil {
 		os.Remove(tmp.Name())
 		return err
 	}
@@ -153,4 +154,15 @@ func (c Config) Validate(themes []string) error {
 		return &FieldError{field, msg}
 	}
 	return nil
+}
+
+// renameWithRetry retries briefly: on Windows a rename over a file that another
+// reader has open (the Quaver folder watcher, an antivirus scan) fails with a sharing error.
+func renameWithRetry(from, to string) error {
+	err := os.Rename(from, to)
+	for i := 0; err != nil && i < 50; i++ {
+		time.Sleep(10 * time.Millisecond)
+		err = os.Rename(from, to)
+	}
+	return err
 }

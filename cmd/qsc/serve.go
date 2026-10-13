@@ -11,12 +11,15 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/api"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/app"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/bus"
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/config"
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/diagnose"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/gamestate"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/keys"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/overlays"
@@ -32,6 +35,9 @@ import (
 // newSampler creates the lane key sampler; tests replace it so they never read the keyboard.
 var newSampler = keys.NewSampler
 
+// steamRoots lists the Steam folders to search; tests replace it.
+var steamRoots = paths.DefaultSteamRoots
+
 const logPollInterval = 200 * time.Millisecond
 
 // seedMaxAge is how recent runtime.log must be to seed the game state at startup.
@@ -42,18 +48,7 @@ func serve(ctx context.Context, args []string, out, errw io.Writer) int {
 	if code >= 0 {
 		return code
 	}
-
-	dir, err := paths.Find(opts.quaverDir, paths.DefaultSteamRoots())
-	if err != nil {
-		fmt.Fprintln(errw, "error:", err)
-		return 1
-	}
-	store, err := scores.Open(dir)
-	if err != nil {
-		fmt.Fprintln(errw, "error:", err)
-		return 1
-	}
-	defer store.Close()
+	out, errw = &syncWriter{w: out}, &syncWriter{w: errw}
 
 	addr := fmt.Sprintf("127.0.0.1:%d", opts.port)
 	ln, err := net.Listen("tcp", addr)
@@ -64,11 +59,19 @@ func serve(ctx context.Context, args []string, out, errw io.Writer) int {
 
 	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	be := &backend{}
+	var wg sync.WaitGroup
+	defer be.close()
+	defer wg.Wait()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
 	b := bus.New()
 	st := state.New()
 	events, unsub := b.Subscribe() // subscribed before the seed line is published
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		defer unsub()
 		for {
 			select {
@@ -84,15 +87,61 @@ func serve(ctx context.Context, args []string, out, errw io.Writer) int {
 	}()
 
 	laneKeys := keys.NewService(b, opts.keys, newSampler)
-	go laneKeys.Run(ctx)
-	a := app.New(b, store)
-	lines := make(chan string, 64)
-	logPath := filepath.Join(dir, "Logs", "runtime.log")
-	if seed, ok := gamestate.LastStateLine(logPath, seedMaxAge); ok {
-		a.Seed(ctx, seed)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		laneKeys.Run(ctx)
+	}()
+
+	override := func() string {
+		if opts.quaverDirFlag {
+			return opts.quaverDir
+		}
+		if c, err := config.Load(opts.configPath); err == nil {
+			return c.QuaverDir
+		}
+		return opts.quaverDir
 	}
-	go gamestate.Tail(ctx, logPath, logPollInterval, lines)
-	go a.Run(ctx, lines)
+	reported := ""
+	find := func() (string, error) {
+		dir, checks := diagnose.Folder(ctx, override(), steamRoots())
+		for _, c := range checks {
+			if !c.OK {
+				if c.Detail != reported {
+					reported = c.Detail
+					reportDegraded(errw, c.Detail)
+				}
+				return "", errors.New(c.Detail)
+			}
+		}
+		return dir, nil
+	}
+	start := func(dir string) error {
+		store, err := scores.Open(dir)
+		if err != nil {
+			return err
+		}
+		be.set(dir, store)
+		a := app.New(b, store)
+		lines := make(chan string, 64)
+		logPath := filepath.Join(dir, "Logs", "runtime.log")
+		if seed, ok := gamestate.LastStateLine(logPath, seedMaxAge); ok {
+			a.Seed(ctx, seed)
+		}
+		wg.Add(2)
+		go func() { defer wg.Done(); gamestate.Tail(ctx, logPath, logPollInterval, lines) }()
+		go func() { defer wg.Done(); a.Run(ctx, lines) }()
+		fmt.Fprintf(out, "Quaver folder: %s\n", dir)
+		return nil
+	}
+	// A usable folder is picked up before the first request; otherwise keep looking.
+	if dir, err := find(); err != nil || start(dir) != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			app.Watch(ctx, recheckInterval, find, start)
+		}()
+	}
 
 	dashboard, err := fs.Sub(web.FS, "dashboard")
 	if err != nil {
@@ -103,12 +152,18 @@ func serve(ctx context.Context, args []string, out, errw io.Writer) int {
 		Version:    version.Version,
 		Started:    time.Now(),
 		Snapshot:   st.Snapshot,
-		History:    store.Recent,
-		Timeline:   store.Timeline,
+		History:    be.recent,
+		Timeline:   be.timeline,
 		ConfigPath: opts.configPath,
-		Effective:  func() string { return dir },
+		Effective: func() string {
+			if dir, _ := be.current(); dir != "" {
+				return dir
+			}
+			return override()
+		},
+		Degraded: func() bool { dir, _ := be.current(); return dir == "" },
 		Detect: func() string {
-			d, _ := paths.Find("", paths.DefaultSteamRoots())
+			d, _ := paths.Find("", steamRoots())
 			return d
 		},
 		PortFlag:         opts.portFlag,
@@ -119,7 +174,7 @@ func serve(ctx context.Context, args []string, out, errw io.Writer) int {
 		IsBuiltinOverlay: func(id string) bool { return overlays.IsBuiltin(web.FS, id) },
 		Keys:             laneKeys.Status,
 		KeysConfig:       opts.keys,
-		SteamRoots:       paths.DefaultSteamRoots(),
+		SteamRoots:       steamRoots(),
 		Port:             opts.port,
 	})
 	srv := &http.Server{
@@ -132,7 +187,6 @@ func serve(ctx context.Context, args []string, out, errw io.Writer) int {
 		srv.Close()
 	}()
 
-	fmt.Fprintf(out, "Quaver folder: %s\n", dir)
 	fmt.Fprintf(out, "Now playing overlay (OBS browser source): http://%s/overlays/now-playing/\n", addr)
 	fmt.Fprintf(out, "Dashboard: http://%s/\n", addr)
 	fmt.Fprintf(out, "Live state: http://%s/state\n", addr)
@@ -149,4 +203,12 @@ func serve(ctx context.Context, args []string, out, errw io.Writer) int {
 		return 1
 	}
 	return 0
+}
+
+func reportDegraded(w io.Writer, detail string) {
+	fmt.Fprintf(w, "warning: Quaver is not ready yet (%s)\n", detail)
+	for _, l := range diagnose.Advice() {
+		fmt.Fprintln(w, " ", l)
+	}
+	fmt.Fprintf(w, "The dashboard works meanwhile. qsc checks again every %s.\n", recheckInterval)
 }

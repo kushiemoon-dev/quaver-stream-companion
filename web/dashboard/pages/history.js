@@ -119,7 +119,9 @@
   function showError(e, refocus) {
     const retry = h('button', { type: 'button', class: 'btn', onclick: function () { load(true); } }, t('history.retry'));
     ui.results.replaceChildren(h('section', { class: 'card empty' },
-      h('p', { class: 'save-status bad', role: 'alert' }, t('history.load_failed', { message: e.message })),
+      e.status === 503
+        ? h('p', { class: 'save-status bad', role: 'alert' }, t('history.unavailable'), ' ', h('a', { href: '#/status' }, t('history.unavailable_link')))
+        : h('p', { class: 'save-status bad', role: 'alert' }, t('history.load_failed', { message: e.message })),
       retry));
     if (refocus) retry.focus();
   }

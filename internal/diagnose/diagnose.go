@@ -35,24 +35,49 @@ const dirNotFound = "Quaver folder not found"
 
 // Run returns the checks quaver_dir, log, database and port, in that order, then keys when enabled.
 func Run(ctx context.Context, o Options) []Check {
-	dir, err := paths.Find(o.QuaverDir, o.SteamRoots)
-	checks := []Check{result("quaver_dir", err, dir)}
-	if err != nil {
-		checks = append(checks,
-			Check{ID: "log", Detail: dirNotFound},
-			Check{ID: "database", Detail: dirNotFound})
-	} else {
-		logPath := filepath.Join(dir, "Logs", "runtime.log")
-		_, statErr := os.Stat(logPath)
-		checks = append(checks,
-			result("log", statErr, logPath),
-			result("database", checkDatabase(ctx, dir), "readable"))
-	}
+	_, checks := folderChecks(ctx, o.QuaverDir, o.SteamRoots)
 	checks = append(checks, checkPort(o))
 	if o.KeysEnabled {
 		checks = append(checks, checkKeys())
 	}
 	return checks
+}
+
+// Folder runs the quaver_dir, log and database checks. It returns the Quaver folder only
+// when all three pass, which is when the log follower and the score reader can start.
+func Folder(ctx context.Context, override string, steamRoots []string) (string, []Check) {
+	dir, checks := folderChecks(ctx, override, steamRoots)
+	for _, c := range checks {
+		if !c.OK {
+			return "", checks
+		}
+	}
+	return dir, checks
+}
+
+func folderChecks(ctx context.Context, override string, steamRoots []string) (string, []Check) {
+	dir, err := paths.Find(override, steamRoots)
+	checks := []Check{result("quaver_dir", err, dir)}
+	if err != nil {
+		return "", append(checks,
+			Check{ID: "log", Detail: dirNotFound},
+			Check{ID: "database", Detail: dirNotFound})
+	}
+	logPath := filepath.Join(dir, "Logs", "runtime.log")
+	_, statErr := os.Stat(logPath)
+	return dir, append(checks,
+		result("log", statErr, logPath),
+		result("database", checkDatabase(ctx, dir), "readable"))
+}
+
+// Advice lists the steps that fix a missing Quaver folder, for `qsc doctor` and the startup message.
+func Advice() []string {
+	return []string{
+		`Steam usually installs Quaver in C:\Program Files (x86)\Steam\steamapps\common\Quaver on Windows,`,
+		"and in ~/.local/share/Steam/steamapps/common/Quaver on Linux (also under Proton).",
+		"Install and start Quaver once, or set its folder in the dashboard Settings,",
+		"with quaver_dir in the config file, or with --quaver-dir <folder>.",
+	}
 }
 
 func result(id string, err error, okDetail string) Check {

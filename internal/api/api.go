@@ -38,6 +38,8 @@ type Deps struct {
 	ConfigPath string
 	// Effective returns the Quaver folder actually in use.
 	Effective func() (quaverDir string)
+	// Degraded tells that no Quaver folder is in use yet; a folder saved then is picked up live.
+	Degraded func() bool
 	// Detect returns the Quaver folder auto-detection finds now, or "".
 	Detect func() string
 	// PortFlag and QuaverDirFlag tell that the setting came from a command-line flag.
@@ -55,6 +57,9 @@ type Deps struct {
 	SteamRoots []string
 	Port       int
 }
+
+// ErrUnavailable is returned by data sources while no Quaver folder is in use; the API answers 503.
+var ErrUnavailable = errors.New("Quaver is not available yet")
 
 type errBody struct {
 	Error string `json:"error"`
@@ -131,7 +136,7 @@ func (a api) restartRequired(c config.Config) bool {
 	if !a.d.PortFlag && c.Port != a.d.Port {
 		return true
 	}
-	if a.d.QuaverDirFlag {
+	if a.d.QuaverDirFlag || (a.d.Degraded != nil && a.d.Degraded()) {
 		return false
 	}
 	after := c.QuaverDir
@@ -255,6 +260,10 @@ func (a api) history(w http.ResponseWriter, r *http.Request) {
 	}
 	results, err := a.d.History(r.Context(), limit)
 	if err != nil {
+		if errors.Is(err, ErrUnavailable) {
+			writeError(w, http.StatusServiceUnavailable, err.Error(), "")
+			return
+		}
 		writeError(w, http.StatusInternalServerError, "could not read the play history", "")
 		return
 	}

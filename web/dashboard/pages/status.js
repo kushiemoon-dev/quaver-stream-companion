@@ -25,6 +25,7 @@
   let state = { game: 'unknown', map: null, last_score: null };
   let diag = { checks: null, error: false, version: '', configPath: '' };
   let connection = 'connecting';
+  let shownDegraded = '';
 
   function fmtRate(rate) {
     return !rate || rate === 1 ? '' : String(Number(rate.toFixed(2))) + 'x';
@@ -101,7 +102,40 @@
       badge(r.autoplay, 'status.autoplay', 'pill-muted')));
   }
 
+  const WIN_PATH = ['C:', 'Program Files (x86)', 'Steam', 'steamapps', 'common', 'Quaver'].join(String.fromCharCode(92));
+  const LINUX_PATH = '~/.local/share/Steam/steamapps/common/Quaver';
+
+  function failing(kind) {
+    const ids = kind === 'folder' ? ['quaver_dir'] : ['log', 'database'];
+    return (diag.checks || []).filter(function (c) { return ids.indexOf(c.id) >= 0 && !c.ok; })[0] || null;
+  }
+
+  function renderDegraded() {
+    const kind = failing('folder') ? 'folder' : failing('files') ? 'files' : '';
+    const bad = kind ? failing(kind) : null;
+    const key = kind + (bad ? bad.detail : '');
+    if (key === shownDegraded) return;
+    shownDegraded = key;
+    ui.degraded.hidden = !kind;
+    ui.degraded.replaceChildren();
+    if (!kind) return;
+    const detail = Object.prototype.hasOwnProperty.call(DETAIL_KEYS, bad.detail) ? t(DETAIL_KEYS[bad.detail]) : bad.detail;
+    ui.degraded.appendChild(h('strong', null, t('status.degraded.' + kind + '_title')));
+    ui.degraded.appendChild(h('p', null, t('status.degraded.intro')));
+    if (kind === 'folder') {
+      ui.degraded.appendChild(h('ul', { class: 'degraded-steps' },
+        h('li', null, t('status.degraded.step_install')),
+        h('li', null, t('status.degraded.step_windows'), ' ', h('code', null, qsc.pathNodes(WIN_PATH))),
+        h('li', null, t('status.degraded.step_linux'), ' ', h('code', null, qsc.pathNodes(LINUX_PATH))),
+        h('li', null, t('status.degraded.step_settings'))));
+    }
+    ui.degraded.appendChild(h('p', { class: 'muted' }, qsc.pathNodes(detail)));
+    ui.degraded.appendChild(h('p', null, t('status.degraded.auto')));
+    if (kind === 'folder') ui.degraded.appendChild(h('a', { class: 'btn', href: '#/settings' }, t('status.degraded.open_settings')));
+  }
+
   function renderDiag() {
+    renderDegraded();
     ui.diag.replaceChildren();
     const byId = {};
     (diag.checks || []).forEach(function (c) { byId[c.id] = c; });
@@ -227,12 +261,14 @@
       conn: h('span', { class: 'pill pill-warn', role: 'status' }),
       now: h('section', { class: 'card card-now' }),
       last: h('section', { class: 'card card-last' }),
+      degraded: h('section', { class: 'banner banner-degraded', role: 'status', hidden: '' }),
       diag: h('div', { class: 'grid grid-4' }),
       foot: h('footer', { class: 'footer' }),
     };
     root.appendChild(h('header', { class: 'page-head' },
       h('div', null, h('h1', null, t('nav.status')), h('p', { class: 'subtitle' }, t('status.subtitle'))),
       h('div', { class: 'head-pills' }, ui.conn, h('span', { 'aria-live': 'polite' }, ui.game))));
+    root.appendChild(ui.degraded);
     root.appendChild(h('div', { class: 'grid grid-2' }, ui.now, ui.last));
     root.appendChild(h('h2', { class: 'section-label' }, t('status.diagnostics')));
     root.appendChild(ui.diag);
@@ -243,6 +279,7 @@
     connection = 'connecting';
     state = { game: 'unknown', map: null, last_score: null };
     diag = { checks: null, error: false, version: '', configPath: '' };
+    shownDegraded = '';
     renderConnection();
     renderAll();
     renderDiag();
