@@ -12,17 +12,17 @@
 | `qsc_<version>_linux_x86_64.AppImage` | Linux, 64 bit Intel or AMD, no extraction needed |
 | `checksums.txt` | SHA-256 of every file above |
 
-Each archive holds the program, the license, the third party notices, the README, the guides in `docs/` and, on Linux, the `qsc.service` file.
+`<version>` is the release tag, for example `v0.1.0-rc1`. Tags with a hyphen are pre-releases. Each archive holds the program, the license, the third party notices (from the release after `v0.1.0-rc1`; the `v0.1.0-rc1` archives do not contain them), the README, the guides in `docs/` and, on Linux, the `qsc.service` file.
 
 ## Download and verify
 
 Put the file you want and `checksums.txt` in the same folder, then check the file.
 
-Windows (PowerShell), replacing the file name:
+Windows (PowerShell), replacing `<version>` with the tag you downloaded:
 
 ```powershell
-(Get-FileHash .\qsc_v0.1.0_windows_amd64.zip -Algorithm SHA256).Hash.ToLower()
-Select-String qsc_v0.1.0_windows_amd64.zip checksums.txt
+(Get-FileHash .\qsc_<version>_windows_amd64.zip -Algorithm SHA256).Hash.ToLower()
+Select-String qsc_<version>_windows_amd64.zip checksums.txt
 ```
 
 The two hashes must be identical.
@@ -48,34 +48,34 @@ If the port is used, qsc says whether another qsc is running (open its dashboard
 
 ## Run
 
-Windows: unzip the archive anywhere you like, for example `C:\Tools\qsc`, then open a terminal in that folder:
+Windows: unzip the archive anywhere you like, for example `C:\Tools\qsc`, then open a terminal in the unzipped folder:
 
 ```
 .\qsc.exe doctor
 .\qsc.exe --open
 ```
 
-Linux archive:
+Linux archive, from the unzipped folder:
 
 ```sh
-tar -xzf qsc_v0.1.0_linux_amd64.tar.gz
-cd qsc_v0.1.0_linux_amd64
+tar -xzf qsc_<version>_linux_amd64.tar.gz
+cd qsc_<version>_linux_amd64
 ./qsc doctor
 ./qsc --open
 ```
 
-`qsc doctor` checks that the Quaver folder is found. `qsc --open` starts the server and opens the dashboard at `http://127.0.0.1:7878/`. Without `--open`, `qsc` never opens a browser. `qsc serve` is the same as `qsc`. See the README for `--port`, `--config` and `--quaver-dir`.
+`qsc doctor` checks that the Quaver folder is found. `qsc --open` starts the server and opens the dashboard at `http://127.0.0.1:7878/`. Without `--open`, `qsc` never opens a browser. `qsc serve` is the same as `qsc`. All commands and flags (`--port`, `--config`, `--quaver-dir`, `--version`, `-h`) are listed in the [README](../README.md#commands).
 
 ## AppImage
 
 ```sh
-chmod +x qsc_v0.1.0_linux_x86_64.AppImage
-./qsc_v0.1.0_linux_x86_64.AppImage
+chmod +x qsc_<version>_linux_x86_64.AppImage
+./qsc_<version>_linux_x86_64.AppImage
 ```
 
 Double clicking it in a file manager works too, no terminal needed. It runs `qsc serve --open`, so the dashboard opens in your browser. Extra options can be added after the file name, for example `--port 7979`. AppImages need FUSE 2 on most distributions; if yours has none, run it with `--appimage-extract-and-run`.
 
-**Untested so far.** The AppImage is built by the release workflow on GitHub. The author builds on Windows and has not run this AppImage on a Linux machine yet, and the release workflow itself has not been run before the first tag. If it does not start for you, use the `.tar.gz` and please open an issue.
+**Untested so far.** The AppImage is built by the release workflow on GitHub. The author builds on Windows, so the AppImage has not been run on a Linux machine yet. If it does not start for you, use the `.tar.gz` and please open an issue.
 
 ## Start with your computer
 

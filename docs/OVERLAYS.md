@@ -59,6 +59,7 @@ The companion publishes read-only data on `127.0.0.1`. All numbers are JSON numb
 | `GET /api/scores/{id}/timeline` | no, same-origin pages only | The judgment timeline of one saved play |
 | `GET /api/status` | no, same-origin pages only | Version and health checks |
 | `GET /api/overlays` | no, same-origin pages only | The custom overlays folder and its overlays |
+| `GET /api/diagnostics` | no, same-origin pages only | The support report behind the Copy diagnostics button |
 
 "Cross-origin readable" means the response carries `Access-Control-Allow-Origin: *`. A custom overlay runs with an opaque origin (see section 5), so it can use `/state` and `/events` but cannot read the `/api/` routes. Tools outside the browser (curl, scripts, bots) can read all of them.
 
@@ -318,10 +319,10 @@ An overlay is code that runs in your browser source. Only install overlays you w
 A custom overlay can load these files from the companion:
 
 - `/overlays/overlay.css`: base styles with the `.card`, `.title`, `.sub` and `.grade` classes and the colors `.gold`, `.green`, `.blue`, `.amber`, `.red` and `.muted`.
-- `/overlays/i18n.js`, `/overlays/model.js` and `/overlays/common.js`, in that order. `common.js` reads the options of section 1 (`theme`, `accent`, `lang`, `scale`, `demo`, `autohide`, `hide`, `n`), loads the theme file and sets the tokens `--bg`, `--fg`, `--muted`, `--accent`, `--border`, `--radius`, `--shadow`, `--font` and `--scale` on the page. It provides:
+- `/overlays/i18n.js`, `/overlays/model.js` and `/overlays/common.js`, in that order. `common.js` reads the options of section 1 (`theme`, `accent`, `lang`, `scale`, `demo`, `autohide`, `hide`, `n`, `best`, `sound`, `counts`, `peak`), loads the theme file and sets the tokens `--bg`, `--fg`, `--muted`, `--accent`, `--border`, `--radius`, `--shadow`, `--font` and `--scale` on the page. It provides:
   - `qscConnect(handlers)`: opens `/events` and calls `handlers[type](data)` with the `data` of each event. It returns the `EventSource`. It does not catch errors: a payload that cannot be parsed throws inside the handler, and the handler's own errors are yours to catch.
   - `qscEl(tag, className, text)`: creates an element and sets its text with `textContent`.
-  - `qscParams`: the parsed options `{ demo, lang, scale, autohide, hide, n }`.
+  - `qscParams`: the parsed options `{ demo, lang, scale, autohide, hide, n, best, sound, counts, peak }`.
   - `qscT(key)` and `qscAutohide(onHide)`: translated labels of the built-in overlays and the `autohide` timer.
   - `qscModel`: helpers shared with the built-in overlays, such as `formatAccuracy`, `gradeText`, `gradeClass` and `resultView`.
   - These helpers belong to the built-in overlays and can change between versions. For a long lived overlay, rely only on the routes of section 4.

@@ -38,4 +38,4 @@ The lane keys overlay needs the Keys card of the dashboard Settings page: turn i
 - **Nothing shows.** Use the "Check connection" button on the OBS page and look at the Status page. The port in the link must match the one in Settings, and the host must be `127.0.0.1` or `localhost`.
 - **The old style stays after editing a custom theme.** Right-click the source in OBS and choose "Refresh cache of current page".
 - **The Pixel shadow looks blurry or clipped.** Make the browser source larger than the recommended size, so the shadow has room.
-- **OBS runs on another PC.** The companion only answers on `127.0.0.1`, so run OBS on the same machine. With a port forward, the Host of the link must match what the companion accepts.
+- **OBS runs on another PC.** The companion only listens on `127.0.0.1` and only answers requests for `127.0.0.1` or `localhost`, so run OBS on the same machine as `qsc`.
