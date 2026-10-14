@@ -1,0 +1,50 @@
+name: Bug report
+description: Something does not work as described
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. For a security problem, do not open an issue: use the Security tab of the repository instead.
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      description: For example Windows 11, Ubuntu 24.04 or Arch with Steam Flatpak.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: qsc version
+      description: The output of qsc version.
+      placeholder: quaver-stream-companion v0.1.0-rc1
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Quaver install type
+      options:
+        - Steam on Windows
+        - Steam on Linux with Proton
+        - Steam on Linux (Flatpak or Snap)
+        - Standalone folder
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What you did, what you expected and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Output of qsc doctor --report
+      description: Review it before you paste it. The runtime.log excerpt can contain your Quaver player name, map titles and replay paths. Delete any line you do not want to publish.
+      render: text
+    validations:
+      required: false

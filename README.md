@@ -6,7 +6,7 @@
 
 ### Live Quaver data for your stream overlays, read safely from the files the game already writes
 
-[![GitHub Release](https://img.shields.io/github/v/release/kushiemoon-dev/quaver-stream-companion?style=flat-square&color=e5a00d)](https://github.com/kushiemoon-dev/quaver-stream-companion/releases/latest)
+[![GitHub Release](https://img.shields.io/github/v/release/kushiemoon-dev/quaver-stream-companion?include_prereleases&style=flat-square&color=e5a00d)](https://github.com/kushiemoon-dev/quaver-stream-companion/releases/latest)
 [![Stars](https://img.shields.io/github/stars/kushiemoon-dev/quaver-stream-companion?style=flat-square&color=a855f7)](https://github.com/kushiemoon-dev/quaver-stream-companion/stargazers)
 [![License](https://img.shields.io/github/license/kushiemoon-dev/quaver-stream-companion?style=flat-square&color=gray)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat-square&logo=go&logoColor=white)](https://go.dev)
@@ -24,9 +24,9 @@
 
 It runs next to the game, keeps everything on your machine, and gives OBS a ready-made browser source plus a documented JSON and live-event API for anyone who wants to build their own overlay. A local dashboard in your browser shows the live status, gives you the overlay links, lists your recent plays and edits your settings.
 
-> **Unofficial project.** Not affiliated with Quaver, and not related to the osu! StreamCompanion tool despite the similar name.
+> **Unofficial project.** Quaver is a trademark of its respective owners. QuaverStreamCompanion is an unofficial tool and is not affiliated with Quaver. It is not related to the osu! StreamCompanion tool despite the similar name.
 
-> **Status: release pending.** The features below are built and tested on Windows; the first tagged release has not been published yet, so build from source until it is. What is planned is listed under [Roadmap](#roadmap).
+> **Status: release candidate.** [`v0.1.0-rc1`](https://github.com/kushiemoon-dev/quaver-stream-companion/releases/tag/v0.1.0-rc1) is published as a pre-release; the stable `0.1.0` is pending feedback. The features below are built and tested on Windows; Linux is best effort. What is planned is listed under [Roadmap](#roadmap).
 
 ---
 
@@ -71,7 +71,7 @@ Lane keys and KPS work on Windows only for now. See the [installation guide](doc
 
 **1. Download `qsc` for your platform** from the [releases page](https://github.com/kushiemoon-dev/quaver-stream-companion/releases) (see [Install](#install)), or [build from source](#build-from-source)
 
-**2. Check that it finds your game**
+**2. Check that it finds your game.** Open a terminal in the folder where you unzipped `qsc` (on Windows type `.\qsc.exe` instead of `qsc`, on Linux `./qsc`):
 
 ```
 qsc doctor
@@ -125,11 +125,11 @@ The dashboard is served at `http://127.0.0.1:7878/` and needs nothing but a brow
 
 | Page | What it does |
 |------|--------------|
-| **Status** | Live game state, current map, and the health of your setup |
+| **Status** | Live game state, current map, the health of your setup and a Copy diagnostics button for bug reports |
 | **Overlays** | Copy the OBS browser source link, pick a theme from the visual theme picker (built-in or your own custom themes) and an accent color, preview the result, and save it as your default look |
 | **OBS** | A step by step guide to add the overlays to OBS, with the recommended sizes, copyable links and a connection check |
 | **History** | Your recent plays: map, difficulty with rate and mods, grade, accuracy, max combo and judgments |
-| **Settings** | Quaver folder, port, dashboard language, the opt-in lane keys card and a Quit button |
+| **Settings** | Quaver folder, port, dashboard language, the config, themes and overlays paths, the version, the opt-in lane keys card and a Quit button |
 
 A **Twitch** tab is shown as "coming soon"; nothing behind it exists yet. The dashboard is available in English, French and German.
 
@@ -195,15 +195,18 @@ All screenshots use synthetic data.
 | Endpoint | What it gives you |
 |----------|-------------------|
 | `GET /` | The dashboard |
-| `GET /state` | JSON snapshot: game state, current map, last score |
-| `GET /events` | Live event stream (Server-Sent Events) |
-| `GET /overlays/now-playing/` | Ready-made overlay: title, artist, difficulty, key count |
+| `GET /state` | JSON snapshot: `game`, `map`, `last_score` and, for same-origin pages and tools without an `Origin` header, `keys` |
+| `GET /events` | Live event stream (Server-Sent Events), at most 64 at once |
+| `GET /events?keys=1` | The same stream plus lane key frames (`keys.frame`). Same-origin only: a cross-origin page gets `403` |
+| `GET /overlays/<id>/` | Ready-made and custom overlays, for example `/overlays/now-playing/`. Shared files such as `/overlays/overlay.css` are served from `/overlays/` too |
+| `GET /themes/<id>.css` | Theme files, built in and custom |
 | `GET /api/status` | Setup health: Quaver folder, files and version |
 | `GET /api/diagnostics` | The support report shown by the Copy diagnostics button (same-origin only, no CORS) |
 | `GET /api/config`, `PUT /api/config` | Read and save the settings file |
 | `GET /api/history` | Recent plays (`?limit=`, 1 to 200) |
 | `GET /api/scores/{id}/timeline` | Accuracy curve of one saved play, from the score database |
 | `GET /api/themes` | Available overlay themes |
+| `GET /api/overlays` | The custom overlays folder and the custom overlays found in it |
 | `POST /api/quit` | Stop `qsc` cleanly (same guards as saving the settings: used by the dashboard Quit button and `qsc stop`) |
 
 ### Events
@@ -220,6 +223,7 @@ Every event is wrapped in the same versioned envelope so your overlay keeps work
 | `game.state` | The game moved to `menu`, `select`, `loading`, `gameplay` or `results` (also `initialization` while the game starts, and `closed` when Quaver is closed). The `/state` snapshot reports `unknown` before the first log line |
 | `map.started` | A map started: title, artist, difficulty, stars, key count |
 | `score.saved` | A play finished: judgments, accuracy, grade, max combo, performance `rating`, `is_pb`, `first_play`, `full_combo`, `failed`, play `rate`, `mods`, `mods_raw`, `paused` and `autoplay` |
+| `keys.frame` | Lane key state, only on `GET /events?keys=1` and only when lane keys are on (see [Lane keys](#lane-keys)) |
 
 Score details:
 
@@ -239,12 +243,22 @@ Quaver writes nothing about individual notes while you play, so there are no liv
 
 ### Overlay options
 
-Overlays take URL parameters:
+Overlays take URL parameters. The full table, with values, defaults and the overlays each one applies to, is in the [overlay guide](docs/OVERLAYS.md#1-the-built-in-overlays-and-their-options). In short:
 
 | Parameter | Example | Effect |
 |-----------|---------|--------|
 | `theme` | `?theme=neutral-light` | Pick a theme by id (a built-in one or your own); without it, the default saved on the Overlays page is used |
 | `accent` | `?accent=ff6ac1` | Override the accent color (hex) |
+| `lang` | `?lang=fr` | Language of the labels: `en`, `fr` or `de` |
+| `scale` | `?scale=1.2` | Size multiplier from 0.5 to 3 |
+| `demo` | `?demo=1` | Show example data without connecting |
+| `autohide` | `?autohide=20` | Seconds until the card hides (now playing, result, alert, curve) |
+| `n` | `?n=10` | History: number of plays, 5 to 50 |
+| `best` | `?best=1` | History: dashed line at the best accuracy shown |
+| `sound` | `?sound=1` | Alert: play a short chime |
+| `counts` | `?counts=0` | Lane keys: hide the press counters |
+| `peak` | `?peak=0` | Lane keys: hide the peak keys per second |
+| `hide` | `?hide=menu,closed` | State: states for which the badge is not shown |
 
 ---
 
@@ -255,7 +269,8 @@ Settings are stored in a JSON file, written by the Settings and Overlays pages o
 | OS | Location |
 |----|----------|
 | Windows | `%APPDATA%\quaver-stream-companion\config.json` |
-| Linux | `~/.config/quaver-stream-companion/config.json` |
+| Linux | `~/.config/quaver-stream-companion/config.json` (or `$XDG_CONFIG_HOME/quaver-stream-companion/config.json` when that variable is set) |
+| macOS | `~/Library/Application Support/quaver-stream-companion/config.json` |
 
 ```json
 {
@@ -267,7 +282,7 @@ Settings are stored in a JSON file, written by the Settings and Overlays pages o
 }
 ```
 
-An empty `quaver_dir` means auto-detection from your Steam libraries. `language` is `en`, `fr` or `de`. `accent` is a hex color without `#`. A missing file gives the defaults. A change of port, or of the Quaver folder once it is in use, takes effect the next time `qsc` starts; a folder saved while `qsc` is still looking for Quaver is picked up within 15 seconds. In a hand-edited JSON path, double each backslash (`\\`) or use forward slashes.
+An empty `quaver_dir` means auto-detection from your Steam libraries. `language` is `en`, `fr` or `de`. `accent` is a hex color without `#`. A missing file gives the defaults. Saving writes a `"version": 1` key, and keys that `qsc` does not know are kept when settings are saved from the dashboard. A change of port, or of the Quaver folder once it is in use, takes effect the next time `qsc` starts; a folder saved while `qsc` is still looking for Quaver is picked up within 15 seconds. In a hand-edited JSON path, double each backslash (`\\`) or use forward slashes.
 
 #### Lane keys
 
@@ -282,6 +297,8 @@ Precedence: command-line flag, then config file, then defaults. Use `--config <p
 ---
 
 ## Commands
+
+Run these from the folder where you unzipped `qsc` (`.\qsc.exe` on Windows, `./qsc` on Linux), or from anywhere once it is on your `PATH`.
 
 ```
 qsc                      start the server
@@ -313,13 +330,14 @@ The server only answers requests whose Host is `127.0.0.1:<port>` or `localhost:
 - [ ] Optional Twitch module: chat commands (`!map`, `!last`, `!pb`) and personal best / full combo alerts
 - [x] Custom overlays folder, lane keys and KPS overlay (Windows), degraded mode without Quaver
 - [x] 11 ready-made themes (Catppuccin, Tokyo Night, Dracula, Nord, Gruvbox, Rose Pine, Pixel, Neon Cosy...) and a guide to make your own
-- [ ] Windows `.exe`, Linux binaries and AppImage releases (release workflow added, first release pending)
+- [x] Windows `.exe`, Linux binaries and AppImage releases (`v0.1.0-rc1` is published as a pre-release)
+- [ ] Stable `0.1.0`, after feedback on the release candidate, especially from Linux and Proton setups
 
 ---
 
 ## Install
 
-Releases come as a Windows zip, Linux `.tar.gz` archives (amd64 and arm64), a Linux AppImage and a `checksums.txt` file. There is no installer: unzip, check the checksum, run `qsc`. The [installation guide](docs/INSTALL.md) covers verification, starting with your computer on Windows and Linux, updating and uninstalling. The AppImage is built by the release workflow and has not been run by the author on Linux yet.
+Releases come as a Windows zip, Linux `.tar.gz` archives (amd64 and arm64), a Linux AppImage and a `checksums.txt` file. There is no installer: unzip, check the checksum, run `qsc`. The [installation guide](docs/INSTALL.md) covers verification, starting with your computer on Windows and Linux, updating and uninstalling. The AppImage is built by the release workflow and has not been run by the author on Linux yet. Release notes are in the [changelog](CHANGELOG.md).
 
 ---
 
@@ -344,15 +362,17 @@ go test ./...
 | [OBS setup](docs/OBS.md) | Adding the overlays to OBS, sizes, troubleshooting |
 | [Overlays](docs/OVERLAYS.md) | Overlay options, the data reference and how to build your own overlay |
 | [Themes](docs/THEMES.md) | Making a theme, the tokens, credits and licenses |
+| [Releasing](docs/RELEASING.md) | How a release is cut, and the repository settings to check |
+| [Docs index](docs/README.md) | All the guides in one list |
 
 ---
 
 ## Contributing
 
-Issues and pull requests are welcome. Run `gofmt -l .`, `go vet ./...` and `go test ./...` before sending a change. To add a built-in theme, follow [Contributing a built-in theme](docs/THEMES.md#contributing-a-built-in-theme). The web files are plain HTML, CSS and JavaScript with no build step and no remote resources.
+Issues and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first: it covers the setup, the checks to run before sending a change and the commit style. This project follows a [code of conduct](CODE_OF_CONDUCT.md). To report a security problem privately, see [SECURITY.md](SECURITY.md). To add a built-in theme, follow [Contributing a built-in theme](docs/THEMES.md#contributing-a-built-in-theme). The web files are plain HTML, CSS and JavaScript with no build step and no remote resources.
 
 ---
 
 ## License and credits
 
-`qsc` is MIT licensed. See [LICENSE](LICENSE). Theme palettes come from Catppuccin, Tokyo Night, Dracula, Nord, Gruvbox and Rose Pine (all MIT), and the Pixel theme uses the VT323 font by Peter Hull under the SIL Open Font License 1.1 ([license text](web/themes/fonts/OFL.txt)). The full table is in the [theme guide](docs/THEMES.md#credits-and-licenses).
+`qsc` is MIT licensed. See [LICENSE](LICENSE). Theme palettes come from Catppuccin, Tokyo Night, Dracula, Nord, Gruvbox and Rose Pine (all MIT), and the Pixel theme uses the VT323 font by Peter Hull under the SIL Open Font License 1.1 ([license text](web/themes/fonts/OFL.txt)). The full table is in the [theme guide](docs/THEMES.md#credits-and-licenses). The licenses of the Go modules built into `qsc` are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md); it ships inside the release archives from the release after `v0.1.0-rc1` (the `v0.1.0-rc1` archives do not contain it).

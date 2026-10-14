@@ -38,7 +38,8 @@ Create a `themes` folder next to your `config.json`:
 | OS | Folder |
 |----|--------|
 | Windows | `%APPDATA%\quaver-stream-companion\themes\` |
-| Linux | `~/.config/quaver-stream-companion/themes/` |
+| Linux | `~/.config/quaver-stream-companion/themes/` (or `$XDG_CONFIG_HOME/quaver-stream-companion/themes/` when that variable is set) |
+| macOS | `~/Library/Application Support/quaver-stream-companion/themes/` |
 
 The exact folder is shown on the **Overlays** page of the dashboard.
 
