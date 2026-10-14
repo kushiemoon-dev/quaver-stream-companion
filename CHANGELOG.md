@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.0-rc2] - 2026-10-14
+
+Second release candidate, published as a pre-release.
+
 ### Added
 
 - `qsc doctor --report` prints a redacted support report, and the Status page has a Copy diagnostics button (`GET /api/diagnostics`, same-origin only).
@@ -13,10 +17,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `qsc -h`, a clear message when the port is busy, and error windows that wait for Enter on Windows.
 - The Settings page shows the config, themes and overlays paths and the version.
 - Third party notices (`THIRD_PARTY_NOTICES.md`) in every archive, a security policy, a code of conduct, contributing guide and issue templates.
+- An offline banner in the dashboard, translated error messages, a skip link, and numbers formatted by language (for example `97,42 %` in French).
+- Overlay event streams reconnect by themselves, including after a refusal.
 
 ### Changed
 
 - Result, alert and curve overlays stay in sync across reconnects, and a restart seeds the last score and map from the database.
+- Overlays keep their layout with very long titles, a missing difficulty no longer breaks the now playing overlay, and the OBS page fits small screens.
+- A score announced before its database row exists is retried in the background without delaying the next map, and score ids are remembered in a bounded set so a restored database does not hide new plays.
 - Score announcements and map detection are more robust: slow database writes no longer block events, the log tailer is bounded, and the score store is reopened when the database file is replaced.
 - The play history is answered with a single query.
 - Unknown keys in the config file are kept when settings are saved.
@@ -46,5 +54,6 @@ First release candidate, published as a pre-release.
 - A Quit button in the dashboard settings and a `qsc stop` command.
 - `qsc doctor`, `qsc version`, and release archives for Windows and Linux (amd64, arm64), a Linux AppImage and `checksums.txt`.
 
-[Unreleased]: https://github.com/kushiemoon-dev/quaver-stream-companion/compare/v0.1.0-rc1...HEAD
+[Unreleased]: https://github.com/kushiemoon-dev/quaver-stream-companion/compare/v0.1.0-rc2...HEAD
+[0.1.0-rc2]: https://github.com/kushiemoon-dev/quaver-stream-companion/releases/tag/v0.1.0-rc2
 [0.1.0-rc1]: https://github.com/kushiemoon-dev/quaver-stream-companion/releases/tag/v0.1.0-rc1
