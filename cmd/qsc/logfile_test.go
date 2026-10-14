@@ -133,8 +133,7 @@ func TestLogFileFailureNeverBlocksStartup(t *testing.T) {
 }
 
 func TestCrashExitsTwoWithTheHint(t *testing.T) {
-	afterStart = func() { panic("boom-test") }
-	t.Cleanup(func() { afterStart = func() {} })
+	t.Cleanup(afterStart.set(func() { panic("boom-test") }))
 	d := testutil.NewQuaverDir(t)
 	cfg := filepath.Join(t.TempDir(), "config.json")
 	var out, errw bytes.Buffer

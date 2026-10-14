@@ -28,10 +28,8 @@ const (
 func emptySteam(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
-	prevRoots, prevEvery := steamRoots, recheckInterval
-	steamRoots = func() []string { return []string{root} }
-	recheckInterval = 20 * time.Millisecond
-	t.Cleanup(func() { steamRoots, recheckInterval = prevRoots, prevEvery })
+	t.Cleanup(steamRootsHook.set(func() []string { return []string{root} }))
+	t.Cleanup(recheckInterval.set(20 * time.Millisecond))
 	return root
 }
 

@@ -8,7 +8,7 @@ import (
 )
 
 // afterStart runs once the server is ready to accept connections; tests replace it to inject a panic.
-var afterStart = func() {}
+var afterStart = newHook(func() {})
 
 const crashHint = `qsc crashed: see qsc.log, and run "qsc doctor --report" for a bug report`
 

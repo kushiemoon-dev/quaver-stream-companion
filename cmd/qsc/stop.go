@@ -16,7 +16,7 @@ import (
 )
 
 // stopWait is how long qsc stop waits for the port to stop answering.
-var stopWait = 5 * time.Second
+var stopWait = newHook(5 * time.Second)
 
 func stop(args []string, out, errw io.Writer) int {
 	port, code := stopPort(args, errw)
@@ -54,7 +54,7 @@ func stop(args []string, out, errw io.Writer) int {
 		return 1
 	}
 
-	for deadline := time.Now().Add(stopWait); time.Now().Before(deadline); time.Sleep(50 * time.Millisecond) {
+	for deadline := time.Now().Add(stopWait.get()); time.Now().Before(deadline); time.Sleep(50 * time.Millisecond) {
 		c, err := net.DialTimeout("tcp", addr, 500*time.Millisecond)
 		if err != nil {
 			fmt.Fprintln(out, "qsc stopped")
@@ -62,7 +62,7 @@ func stop(args []string, out, errw io.Writer) int {
 		}
 		c.Close()
 	}
-	fmt.Fprintf(errw, "error: qsc on port %d is still answering after %s\n", port, stopWait)
+	fmt.Fprintf(errw, "error: qsc on port %d is still answering after %s\n", port, stopWait.get())
 	return 1
 }
 

@@ -120,9 +120,7 @@ func TestStopFailsWhenSomethingElseAnswers(t *testing.T) {
 }
 
 func TestStopFailsWhenThePortKeepsAnswering(t *testing.T) {
-	old := stopWait
-	stopWait = 300 * time.Millisecond
-	t.Cleanup(func() { stopWait = old })
+	t.Cleanup(stopWait.set(300 * time.Millisecond))
 	port := fakeServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusAccepted)
 		fmt.Fprint(w, `{"status":"stopping"}`)

@@ -6,7 +6,7 @@ import (
 )
 
 // openBrowser opens a URL in the default browser. Tests replace it.
-var openBrowser = launchBrowser
+var openBrowser = newHook(launchBrowser)
 
 func launchBrowser(url string) error {
 	var cmd *exec.Cmd

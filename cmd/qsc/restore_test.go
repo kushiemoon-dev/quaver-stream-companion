@@ -35,9 +35,7 @@ func waitStateContains(t *testing.T, port int, want string) {
 // database was rolled back to older ids, an id that comes back is announced again, which only
 // happens when the periodic check cleared the announced set.
 func TestSupervisorTickForgetsAnnouncedScoresAfterARestore(t *testing.T) {
-	old := recheckInterval
-	recheckInterval = 40 * time.Millisecond
-	t.Cleanup(func() { recheckInterval = old })
+	t.Cleanup(recheckInterval.set(40 * time.Millisecond))
 	d := testutil.NewQuaverDir(t)
 	d.AddMap(t, testutil.MapRow{MD5: "m1", Title: "Song", Mode: 1, LastPlayedMS: time.Now().Add(-time.Hour).UnixMilli()})
 	play := testutil.ScoreRow{MapMD5: "m1", Total: 900000, Grade: 7, Accuracy: 98.1, MaxCombo: 300, Marv: 200}
@@ -48,8 +46,7 @@ func TestSupervisorTickForgetsAnnouncedScoresAfterARestore(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	cfg := filepath.Join(t.TempDir(), "config.json")
-	var out, errw bytes.Buffer
-	go run(ctx, []string{"--quaver-dir", d.Path, "--port", fmt.Sprint(port), "--config", cfg}, &out, &errw)
+	runInBackground(t, ctx, cancel, []string{"--quaver-dir", d.Path, "--port", fmt.Sprint(port), "--config", cfg})
 	waitStateContains(t, port, `"id":7`)
 
 	var announced atomic.Int32
