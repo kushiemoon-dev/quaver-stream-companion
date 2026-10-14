@@ -16,6 +16,7 @@ var communityFiles = []string{
 	".github/pull_request_template.md", "docs/README.md", "docs/RELEASING.md",
 	"docs/releases/v0.1.0-rc1.md",
 	"docs/releases/v0.1.0-rc2.md",
+	"docs/releases/v0.1.0.md",
 }
 
 func TestCommunityFilesExist(t *testing.T) {

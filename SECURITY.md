@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Only the latest release receives security fixes. While the project is in its release candidate phase, that means the newest `v0.x` tag on the [releases page](https://github.com/kushiemoon-dev/quaver-stream-companion/releases). Please update before reporting.
+Only the latest release receives security fixes. While the project is in the `0.x` series, that means the newest tag on the [releases page](https://github.com/kushiemoon-dev/quaver-stream-companion/releases). Please update before reporting.
 
 ## Reporting a vulnerability
 

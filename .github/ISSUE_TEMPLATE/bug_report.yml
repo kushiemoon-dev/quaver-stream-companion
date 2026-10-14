@@ -18,7 +18,7 @@ body:
     attributes:
       label: qsc version
       description: The output of qsc version.
-      placeholder: quaver-stream-companion v0.1.0-rc1
+      placeholder: quaver-stream-companion v0.1.0
     validations:
       required: true
   - type: dropdown

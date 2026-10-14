@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-14
+
+First stable release. The program is the same as `0.1.0-rc2`: this release updates the documentation and the release notes. See the entries below for everything it contains.
+
 ## [0.1.0-rc2] - 2026-10-14
 
 Second release candidate, published as a pre-release.
@@ -54,6 +58,7 @@ First release candidate, published as a pre-release.
 - A Quit button in the dashboard settings and a `qsc stop` command.
 - `qsc doctor`, `qsc version`, and release archives for Windows and Linux (amd64, arm64), a Linux AppImage and `checksums.txt`.
 
-[Unreleased]: https://github.com/kushiemoon-dev/quaver-stream-companion/compare/v0.1.0-rc2...HEAD
+[Unreleased]: https://github.com/kushiemoon-dev/quaver-stream-companion/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/kushiemoon-dev/quaver-stream-companion/releases/tag/v0.1.0
 [0.1.0-rc2]: https://github.com/kushiemoon-dev/quaver-stream-companion/releases/tag/v0.1.0-rc2
 [0.1.0-rc1]: https://github.com/kushiemoon-dev/quaver-stream-companion/releases/tag/v0.1.0-rc1
