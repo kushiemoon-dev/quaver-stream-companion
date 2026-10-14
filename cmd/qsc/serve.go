@@ -230,7 +230,8 @@ func serve(ctx context.Context, args []string, out, errw io.Writer) (code int) {
 				ThemesDir: themes.UserDir(opts.configPath), OverlaysDir: overlays.Dir(opts.configPath), SteamRoots: steamRoots(),
 				Port: opts.port, PortOwnedByUs: true, KeysEnabled: laneKeys.Status().Enabled})
 		},
-		Quit: cancel,
+		// The delay lets the answer to the quit request reach its client before the server closes.
+		Quit: func() { time.AfterFunc(quitDelay, cancel) },
 	})
 	srv := &http.Server{
 		Handler: server.New(b, st.Snapshot, web.FS,
