@@ -3,10 +3,12 @@ package testutil
 
 import (
 	"database/sql"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	_ "modernc.org/sqlite"
 )
@@ -82,14 +84,35 @@ func (d *FakeDir) AppendLog(t testing.TB, lines ...string) {
 	}
 }
 
+// dsn builds the database URL with net/url, so a temp path with odd characters still works, and a
+// generous busy timeout: a running qsc reads the same file and a writer must wait for its short locks.
+func (d *FakeDir) dsn() string {
+	p := filepath.ToSlash(filepath.Join(d.Path, "quaver.db"))
+	if !strings.HasPrefix(p, "/") {
+		p = "/" + p
+	}
+	q := url.Values{"_pragma": {"busy_timeout(10000)"}}
+	return (&url.URL{Scheme: "file", Path: p, RawQuery: q.Encode()}).String()
+}
+
+func isBusy(err error) bool {
+	return err != nil && (strings.Contains(err.Error(), "SQLITE_BUSY") || strings.Contains(err.Error(), "database is locked"))
+}
+
 func (d *FakeDir) exec(t testing.TB, query string, args ...any) sql.Result {
 	t.Helper()
-	db, err := sql.Open("sqlite", "file:"+filepath.ToSlash(filepath.Join(d.Path, "quaver.db")))
+	db, err := sql.Open("sqlite", d.dsn())
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
-	res, err := db.Exec(query, args...)
+	var res sql.Result
+	for attempt := 0; attempt < 5; attempt++ {
+		if res, err = db.Exec(query, args...); !isBusy(err) {
+			break
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
 	if err != nil {
 		t.Fatalf("exec %q: %v", query, err)
 	}
@@ -121,7 +144,7 @@ func (d *FakeDir) AddScore(t testing.TB, s ScoreRow) int64 {
 // LockDatabase holds an exclusive lock on quaver.db until the test ends, as Quaver does while writing.
 func (d *FakeDir) LockDatabase(t testing.TB) {
 	t.Helper()
-	db, err := sql.Open("sqlite", "file:"+filepath.ToSlash(filepath.Join(d.Path, "quaver.db")))
+	db, err := sql.Open("sqlite", d.dsn())
 	if err != nil {
 		t.Fatal(err)
 	}

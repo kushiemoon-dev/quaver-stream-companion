@@ -39,7 +39,9 @@ import (
 var newSampler = keys.NewSampler
 
 // steamRoots lists the Steam folders to search; tests replace it.
-var steamRoots = paths.DefaultSteamRoots
+var steamRootsHook = newHook(paths.DefaultSteamRoots)
+
+func steamRoots() []string { return steamRootsHook.get()() }
 
 const logPollInterval = 200 * time.Millisecond
 
@@ -184,9 +186,9 @@ func serve(ctx context.Context, args []string, out, errw io.Writer) (code int) {
 	}
 	spawn(func() {
 		if !started {
-			app.Watch(ctx, recheckInterval, find, start)
+			app.Watch(ctx, recheckInterval.get(), find, start)
 		}
-		app.Supervise(ctx, recheckInterval, be.problem, be.reopen)
+		app.Supervise(ctx, recheckInterval.get(), be.problem, be.reopen)
 	})
 
 	dashboard, err := fs.Sub(web.FS, "dashboard")
@@ -228,7 +230,8 @@ func serve(ctx context.Context, args []string, out, errw io.Writer) (code int) {
 				ThemesDir: themes.UserDir(opts.configPath), OverlaysDir: overlays.Dir(opts.configPath), SteamRoots: steamRoots(),
 				Port: opts.port, PortOwnedByUs: true, KeysEnabled: laneKeys.Status().Enabled})
 		},
-		Quit: cancel,
+		// The delay lets the answer to the quit request reach its client before the server closes.
+		Quit: func() { time.AfterFunc(quitDelay, cancel) },
 	})
 	srv := &http.Server{
 		Handler: server.New(b, st.Snapshot, web.FS,
@@ -249,10 +252,10 @@ func serve(ctx context.Context, args []string, out, errw io.Writer) (code int) {
 	fmt.Fprintln(out, "Keep this window open while you stream, or run qsc stop to quit.")
 
 	slog.Debug("verbose logging is on")
-	afterStart()
+	afterStart.get()()
 
 	if opts.open {
-		if err := openBrowser(fmt.Sprintf("http://%s/", addr)); err != nil {
+		if err := openBrowser.get()(fmt.Sprintf("http://%s/", addr)); err != nil {
 			fmt.Fprintln(errw, "warning: cannot open the browser:", err)
 		}
 	}
@@ -272,5 +275,5 @@ func reportDegraded(w io.Writer, detail string) {
 	for _, l := range diagnose.Advice() {
 		fmt.Fprintln(w, " ", l)
 	}
-	fmt.Fprintf(w, "The dashboard works meanwhile. qsc checks again every %s.\n", recheckInterval)
+	fmt.Fprintf(w, "The dashboard works meanwhile. qsc checks again every %s.\n", recheckInterval.get())
 }

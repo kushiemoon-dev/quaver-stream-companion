@@ -12,7 +12,7 @@ import (
 )
 
 // recheckInterval is how often a degraded qsc looks for a usable Quaver folder again.
-var recheckInterval = 15 * time.Second
+var recheckInterval = newHook(15 * time.Second)
 
 // backend holds what only exists once a usable Quaver folder was found.
 type backend struct {

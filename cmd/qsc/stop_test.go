@@ -120,9 +120,7 @@ func TestStopFailsWhenSomethingElseAnswers(t *testing.T) {
 }
 
 func TestStopFailsWhenThePortKeepsAnswering(t *testing.T) {
-	old := stopWait
-	stopWait = 300 * time.Millisecond
-	t.Cleanup(func() { stopWait = old })
+	t.Cleanup(stopWait.set(300 * time.Millisecond))
 	port := fakeServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusAccepted)
 		fmt.Fprint(w, `{"status":"stopping"}`)
@@ -252,5 +250,49 @@ func TestStopPortFlagIgnoresAnInvalidConfig(t *testing.T) {
 	}
 	if got, code := stopPort([]string{"--config", cfg}, &bytes.Buffer{}); code != -1 || got != 7878 {
 		t.Fatalf("without --port: port = %d, code = %d", got, code)
+	}
+}
+
+// eofServer accepts connections and closes them without answering, as a server that is shutting
+// down does. closeListener ends the listening socket after the first request.
+func eofServer(t *testing.T, closeListener bool) int {
+	t.Helper()
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { ln.Close() })
+	go func() {
+		for {
+			c, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			buf := make([]byte, 4096)
+			c.Read(buf)
+			c.Close()
+			if closeListener {
+				ln.Close()
+				return
+			}
+		}
+	}()
+	return ln.Addr().(*net.TCPAddr).Port
+}
+
+func TestStopTreatsAClosedConnectionAsAcceptedWhenThePortGoesQuiet(t *testing.T) {
+	port := eofServer(t, true)
+	code, out, errw := runStop("--port", fmt.Sprint(port), "--config", filepath.Join(t.TempDir(), "c.json"))
+	if code != 0 || strings.TrimSpace(out) != "qsc stopped" {
+		t.Fatalf("code = %d, out = %q, err = %q", code, out, errw)
+	}
+}
+
+func TestStopFailsWhenTheConnectionClosesButThePortKeepsAnswering(t *testing.T) {
+	t.Cleanup(stopWait.set(300 * time.Millisecond))
+	port := eofServer(t, false)
+	code, out, errw := runStop("--port", fmt.Sprint(port), "--config", filepath.Join(t.TempDir(), "c.json"))
+	if code != 1 || out != "" || !strings.Contains(errw, "still answering") {
+		t.Fatalf("code = %d, out = %q, err = %q", code, out, errw)
 	}
 }

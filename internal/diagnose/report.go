@@ -38,7 +38,7 @@ func Collect(ctx context.Context, src Source) string {
 	if home == "" {
 		home, _ = os.UserHomeDir()
 	}
-	ci := runtime.GOOS == "windows"
+	ci := caseInsensitiveHome(home)
 	names := userNames(home)
 	redact := func(s string) string {
 		return cutRunes(RedactHome(s, home, ci, names...), reportLineMax)

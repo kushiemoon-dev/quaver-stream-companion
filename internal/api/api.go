@@ -125,6 +125,7 @@ func (a api) quit(w http.ResponseWriter, r *http.Request) {
 	body := []byte(`{"status":"stopping"}` + "\n")
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Content-Length", strconv.Itoa(len(body)))
+	w.Header().Set("Connection", "close")
 	w.WriteHeader(http.StatusAccepted)
 	_, _ = w.Write(body)
 	if f, ok := w.(http.Flusher); ok {

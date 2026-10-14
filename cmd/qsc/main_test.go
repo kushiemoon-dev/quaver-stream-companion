@@ -163,8 +163,7 @@ func TestServeSeedsStateFromExistingLog(t *testing.T) {
 	port := freePort(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	var out, errw bytes.Buffer
-	go run(ctx, []string{"--quaver-dir", d.Path, "--port", fmt.Sprint(port)}, &out, &errw)
+	runInBackground(t, ctx, cancel, []string{"--quaver-dir", d.Path, "--port", fmt.Sprint(port)})
 
 	url := fmt.Sprintf("http://127.0.0.1:%d/state", port)
 	deadline := time.Now().Add(3 * time.Second)
@@ -194,8 +193,7 @@ func TestServeShowsMapWhenStartedDuringPlay(t *testing.T) {
 	port := freePort(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	var out, errw bytes.Buffer
-	go run(ctx, []string{"--quaver-dir", d.Path, "--port", fmt.Sprint(port)}, &out, &errw)
+	runInBackground(t, ctx, cancel, []string{"--quaver-dir", d.Path, "--port", fmt.Sprint(port)})
 
 	url := fmt.Sprintf("http://127.0.0.1:%d/state", port)
 	deadline := time.Now().Add(3 * time.Second)
@@ -454,8 +452,7 @@ func TestServeSeedsLastScoreAndMapAfterRestart(t *testing.T) {
 	port := freePort(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	var out, errw bytes.Buffer
-	go run(ctx, []string{"--quaver-dir", d.Path, "--port", fmt.Sprint(port)}, &out, &errw)
+	runInBackground(t, ctx, cancel, []string{"--quaver-dir", d.Path, "--port", fmt.Sprint(port)})
 
 	url := fmt.Sprintf("http://127.0.0.1:%d/state", port)
 	deadline := time.Now().Add(3 * time.Second)

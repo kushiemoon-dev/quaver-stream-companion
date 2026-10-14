@@ -203,9 +203,7 @@ func (r *recorder) calls() []string {
 
 func swapBrowser(t *testing.T, f func(string) error) {
 	t.Helper()
-	old := openBrowser
-	openBrowser = f
-	t.Cleanup(func() { openBrowser = old })
+	t.Cleanup(openBrowser.set(f))
 }
 
 func TestOpenFlagCallsBrowserOnce(t *testing.T) {

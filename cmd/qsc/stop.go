@@ -10,13 +10,18 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
+	"syscall"
 	"time"
 
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/config"
 )
 
 // stopWait is how long qsc stop waits for the port to stop answering.
-var stopWait = 5 * time.Second
+var stopWait = newHook(5 * time.Second)
+
+// quitDelay is how long the server waits after answering a quit request before it shuts down.
+const quitDelay = 100 * time.Millisecond
 
 func stop(args []string, out, errw io.Writer) int {
 	port, code := stopPort(args, errw)
@@ -41,6 +46,10 @@ func stop(args []string, out, errw io.Writer) int {
 			fmt.Fprintf(out, "qsc is not running on port %d\n", port)
 			return 0
 		}
+		if closedByPeer(err) {
+			// The server may shut down before the client reads the answer: accepted if the port goes quiet.
+			return waitUntilStopped(addr, port, out, errw)
+		}
 		fmt.Fprintf(errw, "error: cannot ask %s to stop: %v\n", addr, err)
 		return 1
 	}
@@ -54,7 +63,18 @@ func stop(args []string, out, errw io.Writer) int {
 		return 1
 	}
 
-	for deadline := time.Now().Add(stopWait); time.Now().Before(deadline); time.Sleep(50 * time.Millisecond) {
+	return waitUntilStopped(addr, port, out, errw)
+}
+
+// closedByPeer tells that the connection ended before an answer came, as when the server exits.
+func closedByPeer(err error) bool {
+	return errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, syscall.ECONNRESET) ||
+		strings.Contains(err.Error(), "connection reset") || strings.Contains(err.Error(), "forcibly closed")
+}
+
+// waitUntilStopped polls the port until nothing answers on it.
+func waitUntilStopped(addr string, port int, out, errw io.Writer) int {
+	for deadline := time.Now().Add(stopWait.get()); time.Now().Before(deadline); time.Sleep(50 * time.Millisecond) {
 		c, err := net.DialTimeout("tcp", addr, 500*time.Millisecond)
 		if err != nil {
 			fmt.Fprintln(out, "qsc stopped")
@@ -62,7 +82,7 @@ func stop(args []string, out, errw io.Writer) int {
 		}
 		c.Close()
 	}
-	fmt.Fprintf(errw, "error: qsc on port %d is still answering after %s\n", port, stopWait)
+	fmt.Fprintf(errw, "error: qsc on port %d is still answering after %s\n", port, stopWait.get())
 	return 1
 }
 

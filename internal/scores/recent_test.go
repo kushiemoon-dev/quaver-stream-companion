@@ -68,7 +68,17 @@ func TestRecentOnALargeDatabaseIsFast(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// The reference is what the history cost before: one ScoreByID per entry. Comparing with it in
+	// the same run keeps the check independent of how fast the machine is.
 	start := time.Now()
+	for id := int64(20000); id > 19800; id-- {
+		if _, err := st.ScoreByID(ctx, id); err != nil {
+			t.Fatal(err)
+		}
+	}
+	perEntry := time.Since(start)
+
+	start = time.Now()
 	got, err := st.Recent(ctx, 200)
 	took := time.Since(start)
 	if err != nil {
@@ -77,8 +87,8 @@ func TestRecentOnALargeDatabaseIsFast(t *testing.T) {
 	if len(got) != 200 {
 		t.Fatalf("len = %d", len(got))
 	}
-	t.Logf("Recent(200) over 20000 scores took %v", took)
-	if took > 150*time.Millisecond {
-		t.Fatalf("took %v, want under 150ms", took)
+	t.Logf("Recent(200) took %v, 200 single lookups took %v", took, perEntry)
+	if took*3 > perEntry {
+		t.Fatalf("Recent took %v, one lookup per entry takes %v: it must be at least 3 times faster", took, perEntry)
 	}
 }

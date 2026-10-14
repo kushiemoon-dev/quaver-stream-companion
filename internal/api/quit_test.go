@@ -101,3 +101,11 @@ func TestQuitAcceptsSameOriginAndCharset(t *testing.T) {
 		t.Fatalf("status = %d, calls = %d", got, calls.Load())
 	}
 }
+
+func TestQuitAsksTheClientToCloseTheConnection(t *testing.T) {
+	e, _ := quitEnv(t)
+	w := do(e.h, "POST", "127.0.0.1:5555", "/api/quit", "", map[string]string{"Content-Type": "application/json", "X-Requested-With": "qsc"})
+	if w.Header().Get("Connection") != "close" {
+		t.Fatalf("Connection = %q, want close", w.Header().Get("Connection"))
+	}
+}
