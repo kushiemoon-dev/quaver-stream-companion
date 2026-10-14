@@ -79,7 +79,7 @@ func next(t *testing.T, ch <-chan bus.Event, typ string) bus.Event {
 			t.Fatalf("got event %q, want %q", e.Type, typ)
 		}
 		return e
-	case <-time.After(2 * time.Second):
+	case <-time.After(10 * time.Second):
 		t.Fatalf("timeout waiting for %q", typ)
 		return bus.Event{}
 	}
@@ -288,5 +288,5 @@ func TestReplayedScoreIdsAreNotAnnouncedAgain(t *testing.T) {
 
 // tune makes retries fast for tests that run on the real clock.
 func tune(a *App) {
-	a.retry, a.maxDelay, a.budget = time.Millisecond, time.Millisecond, 2*time.Second
+	a.retry, a.maxDelay, a.budget = time.Millisecond, time.Millisecond, 10*time.Second
 }

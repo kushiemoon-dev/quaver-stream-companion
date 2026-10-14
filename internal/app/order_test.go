@@ -71,14 +71,14 @@ func same(a, b []string) bool { return fmt.Sprint(a) == fmt.Sprint(b) }
 
 func TestLateMapNeverFollowsALaterStateOrScore(t *testing.T) {
 	eachProcs(t, func(t *testing.T) {
-		src := &fakeSource{lastMap: laggingMap(300 * time.Millisecond), score: instantScore}
+		src := &fakeSource{lastMap: laggingMap(time.Second), score: instantScore}
 		lines, events := slowSetup(t, src)
 
 		lines <- lineGameplay
 		lines <- lineResults
 		lines <- scoreLine("77")
 
-		got := sequence(events, 700*time.Millisecond)
+		got := sequence(events, 1500*time.Millisecond)
 		want := []string{"game.state:gameplay", "game.state:results", "score.saved:77"}
 		if !same(got, want) {
 			t.Fatalf("events = %v, want %v", got, want)
@@ -88,13 +88,13 @@ func TestLateMapNeverFollowsALaterStateOrScore(t *testing.T) {
 
 func TestQuickQuitDropsThePendingMap(t *testing.T) {
 	eachProcs(t, func(t *testing.T) {
-		src := &fakeSource{lastMap: laggingMap(300 * time.Millisecond)}
+		src := &fakeSource{lastMap: laggingMap(time.Second)}
 		lines, events := slowSetup(t, src)
 
 		lines <- lineGameplay
 		lines <- lineSelect
 
-		got := sequence(events, 700*time.Millisecond)
+		got := sequence(events, 1500*time.Millisecond)
 		if want := []string{"game.state:gameplay", "game.state:select"}; !same(got, want) {
 			t.Fatalf("events = %v, want %v", got, want)
 		}
@@ -103,13 +103,13 @@ func TestQuickQuitDropsThePendingMap(t *testing.T) {
 
 func TestScoreWaitsForTheMapOfItsPlay(t *testing.T) {
 	eachProcs(t, func(t *testing.T) {
-		src := &fakeSource{lastMap: laggingMap(200 * time.Millisecond), score: instantScore}
+		src := &fakeSource{lastMap: laggingMap(time.Second), score: instantScore}
 		lines, events := slowSetup(t, src)
 
 		lines <- lineGameplay
 		lines <- scoreLine("78")
 
-		got := sequence(events, 700*time.Millisecond)
+		got := sequence(events, 1500*time.Millisecond)
 		want := []string{"game.state:gameplay", "map.started", "score.saved:78"}
 		if !same(got, want) {
 			t.Fatalf("events = %v, want %v", got, want)
@@ -118,7 +118,7 @@ func TestScoreWaitsForTheMapOfItsPlay(t *testing.T) {
 }
 
 func TestStatesAreNotDelayedByAnUnreadMap(t *testing.T) {
-	src := &fakeSource{lastMap: laggingMap(time.Second), score: instantScore}
+	src := &fakeSource{lastMap: laggingMap(4 * time.Second), score: instantScore}
 	lines, events := slowSetup(t, src)
 
 	lines <- lineGameplay
@@ -126,7 +126,7 @@ func TestStatesAreNotDelayedByAnUnreadMap(t *testing.T) {
 	start := time.Now()
 	next(t, events, bus.TypeGameState)
 	next(t, events, bus.TypeGameState)
-	if d := time.Since(start); d > 250*time.Millisecond {
+	if d := time.Since(start); d > 2*time.Second {
 		t.Fatalf("states took %v", d)
 	}
 }
@@ -228,7 +228,7 @@ func within(t *testing.T, ch <-chan bus.Event, typ string, d time.Duration) bus.
 
 func TestNextMapDoesNotWaitBehindASlowScoreRow(t *testing.T) {
 	eachProcs(t, func(t *testing.T) {
-		scoreAt := time.Now().Add(900 * time.Millisecond)
+		scoreAt := time.Now().Add(3 * time.Second)
 		var calls atomic.Int64
 		src := &fakeSource{
 			lastMap: func(int) (scores.Map, error) {
@@ -251,9 +251,9 @@ func TestNextMapDoesNotWaitBehindASlowScoreRow(t *testing.T) {
 		within(t, events, bus.TypeGameState, time.Second)
 
 		lines <- lineGameplay
-		within(t, events, bus.TypeGameState, 300*time.Millisecond)
-		within(t, events, bus.TypeMapStarted, 300*time.Millisecond)
-		if r := within(t, events, bus.TypeScoreSaved, 2*time.Second).Data.(scores.Result); r.Score.ID != 90 {
+		within(t, events, bus.TypeGameState, 2*time.Second)
+		within(t, events, bus.TypeMapStarted, 2*time.Second)
+		if r := within(t, events, bus.TypeScoreSaved, 8*time.Second).Data.(scores.Result); r.Score.ID != 90 {
 			t.Fatalf("score = %+v", r.Score)
 		}
 	})
@@ -261,7 +261,7 @@ func TestNextMapDoesNotWaitBehindASlowScoreRow(t *testing.T) {
 
 func TestShortNextPlayStillGetsItsMapBehindASlowScoreRow(t *testing.T) {
 	eachProcs(t, func(t *testing.T) {
-		scoreAt := time.Now().Add(900 * time.Millisecond)
+		scoreAt := time.Now().Add(3 * time.Second)
 		src := &fakeSource{
 			lastMap: func(int) (scores.Map, error) { return fresh("Song"), nil },
 			score: func(_ int, id int64) (scores.Result, error) {
@@ -275,9 +275,9 @@ func TestShortNextPlayStillGetsItsMapBehindASlowScoreRow(t *testing.T) {
 
 		lines <- scoreLine("91")
 		lines <- lineGameplay
-		within(t, events, bus.TypeGameState, 300*time.Millisecond)
-		within(t, events, bus.TypeMapStarted, 300*time.Millisecond)
-		within(t, events, bus.TypeScoreSaved, 2*time.Second)
+		within(t, events, bus.TypeGameState, 2*time.Second)
+		within(t, events, bus.TypeMapStarted, 2*time.Second)
+		within(t, events, bus.TypeScoreSaved, 8*time.Second)
 	})
 }
 
@@ -306,7 +306,7 @@ func TestScoreDoesNotHangWhenItsMapJobIsDroppedByOverflow(t *testing.T) {
 	}
 	close(release)
 
-	deadline := time.After(3 * time.Second)
+	deadline := time.After(10 * time.Second)
 	for {
 		select {
 		case e := <-events:

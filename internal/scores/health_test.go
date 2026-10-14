@@ -13,7 +13,7 @@ import (
 
 func lockDatabase(t *testing.T, d *testutil.FakeDir) {
 	t.Helper()
-	db, err := sql.Open("sqlite", "file:"+filepath.ToSlash(filepath.Join(d.Path, "quaver.db")))
+	db, err := sql.Open("sqlite", "file:"+filepath.ToSlash(filepath.Join(d.Path, "quaver.db"))+"?_pragma=busy_timeout(10000)")
 	if err != nil {
 		t.Fatal(err)
 	}

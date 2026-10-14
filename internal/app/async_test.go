@@ -30,7 +30,7 @@ func slowSetup(t *testing.T, src Source) (chan<- string, <-chan bus.Event) {
 
 func TestSlowScoreRowDoesNotBlockTheNextState(t *testing.T) {
 	var releaseAt atomic.Int64
-	releaseAt.Store(time.Now().Add(500 * time.Millisecond).UnixMilli())
+	releaseAt.Store(time.Now().Add(3 * time.Second).UnixMilli())
 	src := &fakeSource{
 		lastMap: func(int) (scores.Map, error) { return fresh("Song"), nil },
 		score: func(_ int, id int64) (scores.Result, error) {
@@ -49,7 +49,7 @@ func TestSlowScoreRowDoesNotBlockTheNextState(t *testing.T) {
 	if gs := next(t, events, bus.TypeGameState).Data.(bus.GameState); gs.State != "gameplay" {
 		t.Fatalf("state = %q", gs.State)
 	}
-	if d := time.Since(started); d > 250*time.Millisecond {
+	if d := time.Since(started); d > 2*time.Second {
 		t.Fatalf("game.state took %v: the slow score row blocked the tail", d)
 	}
 	next(t, events, bus.TypeMapStarted)

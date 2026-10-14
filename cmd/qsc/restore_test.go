@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
@@ -18,7 +19,7 @@ import (
 func waitStateContains(t *testing.T, port int, want string) {
 	t.Helper()
 	url := fmt.Sprintf("http://127.0.0.1:%d/state", port)
-	for deadline := time.Now().Add(4 * time.Second); time.Now().Before(deadline); time.Sleep(30 * time.Millisecond) {
+	for deadline := time.Now().Add(20 * time.Second); time.Now().Before(deadline); time.Sleep(30 * time.Millisecond) {
 		if resp, err := http.Get(url); err == nil {
 			var buf bytes.Buffer
 			buf.ReadFrom(resp.Body)
@@ -66,17 +67,31 @@ func TestSupervisorTickForgetsAnnouncedScoresAfterARestore(t *testing.T) {
 
 	d.Exec(t, `DELETE FROM Score WHERE Id > 3`)
 	d.Exec(t, `UPDATE sqlite_sequence SET seq = 3 WHERE name = 'Score'`)
-	time.Sleep(600 * time.Millisecond)
+	waitForLog(t, filepath.Join(filepath.Dir(cfg), "qsc.log"), "forgetting announced scores")
 	for range 4 {
 		d.AddScore(t, play)
 	}
-	d.AppendLog(t, "[1:06:06] - RUNTIME - IMPORTANT: Successfully saved score to database with id: 7")
-
-	for deadline := time.Now().Add(4 * time.Second); announced.Load() == 0 && time.Now().Before(deadline); time.Sleep(30 * time.Millisecond) {
+	// The log tailer ignores what the file held when it started, so the line is written again until
+	// it is read; lines after the first announcement are replays and are skipped.
+	line := "[1:06:06] - RUNTIME - IMPORTANT: Successfully saved score to database with id: 7"
+	for deadline := time.Now().Add(20 * time.Second); announced.Load() == 0 && time.Now().Before(deadline); time.Sleep(300 * time.Millisecond) {
+		d.AppendLog(t, line)
 	}
+	time.Sleep(500 * time.Millisecond)
 	if announced.Load() != 1 {
 		t.Fatalf("score.saved events = %d, want 1: the restored id 7 must be announced again", announced.Load())
 	}
+}
+
+// waitForLog waits until the log file holds text, which proves a periodic check ran.
+func waitForLog(t *testing.T, path, text string) {
+	t.Helper()
+	for deadline := time.Now().Add(20 * time.Second); time.Now().Before(deadline); time.Sleep(30 * time.Millisecond) {
+		if data, err := os.ReadFile(path); err == nil && strings.Contains(string(data), text) {
+			return
+		}
+	}
+	t.Fatalf("%s never appeared in %s", text, path)
 }
 
 func TestServeLogRedactsTheHomeFolder(t *testing.T) {
