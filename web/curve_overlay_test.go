@@ -17,9 +17,6 @@ func TestCurveOverlayPage(t *testing.T) {
 			t.Errorf("curve overlay is missing %q", want)
 		}
 	}
-	if strings.Contains(src, "snapshot") {
-		t.Error("curve must ignore the snapshot so a connect never replays an old score")
-	}
 	if regexp.MustCompile(`innerHTML|outerHTML|insertAdjacentHTML`).MatchString(src) {
 		t.Error("curve must not write markup")
 	}

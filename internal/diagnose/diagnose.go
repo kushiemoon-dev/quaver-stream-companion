@@ -66,7 +66,7 @@ func folderChecks(ctx context.Context, override string, steamRoots []string) (st
 	_, statErr := os.Stat(logPath)
 	return dir, append(checks,
 		result("log", statErr, logPath),
-		result("database", checkDatabase(ctx, dir), "readable"))
+		databaseCheck(checkDatabase(ctx, dir)))
 }
 
 // Advice lists the steps that fix a missing Quaver folder, for `qsc doctor` and the startup message.
@@ -86,6 +86,16 @@ func result(id string, err error, okDetail string) Check {
 		return Check{ID: id, Detail: err.Error()}
 	}
 	return Check{ID: id, OK: true, Detail: okDetail}
+}
+
+// busyDetail is reported while Quaver holds the write lock: the database is fine, only unreadable for now.
+const busyDetail = "busy: Quaver is writing the database"
+
+func databaseCheck(err error) Check {
+	if scores.IsBusy(err) {
+		return Check{ID: "database", OK: true, Detail: busyDetail}
+	}
+	return result("database", err, "readable")
 }
 
 func checkDatabase(ctx context.Context, dir string) error {

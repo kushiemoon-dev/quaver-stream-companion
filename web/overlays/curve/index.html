@@ -21,6 +21,7 @@
   const card = document.getElementById('card');
   document.title = qscT('curve.title');
   const autohide = qscAutohide(function () { card.classList.add('hidden'); });
+  const gate = qscModel.createIdGate();
   let inflight = null;
 
   function svg(tag, attrs, text) {
@@ -78,7 +79,10 @@
     const demo = Array.from({ length: 120 }, function (_, i) { return 100 - 3 * Math.exp(-i / 12) - i * 0.015; });
     draw({ total: 1200, points: demo, misses: [140, 410, 411, 800, 1010] });
   } else {
-    qscConnect({ 'score.saved': load });
+    qscConnect({
+      'snapshot': function (d) { if (d.last_score && gate.fresh(d.last_score)) load(d.last_score); },
+      'score.saved': function (r) { if (gate.fresh(r)) load(r); },
+    });
   }
 </script>
 </body>

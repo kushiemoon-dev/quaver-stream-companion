@@ -31,6 +31,21 @@ func (s *Store) Snapshot() Snapshot {
 	return s.snap
 }
 
+// Seed fills the map and last score of a fresh snapshot without an event. A value already
+// known is kept, so a live event that raced the seed wins.
+func (s *Store) Seed(m *scores.Map, r *scores.Result) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	next := s.snap
+	if next.Map == nil && m != nil {
+		next.Map = m
+	}
+	if next.LastScore == nil && r != nil {
+		next.LastScore = r
+	}
+	s.snap = next
+}
+
 // Apply folds one event into the snapshot. Snapshots are replaced, never
 // mutated, so a copy handed out earlier stays valid.
 func (s *Store) Apply(e bus.Event) {

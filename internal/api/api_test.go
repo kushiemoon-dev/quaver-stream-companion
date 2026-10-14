@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -673,5 +674,39 @@ func TestHistoryAndTimelineAnswer503WhileUnavailable(t *testing.T) {
 		if w.Code != 503 || !strings.Contains(w.Body.String(), "not available yet") {
 			t.Errorf("%s = %d %s", p, w.Code, w.Body.String())
 		}
+	}
+}
+
+func TestHistoryAndTimelineAnswer503WhenQuaverIsWriting(t *testing.T) {
+	busy := fmt.Errorf("list recent scores: %w", scores.ErrBusy)
+	e := newEnv(t, func(d *Deps) {
+		d.History = func(context.Context, int) ([]scores.Result, error) { return nil, busy }
+		d.Timeline = func(context.Context, int64) (scores.Timeline, error) { return scores.Timeline{}, busy }
+	})
+	for _, p := range []string{"/api/history", "/api/scores/1/timeline"} {
+		w := e.get(p)
+		if w.Code != 503 || !strings.Contains(w.Body.String(), "Quaver is writing the database, try again") {
+			t.Errorf("%s = %d %s", p, w.Code, w.Body.String())
+		}
+	}
+}
+
+func TestPutConfigRejectsABodyWithoutSettings(t *testing.T) {
+	e := newEnv(t)
+	before, _ := os.ReadFile(e.cfgPath)
+	for _, body := range []string{`{}`, `{"config":{"port":9000},"language":"de"}`, `{"config":{"port":9000}}`, `{"foo":1}`, `[]`, `null`} {
+		w := e.put(body, nil)
+		var er errBody
+		decode(t, w, &er)
+		if w.Code != 400 || er.Error == "" {
+			t.Errorf("%s: code %d body %s", body, w.Code, w.Body.String())
+		}
+	}
+	after, _ := os.ReadFile(e.cfgPath)
+	if string(before) != string(after) {
+		t.Fatal("a rejected body must not touch the config file")
+	}
+	if w := e.put(`{"language":"de"}`, nil); w.Code != 200 {
+		t.Fatalf("a document with a known key is saved as a whole, got %d %s", w.Code, w.Body.String())
 	}
 }

@@ -4,37 +4,66 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"unicode/utf8"
 )
+
+var bs = string(rune(92))
+
+// sep matches what may follow or precede a path segment: a separator, quote or space.
+var sep = "[" + bs + bs + "/\"'`" + `\s]`
+
+// genericUserDir matches the segment right after Users or home.
+var genericUserDir = regexp.MustCompile("(?i)((?:^|" + sep + ")(?:Users|home)(?:" + bs + bs + "{1,2}|/))[^" + bs + bs + "/\"'`" + bs + "s]+")
+
+// minBareName is the shortest user name replaced as a word on its own: shorter ones would hit
+// ordinary text. Paths under the home folder are always redacted.
+const minBareName = 4
 
 // RedactHome hides the user's home folder and name in s. The home path (plain, slash, JSON-escaped and
 // short-name spellings) becomes "~" when a separator, quote, space or the end follows it, so names with
 // accents, dots, parentheses or non-Latin letters are covered. names are bare user names matched as whole
 // path segments, and any segment right after Users or home is replaced too.
 func RedactHome(s, home string, caseInsensitive bool, names ...string) string {
-	bs := string(rune(92))
-	sep := "[" + bs + bs + "/\"'`" + `\s]`
+	return newHomeRedactor(home, caseInsensitive, names)(s)
+}
+
+// newHomeRedactor compiles the patterns once.
+func newHomeRedactor(home string, caseInsensitive bool, names []string) func(string) string {
 	flags := ""
 	if caseInsensitive {
 		flags = "(?i)"
 	}
+	var homeRe, nameRe *regexp.Regexp
 	if home != "" {
 		variants := []string{home, filepath.ToSlash(home), strings.ReplaceAll(home, bs, bs+bs)}
-		s = regexp.MustCompile(flags+"(?:"+quoteAll(variants)+")("+sep+"|$)").ReplaceAllString(s, "~${1}")
+		homeRe = regexp.MustCompile(flags + "(?:" + quoteAll(variants) + ")(" + sep + "|$)")
 	}
-	if len(names) > 0 {
-		re := regexp.MustCompile(flags + "(^|" + sep + ")(?:" + quoteAll(names) + ")(" + sep + "|$)")
-		for i := 0; i < 4; i++ {
-			next := re.ReplaceAllString(s, "${1}~${2}")
-			if next == s {
-				break
-			}
-			s = next
+	var bare []string
+	for _, n := range names {
+		if utf8.RuneCountInString(n) >= minBareName {
+			bare = append(bare, n)
 		}
 	}
-	generic := regexp.MustCompile("(?i)((?:^|" + sep + ")(?:Users|home)(?:" + bs + bs + "{1,2}|/))[^" + bs + bs + "/\"'`" + bs + "s]+")
-	return generic.ReplaceAllString(s, "${1}~")
+	if len(bare) > 0 {
+		nameRe = regexp.MustCompile(flags + "(^|" + sep + ")(?:" + quoteAll(bare) + ")(" + sep + "|$)")
+	}
+	return func(s string) string {
+		if homeRe != nil {
+			s = homeRe.ReplaceAllString(s, "~${1}")
+		}
+		if nameRe != nil {
+			for i := 0; i < 4; i++ {
+				next := nameRe.ReplaceAllString(s, "${1}~${2}")
+				if next == s {
+					break
+				}
+				s = next
+			}
+		}
+		return genericUserDir.ReplaceAllString(s, "${1}~")
+	}
 }
 
 func quoteAll(list []string) string {
@@ -64,6 +93,17 @@ func userNames(home string) []string {
 	add(os.Getenv("USERNAME"))
 	add(os.Getenv("USER"))
 	return out
+}
+
+// HomeRedactor returns a function that applies RedactHome for home, or for the user home folder when
+// home is empty, so log lines and the support report hide the same names.
+func HomeRedactor(home string) func(string) string {
+	if home == "" {
+		home, _ = os.UserHomeDir()
+	}
+	ci := runtime.GOOS == "windows"
+	names := userNames(home)
+	return newHomeRedactor(home, ci, names)
 }
 
 // cutRunes shortens s to at most max bytes on a rune boundary.

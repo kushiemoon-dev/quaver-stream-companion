@@ -701,7 +701,7 @@ func TestOverflowingSubscriberIsClosedSoItResyncs(t *testing.T) {
 	}()
 	waitFor(t, func() bool { return b.Subscribers() == 1 })
 	for i := 0; i < 500; i++ {
-		b.Publish(bus.TypeGameState, bus.GameState{State: "gameplay"})
+		b.Publish(bus.TypeMapStarted, i)
 	}
 	close(w.release)
 	select {

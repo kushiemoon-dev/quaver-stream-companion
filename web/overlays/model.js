@@ -126,8 +126,31 @@
       difficultyName: text(map.difficulty_name),
       stars: formatStars(map.difficulty),
       rate: formatRate(score.rate),
-      mods: modList(score.mods),
+      mods: modList(withoutBadgeMods(score.mods, result)),
       badges: BADGES.filter(function (b) { return result[b[0]] === true; }).map(function (b) { return b[1]; }),
+    };
+  }
+
+  const BADGE_MODS = { Paused: 'paused', Autoplay: 'autoplay' };
+
+  // A mod shown as a badge is not listed again as a chip.
+  function withoutBadgeMods(mods, result) {
+    if (!Array.isArray(mods)) return mods;
+    return mods.filter(function (m) { return !(has(BADGE_MODS, m) && result[BADGE_MODS[m]] === true); });
+  }
+
+  // fresh(result) is false only for a score whose id was the last one seen, so a reconnect never replays it.
+  function createIdGate() {
+    let last = null;
+    return {
+      fresh: function (result) {
+        if (result === null || typeof result !== 'object') return false;
+        const id = obj(result.score).id;
+        if (!Number.isInteger(id)) return true;
+        if (id === last) return false;
+        last = id;
+        return true;
+      },
     };
   }
 
@@ -317,7 +340,12 @@
       const cur = open(url);
       es = cur;
       Object.keys(handlers).forEach(function (name) {
-        cur.addEventListener(name, function (ev) { handlers[name](JSON.parse(ev.data).data); });
+        cur.addEventListener(name, function (ev) {
+          let body;
+          try { body = JSON.parse(ev.data); } catch (e) { return; }
+          const data = body !== null && typeof body === 'object' ? body.data : null;
+          if (data !== null && typeof data === 'object') handlers[name](data);
+        });
       });
       cur.onopen = function () {
         delay = RECONNECT_FIRST_MS;
@@ -335,7 +363,7 @@
   }
 
   const api = {
-    createConnection: createConnection,
+    createConnection: createConnection, createIdGate: createIdGate,
     gradeClass: gradeClass, gradeText: gradeText, formatAccuracy: formatAccuracy, formatRate: formatRate,
     formatStars: formatStars, modList: modList, judgments: judgments, parseCount: parseCount,
     parseScale: parseScale, parseAutohide: parseAutohide, parseLang: parseLang, parseHide: parseHide,

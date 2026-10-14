@@ -105,8 +105,13 @@ func BuildTimeline(scoreID int64, seq []byte) Timeline {
 // Timeline reads the judgment timeline of a score. It returns ErrNotFound for an
 // unknown score and ErrNoTimeline when the stored sequence is missing or unreadable.
 func (s *Store) Timeline(ctx context.Context, id int64) (Timeline, error) {
+	t, err := s.timeline(ctx, id)
+	return t, s.track(err)
+}
+
+func (s *Store) timeline(ctx context.Context, id int64) (Timeline, error) {
 	var raw string
-	err := s.db.QueryRowContext(ctx,
+	err := s.api.QueryRowContext(ctx,
 		`SELECT COALESCE(JudgementBreakdown,'') FROM Score WHERE Id = ?`, id).Scan(&raw)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Timeline{}, ErrNotFound

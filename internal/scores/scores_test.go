@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/testutil"
 )
@@ -481,7 +482,7 @@ func TestOpenAcceptsUnusualFolderNames(t *testing.T) {
 func TestReadOnlyDSNRefusesNetworkPaths(t *testing.T) {
 	bs := string(rune(92))
 	for _, p := range []string{bs + bs + "host" + bs + "share" + bs + "quaver.db", "//host/share/quaver.db"} {
-		if dsn, err := readOnlyDSN(p); err == nil {
+		if dsn, err := readOnlyDSN(p, time.Second); err == nil {
 			t.Errorf("readOnlyDSN(%q) = %q, want an error", p, dsn)
 		}
 	}

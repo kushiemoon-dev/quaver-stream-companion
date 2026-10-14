@@ -92,9 +92,10 @@ func Normalize(c Config) Config {
 	return c
 }
 
-// Save writes the settings atomically, creating the folder if needed.
+// Save writes the settings atomically, creating the folder if needed. Keys of the existing file
+// that this version does not know are kept.
 func Save(path string, c Config) error {
-	data, err := json.MarshalIndent(c, "", "  ")
+	data, err := encode(path, c)
 	if err != nil {
 		return err
 	}
@@ -107,8 +108,9 @@ func Save(path string, c Config) error {
 		return err
 	}
 	_, werr := tmp.Write(append(data, '\n'))
+	serr := syncFile(tmp)
 	cerr := tmp.Close()
-	if err := firstErr(werr, cerr); err != nil {
+	if err := firstErr(werr, serr, cerr); err != nil {
 		os.Remove(tmp.Name())
 		return err
 	}

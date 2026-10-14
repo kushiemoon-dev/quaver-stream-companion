@@ -174,3 +174,21 @@ func TestFolderChecksAcceptCaseVariantsOfLogAndDatabase(t *testing.T) {
 		t.Fatalf("dir = %q, checks = %+v", dir, checks)
 	}
 }
+
+func TestBusyDatabaseIsReportedAsBusyNotFailed(t *testing.T) {
+	d := testutil.NewQuaverDir(t)
+	d.AddMap(t, testutil.MapRow{MD5: "m", Title: "T", Mode: 1, LastPlayedMS: 1})
+	d.LockDatabase(t)
+
+	checks := Run(context.Background(), Options{QuaverDir: d.Path, Port: freePort(t)})
+
+	var db Check
+	for _, c := range checks {
+		if c.ID == "database" {
+			db = c
+		}
+	}
+	if !db.OK || !strings.Contains(db.Detail, "busy") {
+		t.Fatalf("database check = %+v, want ok with a busy detail", db)
+	}
+}

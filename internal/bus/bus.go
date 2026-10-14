@@ -14,7 +14,7 @@ const (
 	TypeMapStarted  = "map.started"
 	TypeScoreSaved  = "score.saved"
 	TypeKeysFrame   = "keys.frame"
-	subscriberQueue = 64
+	subscriberQueue = 256
 )
 
 type Event struct {

@@ -148,8 +148,8 @@ func TestOverlayHiddenBeatsFill(t *testing.T) {
 
 func TestOverlayReconnectsDoNotReshowOrRestartTimers(t *testing.T) {
 	result, _ := fs.ReadFile(FS, "overlays/result/index.html")
-	if !strings.Contains(string(result), "!shown && d.last_score") {
-		t.Error("result must render snapshot.last_score only while nothing was shown yet")
+	if !strings.Contains(string(result), "d.last_score && gate.fresh(d.last_score)") {
+		t.Error("result must render snapshot.last_score only when its id was not rendered yet")
 	}
 	np, _ := fs.ReadFile(FS, "overlays/now-playing/index.html")
 	src := string(np)

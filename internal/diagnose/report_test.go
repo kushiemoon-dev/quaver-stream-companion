@@ -47,10 +47,10 @@ func TestRedactHomeCoversTheSpellingsOfAPath(t *testing.T) {
 	if got := RedactHome("/home/carol/x", "", false); got != "/home/~/x" {
 		t.Errorf("segment after home must go even without a home: %q", got)
 	}
-	if got := RedactHome("login Zoë ok", "", false, "Zoë"); got != "login ~ ok" {
+	if got := RedactHome("login Zoëlle ok", "", false, "Zoëlle"); got != "login ~ ok" {
 		t.Errorf("bare name: %q", got)
 	}
-	if got := RedactHome("Zoëlle stays", "", false, "Zoë"); got != "Zoëlle stays" {
+	if got := RedactHome("Zoëllex stays", "", false, "Zoëlle"); got != "Zoëllex stays" {
 		t.Errorf("a name inside a longer word must stay: %q", got)
 	}
 }
@@ -148,5 +148,48 @@ func TestReportTruncatesLongLines(t *testing.T) {
 	report := Collect(context.Background(), src)
 	if strings.Contains(report, strings.Repeat("z", 600)) {
 		t.Fatal("a log line must be cut")
+	}
+}
+
+func TestHomeRedactorHidesAnAccentedUserFolder(t *testing.T) {
+	bs := string(rune(92))
+	home := "C:" + bs + "Users" + bs + "Zo" + string(rune(0xEB)) + " M" + string(rune(0xFC)) + "ller"
+	redact := HomeRedactor(home)
+
+	in := "dir=" + home + bs + "AppData" + bs + "Roaming" + bs + "qsc err=open " + home + bs + "x"
+	got := redact(in)
+	if strings.Contains(got, "ller") || strings.Contains(got, "Zo") {
+		t.Fatalf("redacted = %q", got)
+	}
+	if !strings.Contains(got, "~"+bs+"AppData") {
+		t.Fatalf("redacted = %q", got)
+	}
+	if redact("nothing to hide: D:/Games/Quaver") != "nothing to hide: D:/Games/Quaver" {
+		t.Fatal("paths outside the home folder must stay")
+	}
+}
+
+func TestHomeRedactorIsCheapPerValue(t *testing.T) {
+	bs := string(rune(92))
+	home := "C:" + bs + "Users" + bs + "Alice"
+	redact := HomeRedactor(home)
+	allocs := testing.AllocsPerRun(50, func() { redact("dir=" + home + bs + "AppData err=none") })
+	if allocs > 40 {
+		t.Fatalf("%v allocations per value: the patterns must be compiled once", allocs)
+	}
+}
+
+func TestShortUserNamesAreNotReplacedAsWords(t *testing.T) {
+	bs := string(rune(92))
+	home := "C:" + bs + "Users" + bs + "Al"
+	redact := HomeRedactor(home)
+
+	got := redact("Al wrote Al.txt to " + home + bs + "docs")
+	if want := "Al wrote Al.txt to ~" + bs + "docs"; got != want {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+	long := HomeRedactor("C:" + bs + "Users" + bs + "Alice")("hello Alice from C:" + bs + "Users" + bs + "Alice" + bs + "x")
+	if strings.Contains(long, "Alice") {
+		t.Fatalf("a name of four letters or more is still hidden: %q", long)
 	}
 }

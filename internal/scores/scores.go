@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync/atomic"
+	"time"
 
 	_ "modernc.org/sqlite"
 
@@ -76,7 +78,14 @@ type Result struct {
 
 // Store reads quaver.db. The database is always opened read-only.
 type Store struct {
-	db *sql.DB
+	db       *sql.DB
+	api      *sql.DB // dashboard reads: gives up on a locked database sooner than db
+	now      func() time.Time
+	path     string
+	ident    os.FileInfo
+	failures atomic.Int32
+	// warnedFuture is the newest future map date already reported.
+	warnedFuture atomic.Int64
 }
 
 // Open opens quaverDir/quaver.db read-only.
@@ -85,7 +94,7 @@ func Open(quaverDir string) (*Store, error) {
 	if _, err := os.Stat(path); err != nil {
 		return nil, fmt.Errorf("quaver.db not found in %s: %w", quaverDir, err)
 	}
-	dsn, err := readOnlyDSN(path)
+	dsn, err := readOnlyDSN(path, lookupBusy)
 	if err != nil {
 		return nil, err
 	}
@@ -97,11 +106,20 @@ func Open(quaverDir string) (*Store, error) {
 		db.Close()
 		return nil, fmt.Errorf("open quaver.db read-only: %w", err)
 	}
-	return &Store{db: db}, nil
+	apiDSN, _ := readOnlyDSN(path, apiBusy)
+	api, err := sql.Open("sqlite", apiDSN)
+	if err != nil {
+		db.Close()
+		return nil, fmt.Errorf("open quaver.db: %w", err)
+	}
+	db.SetConnMaxIdleTime(idleTime)
+	api.SetConnMaxIdleTime(idleTime)
+	ident, _ := fileIdentity(path)
+	return &Store{db: db, api: api, now: time.Now, path: path, ident: ident}, nil
 }
 
 // readOnlyDSN builds a file: URL so characters such as #, %, ? and spaces in the folder name stay part of the path.
-func readOnlyDSN(path string) (string, error) {
+func readOnlyDSN(path string, busy time.Duration) (string, error) {
 	if paths.IsUNC(path) {
 		return "", fmt.Errorf("quaver.db path %q is a network path", path)
 	}
@@ -109,12 +127,12 @@ func readOnlyDSN(path string) (string, error) {
 	if !strings.HasPrefix(p, "/") {
 		p = "/" + p
 	}
-	q := url.Values{"mode": {"ro"}, "_pragma": {"busy_timeout(3000)"}}
+	q := url.Values{"mode": {"ro"}, "_pragma": {fmt.Sprintf("busy_timeout(%d)", busy.Milliseconds())}}
 	return (&url.URL{Scheme: "file", Path: p, RawQuery: q.Encode()}).String(), nil
 }
 
 // Close closes the database.
-func (s *Store) Close() error { return s.db.Close() }
+func (s *Store) Close() error { return errors.Join(s.db.Close(), s.api.Close()) }
 
 const mapCols = `COALESCE(m.Md5Checksum,''), COALESCE(m.Artist,''), COALESCE(m.Title,''), COALESCE(m.DifficultyName,''), COALESCE(m.Difficulty10X,0), COALESCE(m.Mode,0), COALESCE(m.LastTimePlayed,0)`
 
@@ -128,12 +146,30 @@ func keysFor(mode int) int {
 	return 0
 }
 
-// LastPlayedMap returns the most recently played map, or ErrNotFound.
+// lookupBusy and apiBusy are how long a read waits for Quaver's write lock: score lookups wait
+// longer than the dashboard, which can simply be asked again.
+const (
+	lookupBusy = 3 * time.Second
+	apiBusy    = time.Second
+)
+
+// maxClockSkew is how far ahead of the clock a LastTimePlayed may be before the row is ignored.
+const maxClockSkew = 5 * time.Minute
+
+// LastPlayedMap returns the most recently played map, or ErrNotFound. Rows dated more than
+// maxClockSkew in the future are ignored.
 func (s *Store) LastPlayedMap(ctx context.Context) (Map, error) {
+	m, err := s.lastPlayedMap(ctx)
+	return m, s.track(err)
+}
+
+func (s *Store) lastPlayedMap(ctx context.Context) (Map, error) {
 	var m Map
 	var mode int
+	limit := s.now().Add(maxClockSkew).UnixMilli()
+	s.warnFutureMap(ctx, limit)
 	err := s.db.QueryRowContext(ctx,
-		`SELECT `+mapCols+` FROM Map m ORDER BY m.LastTimePlayed DESC LIMIT 1`,
+		`SELECT `+mapCols+` FROM Map m WHERE COALESCE(m.LastTimePlayed,0) <= ? ORDER BY m.LastTimePlayed DESC LIMIT 1`, limit,
 	).Scan(&m.MD5, &m.Artist, &m.Title, &m.DifficultyName, &m.Difficulty, &mode, &m.LastPlayedMS)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Map{}, ErrNotFound
@@ -145,52 +181,74 @@ func (s *Store) LastPlayedMap(ctx context.Context) (Map, error) {
 	return m, nil
 }
 
+func (s *Store) warnFutureMap(ctx context.Context, limit int64) {
+	var newest int64
+	if err := s.db.QueryRowContext(ctx, `SELECT COALESCE(MAX(LastTimePlayed),0) FROM Map`).Scan(&newest); err == nil && newest > limit && s.warnedFuture.Swap(newest) != newest {
+		slog.Warn("quaver.db has a map dated in the future; ignoring it", "ahead_s", (newest-limit)/1000+int64(maxClockSkew/time.Second))
+	}
+}
+
+// NewestScore returns the latest saved score, skipping rows whose map is dated in the future,
+// or ErrNotFound.
+func (s *Store) NewestScore(ctx context.Context) (Result, error) {
+	r, err := s.newestScore(ctx)
+	return r, s.track(err)
+}
+
+func (s *Store) newestScore(ctx context.Context) (Result, error) {
+	var id int64
+	err := s.db.QueryRowContext(ctx,
+		`SELECT s.Id FROM Score s LEFT JOIN Map m ON m.Md5Checksum = s.MapMd5
+		 WHERE COALESCE(m.LastTimePlayed,0) <= ? ORDER BY s.Id DESC LIMIT 1`, s.now().Add(maxClockSkew).UnixMilli(),
+	).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Result{}, ErrNotFound
+	}
+	if err != nil {
+		return Result{}, fmt.Errorf("read newest score: %w", err)
+	}
+	return s.ScoreByID(ctx, id)
+}
+
+// MaxScoreID returns the highest score id, or 0 when there is none. Unlike NewestScore it does
+// not skip rows of maps dated in the future.
+func (s *Store) MaxScoreID(ctx context.Context) (int64, error) {
+	var id int64
+	err := s.db.QueryRowContext(ctx, `SELECT COALESCE(MAX(Id),0) FROM Score`).Scan(&id)
+	if err != nil {
+		err = fmt.Errorf("read highest score id: %w", s.track(err))
+	} else {
+		s.track(nil)
+	}
+	return id, err
+}
+
 // ScoreByID returns a score with its map, or ErrNotFound.
 func (s *Store) ScoreByID(ctx context.Context, id int64) (Result, error) {
-	var r Result
-	var mapMD5 string
-	var grade, mode int
-	j := &r.Score.Judgments
-	err := s.db.QueryRowContext(ctx,
-		`SELECT s.Id, COALESCE(s.MapMd5,''), COALESCE(s.Grade,0), COALESCE(s.Accuracy,0), COALESCE(s.MaxCombo,0),
-		        COALESCE(s.CountMarv,0), COALESCE(s.CountPerf,0), COALESCE(s.CountGreat,0), COALESCE(s.CountGood,0), COALESCE(s.CountOkay,0), COALESCE(s.CountMiss,0),
-		        COALESCE(s.TotalScore,0), COALESCE(s.DateTime,''), COALESCE(s.Mods,0), COALESCE(s.PerformanceRating,0), `+mapCols+`
-		 FROM Score s LEFT JOIN Map m ON m.Md5Checksum = s.MapMd5 WHERE s.Id = ?`, id,
-	).Scan(&r.Score.ID, &mapMD5, &grade, &r.Score.Accuracy, &r.Score.MaxCombo,
-		&j.Marv, &j.Perf, &j.Great, &j.Good, &j.Okay, &j.Miss,
-		&r.Score.TotalScore, &r.Score.PlayedAt, &r.Score.ModsRaw, &r.Score.Rating,
-		&r.Map.MD5, &r.Map.Artist, &r.Map.Title, &r.Map.DifficultyName, &r.Map.Difficulty, &mode, &r.Map.LastPlayedMS)
+	r, err := s.scoreByID(ctx, id)
+	return r, s.track(err)
+}
+
+func (s *Store) scoreByID(ctx context.Context, id int64) (Result, error) {
+	rw, err := scanScore(s.db.QueryRowContext(ctx, scoreSelect+` WHERE s.Id = ?`, id))
 	if errors.Is(err, sql.ErrNoRows) {
 		return Result{}, ErrNotFound
 	}
 	if err != nil {
 		return Result{}, fmt.Errorf("read score %d: %w", id, err)
 	}
-
-	if grade >= 0 && grade < len(gradeNames) {
-		r.Score.Grade = gradeNames[grade]
-	}
-	r.Score.Rate, r.Score.Mods = decodeMods(r.Score.ModsRaw)
-	r.Map.Keys = keysFor(mode)
-	if r.Map.MD5 == "" {
-		r.Map.MD5 = mapMD5
-	}
-	r.Failed = grade == failedGrade
-	r.Paused = r.Score.ModsRaw&pausedMod != 0
-	r.Autoplay = r.Score.ModsRaw&autoplayMod != 0
+	r := rw.result()
 	s.applyRateDifficulty(ctx, &r)
-	r.FullCombo = !r.Failed && !r.Autoplay && j.Miss == 0
 
 	var prevCount int
 	var prevMax int64
 	if err := s.db.QueryRowContext(ctx,
 		`SELECT COUNT(*), COALESCE(MAX(TotalScore),0) FROM Score WHERE MapMd5 = ? AND Id < ? AND Grade <> `+strconv.Itoa(failedGrade)+` AND COALESCE(Mods,0) & ? = 0 AND COALESCE(Mods,0) & ? = ?`,
-		mapMD5, id, disqualifyMask, keyMask, r.Score.ModsRaw&keyMask,
+		rw.mapMD5, id, disqualifyMask, keyMask, r.Score.ModsRaw&keyMask,
 	).Scan(&prevCount, &prevMax); err != nil {
-		return Result{}, fmt.Errorf("read previous scores of %q: %w", mapMD5, err)
+		return Result{}, fmt.Errorf("read previous scores of %q: %w", rw.mapMD5, err)
 	}
-	r.FirstPlay = prevCount == 0
-	r.IsPB = !r.Failed && r.Score.ModsRaw&disqualifyMask == 0 && prevCount > 0 && r.Score.TotalScore > prevMax
+	applyPrevious(&r, prevCount, prevMax)
 	return r, nil
 }
 
@@ -214,39 +272,4 @@ func (s *Store) applyRateDifficulty(ctx context.Context, r *Result) {
 	if d != 0 {
 		r.Map.Difficulty = d
 	}
-}
-
-const maxRecent = 200
-
-// Recent returns the latest plays, newest first. limit is clamped to 1..200.
-func (s *Store) Recent(ctx context.Context, limit int) ([]Result, error) {
-	limit = min(max(limit, 1), maxRecent)
-	rows, err := s.db.QueryContext(ctx, `SELECT Id FROM Score ORDER BY Id DESC LIMIT ?`, limit)
-	if err != nil {
-		return nil, fmt.Errorf("list recent scores: %w", err)
-	}
-	var ids []int64
-	for rows.Next() {
-		var id int64
-		if err := rows.Scan(&id); err != nil {
-			rows.Close()
-			return nil, fmt.Errorf("list recent scores: %w", err)
-		}
-		ids = append(ids, id)
-	}
-	err = rows.Err()
-	rows.Close()
-	if err != nil {
-		return nil, fmt.Errorf("list recent scores: %w", err)
-	}
-
-	out := make([]Result, 0, len(ids))
-	for _, id := range ids {
-		r, err := s.ScoreByID(ctx, id)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, r)
-	}
-	return out, nil
 }

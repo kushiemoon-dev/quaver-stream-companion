@@ -3,6 +3,7 @@ package logging
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"log/slog"
 	"os"
@@ -111,24 +112,91 @@ type nopCloser struct{}
 
 func (nopCloser) Close() error { return nil }
 
-// Setup returns a logger that writes to the console and to the rolling file at path.
+// FileOnly marks a record that goes to the log file but not to the console.
+var FileOnly = slog.Bool("file_only", true)
+
+// splitHandler sends records to the console and the file, and file-only ones to the file alone.
+type splitHandler struct{ console, file slog.Handler }
+
+func (h splitHandler) Enabled(ctx context.Context, l slog.Level) bool {
+	return h.console.Enabled(ctx, l) || h.file.Enabled(ctx, l)
+}
+
+func (h splitHandler) Handle(ctx context.Context, r slog.Record) error {
+	fileOnly := false
+	r.Attrs(func(a slog.Attr) bool {
+		fileOnly = fileOnly || (a.Key == FileOnly.Key && a.Value.Kind() == slog.KindBool && a.Value.Bool())
+		return !fileOnly
+	})
+	if !fileOnly {
+		_ = h.console.Handle(ctx, r)
+	}
+	return h.file.Handle(ctx, r)
+}
+
+func (h splitHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return splitHandler{h.console.WithAttrs(attrs), h.file.WithAttrs(attrs)}
+}
+
+func (h splitHandler) WithGroup(name string) slog.Handler {
+	return splitHandler{h.console.WithGroup(name), h.file.WithGroup(name)}
+}
+
+// errorText is err.Error(), or "<nil>" for a typed nil error whose method panics.
+func errorText(err error) (text string) {
+	defer func() {
+		if recover() != nil {
+			text = "<nil>"
+		}
+	}()
+	return err.Error()
+}
+
+// replacer applies redact to every string value of a record and drops the FileOnly marker.
+func replacer(redact func(string) string) func([]string, slog.Attr) slog.Attr {
+	return func(_ []string, a slog.Attr) slog.Attr {
+		if a.Key == FileOnly.Key {
+			return slog.Attr{}
+		}
+		if redact == nil {
+			return a
+		}
+		switch a.Value.Kind() {
+		case slog.KindString:
+			a.Value = slog.StringValue(redact(a.Value.String()))
+		case slog.KindAny:
+			if err, ok := a.Value.Any().(error); ok {
+				a.Value = slog.StringValue(redact(errorText(err)))
+			}
+		}
+		return a
+	}
+}
+
+// Setup returns a logger that writes to the console and to the rolling file at path. Every string
+// value goes through redact, when one is given.
 // It never fails: when the file cannot be opened the logger writes to the console only and says so once.
-func Setup(path string, verbose bool, console io.Writer) (*slog.Logger, io.Closer) {
+func Setup(path string, verbose bool, console io.Writer, redact ...func(string) string) (*slog.Logger, io.Closer) {
 	level := slog.LevelInfo
 	if verbose {
 		level = slog.LevelDebug
 	}
-	opts := &slog.HandlerOptions{Level: level}
+	var r func(string) string
+	if len(redact) > 0 {
+		r = redact[0]
+	}
+	opts := &slog.HandlerOptions{Level: level, ReplaceAttr: replacer(r)}
+	consoleHandler := slog.NewTextHandler(console, opts)
 	if path == "" {
-		return slog.New(slog.NewTextHandler(console, opts)), nopCloser{}
+		return slog.New(consoleHandler), nopCloser{}
 	}
 	f, err := OpenRolling(path, MaxBytes)
 	if err != nil {
-		log := slog.New(slog.NewTextHandler(console, opts))
+		log := slog.New(consoleHandler)
 		log.Warn("cannot open the log file; logging to the console only", "err", err.Error())
 		return log, nopCloser{}
 	}
-	return slog.New(slog.NewTextHandler(io.MultiWriter(console, f), opts)), f
+	return slog.New(splitHandler{consoleHandler, slog.NewTextHandler(f, opts)}), f
 }
 
 // Tail returns the last n lines of the file at path, or nil when it cannot be read.

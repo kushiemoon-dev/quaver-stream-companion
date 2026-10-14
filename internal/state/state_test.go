@@ -81,3 +81,19 @@ func TestSnapshotKeysIsNullUntilAFrameArrives(t *testing.T) {
 		t.Fatalf("keys shape = %v err = %v", back.Keys, err)
 	}
 }
+
+func TestSeedFillsOnlyWhatIsEmpty(t *testing.T) {
+	s := New()
+	m1, m2 := scores.Map{Title: "seed"}, scores.Map{Title: "event"}
+	r := scores.Result{Score: scores.Score{ID: 3}}
+
+	s.Seed(&m1, &r)
+	if got := s.Snapshot(); got.Map.Title != "seed" || got.LastScore.Score.ID != 3 {
+		t.Fatalf("snapshot = %+v", got)
+	}
+	s.Apply(bus.Event{Data: m2})
+	s.Seed(&m1, nil)
+	if got := s.Snapshot(); got.Map.Title != "event" {
+		t.Fatalf("a seed must not overwrite a live map, got %+v", got.Map)
+	}
+}

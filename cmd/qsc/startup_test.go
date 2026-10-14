@@ -245,7 +245,31 @@ func TestFailedBindIsLoggedAndNotReportedAsStarted(t *testing.T) {
 	if strings.Contains(log, "qsc started") || strings.Contains(log, "qsc stopped") || !strings.Contains(log, "cannot listen") {
 		t.Fatalf("log:\n%s", log)
 	}
-	if !strings.Contains(errw.String(), "cannot listen") {
+	if !strings.Contains(errw.String(), "used by another program") {
 		t.Fatalf("console: %q", errw.String())
+	}
+}
+
+func TestBusyPortConsoleShowsOnlyTheFriendlyMessage(t *testing.T) {
+	d := testutil.NewQuaverDir(t)
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	port := ln.Addr().(*net.TCPAddr).Port
+	cfg := filepath.Join(t.TempDir(), "config.json")
+
+	var out, errw bytes.Buffer
+	args := []string{"--quaver-dir", d.Path, "--port", fmt.Sprint(port), "--config", cfg}
+	if code := run(context.Background(), args, &out, &errw); code != 1 {
+		t.Fatalf("code = %d", code)
+	}
+	if strings.Contains(errw.String(), "level=ERROR") || !strings.Contains(errw.String(), "is used by another program") {
+		t.Fatalf("console = %q", errw.String())
+	}
+	data, _ := os.ReadFile(filepath.Join(filepath.Dir(cfg), "qsc.log"))
+	if !strings.Contains(string(data), "cannot listen") {
+		t.Fatalf("qsc.log = %q", data)
 	}
 }

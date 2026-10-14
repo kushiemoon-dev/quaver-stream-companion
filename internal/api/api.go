@@ -2,6 +2,7 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -63,6 +64,8 @@ type Deps struct {
 	// Quit stops the whole app; the API calls it at most once, after answering POST /api/quit.
 	Quit func()
 }
+
+const busyMessage = "Quaver is writing the database, try again"
 
 // ErrUnavailable is returned by data sources while no Quaver folder is in use; the API answers 503.
 var ErrUnavailable = errors.New("Quaver is not available yet")
@@ -209,10 +212,15 @@ func (a api) getConfig(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (a api) putConfig(w http.ResponseWriter, r *http.Request) {
-	var c config.Config
-	dec := json.NewDecoder(r.Body)
-	err := dec.Decode(&c)
+// settingsKeys are the top-level keys of a settings document.
+var settingsKeys = map[string]bool{"quaver_dir": true, "port": true, "language": true, "overlay": true, "keys": true, "version": true}
+
+// parseSettings reads a PUT body: a settings document with at least one key and no key that is
+// not a setting. As documented, the document replaces the saved one: keys left out take their default.
+func parseSettings(body []byte) (config.Config, error) {
+	var raw map[string]json.RawMessage
+	dec := json.NewDecoder(bytes.NewReader(body))
+	err := dec.Decode(&raw)
 	if err == nil {
 		if _, e := dec.Token(); e != io.EOF {
 			err = errors.New("unexpected data after the JSON object")
@@ -222,12 +230,37 @@ func (a api) putConfig(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if err != nil {
+		return config.Config{}, errors.New("invalid JSON: " + err.Error())
+	}
+	if len(raw) == 0 {
+		return config.Config{}, errors.New("the body must be a settings document such as {\"port\": 7878, \"language\": \"en\"}")
+	}
+	for k := range raw {
+		if !settingsKeys[k] {
+			return config.Config{}, errors.New("unknown setting \"" + k + "\": send the settings at the top level of the document")
+		}
+	}
+	c := config.Defaults()
+	if err := json.Unmarshal(body, &c); err != nil {
+		return config.Config{}, errors.New("invalid JSON: " + err.Error())
+	}
+	return c, nil
+}
+
+func (a api) putConfig(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
 		var tooBig *http.MaxBytesError
 		if errors.As(err, &tooBig) {
 			writeError(w, http.StatusRequestEntityTooLarge, "request body too large", "")
 			return
 		}
 		writeError(w, http.StatusBadRequest, "invalid JSON: "+err.Error(), "")
+		return
+	}
+	c, err := parseSettings(body)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error(), "")
 		return
 	}
 	c = config.Normalize(c)
@@ -292,6 +325,10 @@ func (a api) history(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, ErrUnavailable) {
 			writeError(w, http.StatusServiceUnavailable, err.Error(), "")
+			return
+		}
+		if scores.IsBusy(err) {
+			writeError(w, http.StatusServiceUnavailable, busyMessage, "")
 			return
 		}
 		writeError(w, http.StatusInternalServerError, "could not read the play history", "")

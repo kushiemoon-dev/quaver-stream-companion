@@ -156,6 +156,13 @@ Quit `qsc` first (the Quit button in Settings, or `qsc stop`), then replace the 
 
 What `qsc` leaves behind: that config folder (`config.json`, `qsc.log` and its older copy `qsc.log.1`, and your custom `themes` and `overlays` folders) and, on Linux, the service file you copied. Nothing is written to the registry or to the Quaver folder.
 
+## Troubleshooting
+
+- While `qsc` runs it keeps `quaver.db` open read-only, and `qsc` never writes to it. Connections that are not in use are closed after about 30 seconds. On Windows, restoring a backup over `quaver.db` can still fail with a sharing error while `qsc` is running, so run `qsc stop` first, restore the file, then start `qsc` again. If the file is replaced while `qsc` runs, it notices within about 15 seconds and opens the new one.
+- While Quaver is saving a score the dashboard history can answer `Quaver is writing the database, try again`, and the Status page shows the database as busy. This is not an error: reload after a moment.
+- Lane key sampling (the optional keys overlay) stops after 15 minutes in gameplay without any activity in Quaver's log, in case the game went silent, and starts again at the next game state change.
+- If an overlay stays blank after you restart `qsc`, check that Quaver is running and the Quaver folder is right in Status. The last score and map are shown again from the database once `qsc` has read them.
+
 ## Reporting a problem
 
 Run `qsc doctor --report` (or press Copy diagnostics on the Status page). It prints the version, your system, the settings without key bindings, the doctor checks, the names of your custom themes and overlays, and the last 50 lines of `qsc.log` and of Quaver's `runtime.log`. Your user folder name is replaced by `~`.

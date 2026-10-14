@@ -442,3 +442,35 @@ func TestStartupAcceptsCustomThemeFromConfigFolder(t *testing.T) {
 		t.Fatalf("code = %d, stderr = %q", code, errw.String())
 	}
 }
+
+func TestServeSeedsLastScoreAndMapAfterRestart(t *testing.T) {
+	d := testutil.NewQuaverDir(t)
+	d.AddMap(t, testutil.MapRow{MD5: "m1", Artist: "A", Title: "Played Before", DiffName: "hard", Mode: 1, LastPlayedMS: time.Now().Add(-2 * time.Hour).UnixMilli(), Difficulty: 15.7})
+	d.AddScore(t, testutil.ScoreRow{MapMD5: "m1", Total: 900000, Grade: 7, Accuracy: 98.2, MaxCombo: 300})
+	line := "[1:00:00] - RUNTIME - IMPORTANT: Screen has been switched to type: `Results`\n"
+	if err := os.WriteFile(filepath.Join(d.Path, "Logs", "runtime.log"), []byte(line), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	port := freePort(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	var out, errw bytes.Buffer
+	go run(ctx, []string{"--quaver-dir", d.Path, "--port", fmt.Sprint(port)}, &out, &errw)
+
+	url := fmt.Sprintf("http://127.0.0.1:%d/state", port)
+	deadline := time.Now().Add(3 * time.Second)
+	var body string
+	for time.Now().Before(deadline) {
+		if resp, err := http.Get(url); err == nil {
+			buf := new(bytes.Buffer)
+			buf.ReadFrom(resp.Body)
+			resp.Body.Close()
+			body = buf.String()
+			if strings.Contains(body, `"game":"results"`) && strings.Contains(body, "Played Before") && strings.Contains(body, `"accuracy":98.2`) {
+				return
+			}
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	t.Fatalf("state body = %q", body)
+}

@@ -97,3 +97,60 @@ func waitClosed(t *testing.T, ch <-chan struct{}) {
 		t.Fatal("did not return")
 	}
 }
+
+func TestSuperviseReopensWhenCheckReportsAProblem(t *testing.T) {
+	var reopens atomic.Int32
+	var problem atomic.Bool
+	reopened := make(chan struct{}, 4)
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		Supervise(ctx, 5*time.Millisecond,
+			func() string {
+				if problem.Load() {
+					return "database file replaced"
+				}
+				return ""
+			},
+			func() error {
+				reopens.Add(1)
+				problem.Store(false)
+				reopened <- struct{}{}
+				return nil
+			})
+	}()
+	time.Sleep(40 * time.Millisecond)
+	if reopens.Load() != 0 {
+		t.Fatal("reopened a healthy store")
+	}
+	problem.Store(true)
+	select {
+	case <-reopened:
+	case <-time.After(2 * time.Second):
+		t.Fatal("never reopened")
+	}
+	cancel()
+	waitClosed(t, done)
+}
+
+func TestSuperviseRetriesAFailedReopen(t *testing.T) {
+	var tries atomic.Int32
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go Supervise(ctx, 5*time.Millisecond,
+		func() string { return "repeated read errors" },
+		func() error {
+			if tries.Add(1) < 3 {
+				return errors.New("database is locked")
+			}
+			return nil
+		})
+	deadline := time.Now().Add(2 * time.Second)
+	for tries.Load() < 3 && time.Now().Before(deadline) {
+		time.Sleep(5 * time.Millisecond)
+	}
+	if tries.Load() < 3 {
+		t.Fatalf("tries = %d", tries.Load())
+	}
+}

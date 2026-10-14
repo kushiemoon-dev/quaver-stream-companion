@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -251,5 +252,117 @@ func TestSaveWhileAnotherGoroutineLoads(t *testing.T) {
 		if err := Save(p, Defaults()); err != nil {
 			t.Fatalf("save %d: %v", i, err)
 		}
+	}
+}
+
+func readFileObject(t *testing.T, path string) map[string]any {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var m map[string]any
+	if err := json.Unmarshal(data, &m); err != nil {
+		t.Fatalf("saved file is not JSON: %v\n%s", err, data)
+	}
+	return m
+}
+
+func TestSaveKeepsKeysThisVersionDoesNotKnow(t *testing.T) {
+	p := write(t, `{"port": 9000, "stream_deck": {"slot": 3, "label": "x"}, "overlay": {"theme": "neutral-light", "font_scale": 1.5}, "keys": {"enabled": false, "haptics": true}}`)
+	c, err := Load(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Port = 9100
+	c.Overlay.Accent = "ff8800"
+	if err := Save(p, c); err != nil {
+		t.Fatal(err)
+	}
+
+	got := readFileObject(t, p)
+	if got["port"] != float64(9100) {
+		t.Fatalf("port = %v", got["port"])
+	}
+	deck, _ := got["stream_deck"].(map[string]any)
+	if deck["slot"] != float64(3) || deck["label"] != "x" {
+		t.Fatalf("stream_deck = %v", got["stream_deck"])
+	}
+	if ov, _ := got["overlay"].(map[string]any); ov["font_scale"] != 1.5 || ov["accent"] != "ff8800" {
+		t.Fatalf("overlay = %v", got["overlay"])
+	}
+	if ks, _ := got["keys"].(map[string]any); ks["haptics"] != true {
+		t.Fatalf("keys = %v", got["keys"])
+	}
+}
+
+func TestSaveWritesTheVersionAndNeverLowersIt(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "config.json")
+	if err := Save(p, Defaults()); err != nil {
+		t.Fatal(err)
+	}
+	if v := readFileObject(t, p)["version"]; v != float64(1) {
+		t.Fatalf("version = %v, want 1", v)
+	}
+
+	newer := write(t, `{"version": 2, "port": 9000, "shiny": true}`)
+	c, err := Load(newer)
+	if err != nil {
+		t.Fatalf("a newer file must still load: %v", err)
+	}
+	if err := Save(newer, c); err != nil {
+		t.Fatal(err)
+	}
+	got := readFileObject(t, newer)
+	if got["version"] != float64(2) || got["shiny"] != true {
+		t.Fatalf("saved = %v", got)
+	}
+}
+
+func TestSaveOverACorruptFileStillWorks(t *testing.T) {
+	p := write(t, `{not json`)
+	if err := Save(p, Defaults()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Load(p); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSaveFlushesTheTempFileBeforeTheRename(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "config.json")
+	var flushed []string
+	old := syncFile
+	syncFile = func(f *os.File) error {
+		if _, err := os.Stat(p); err == nil {
+			t.Error("the target was replaced before the temp file was flushed")
+		}
+		flushed = append(flushed, f.Name())
+		return f.Sync()
+	}
+	t.Cleanup(func() { syncFile = old })
+
+	if err := Save(p, Defaults()); err != nil {
+		t.Fatal(err)
+	}
+	if len(flushed) != 1 || !strings.HasSuffix(flushed[0], ".tmp") {
+		t.Fatalf("flushed = %v", flushed)
+	}
+}
+
+func TestSaveReportsAFailedFlush(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "config.json")
+	old := syncFile
+	syncFile = func(*os.File) error { return errors.New("disk full") }
+	t.Cleanup(func() { syncFile = old })
+
+	if err := Save(p, Defaults()); err == nil {
+		t.Fatal("a flush error must fail the save")
+	}
+	if _, err := os.Stat(p); err == nil {
+		t.Fatal("no config file may appear after a failed flush")
+	}
+	if left, _ := filepath.Glob(filepath.Join(filepath.Dir(p), ".config-*.tmp")); len(left) != 0 {
+		t.Fatalf("temp files left: %v", left)
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"reflect"
+	"sync/atomic"
 	"time"
 
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/bus"
@@ -13,6 +14,9 @@ import (
 const (
 	sampleEvery = 2 * time.Millisecond
 	frameGap    = time.Second / 30
+	// quietLimit is how long gameplay may last without any activity (a log line or an event)
+	// before sampling stops; it starts again at the next game state change.
+	quietLimit = 15 * time.Minute
 )
 
 // Status tells the dashboard and doctor what the sampler is doing.
@@ -45,6 +49,8 @@ type Service struct {
 	playing bool
 	last    Frame
 	lastPub time.Time
+
+	activity atomic.Int64
 }
 
 // NewService builds the service. When the settings are disabled the factory is never called
@@ -69,6 +75,10 @@ func NewService(b *bus.Bus, c Config, newSampler func() (Sampler, error)) *Servi
 	s.eng = NewEngine(s.name, s.lanes)
 	return s
 }
+
+// Touch records activity of the game, such as a runtime.log line, so a long play is not
+// taken for a game that went silent.
+func (s *Service) Touch() { s.activity.Store(s.now().UnixNano()) }
 
 // Status returns the enabled flag, platform support and configured layout.
 func (s *Service) Status() Status { return s.status }
@@ -97,6 +107,9 @@ func (s *Service) Run(ctx context.Context) {
 			if !ok {
 				return
 			}
+			if e.Type != bus.TypeKeysFrame {
+				s.Touch()
+			}
 			switch d := e.Data.(type) {
 			case bus.GameState:
 				if d.State == "gameplay" {
@@ -122,6 +135,12 @@ func (s *Service) Run(ctx context.Context) {
 			}
 		case <-tickC:
 			now := s.now()
+			if now.Sub(time.Unix(0, s.activity.Load())) > quietLimit {
+				slog.Warn("no activity for 15 minutes in gameplay; lane key sampling paused until the game state changes")
+				stop()
+				s.publish(s.eng.Release(now))
+				continue
+			}
 			f := s.eng.Update(now, s.sampler.Down(s.laneKeys()))
 			if now.Sub(s.lastPub) >= s.gap && !reflect.DeepEqual(f, s.last) {
 				s.publish(f)

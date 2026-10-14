@@ -17,12 +17,11 @@
   document.title = qscT('result.title');
   const autohide = qscAutohide(function () { card.classList.add('hidden'); });
 
-  let shown = false;
+  const gate = qscModel.createIdGate();
 
   function render(result) {
     const v = qscModel.resultView(result);
     if (!v) return;
-    shown = true;
     const head = qscEl('div', 'head');
     head.appendChild(qscEl('div', 'grade ' + v.gradeClass, v.grade));
     const info = qscEl('div');
@@ -60,8 +59,8 @@
     });
   } else {
     qscConnect({
-      'snapshot': function (d) { if (!shown && d.last_score) render(d.last_score); },
-      'score.saved': render,
+      'snapshot': function (d) { if (d.last_score && gate.fresh(d.last_score)) render(d.last_score); },
+      'score.saved': function (r) { if (gate.fresh(r)) render(r); },
     });
   }
 </script>

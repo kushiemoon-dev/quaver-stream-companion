@@ -117,3 +117,17 @@ func (d *FakeDir) AddScore(t testing.TB, s ScoreRow) int64 {
 	}
 	return id
 }
+
+// LockDatabase holds an exclusive lock on quaver.db until the test ends, as Quaver does while writing.
+func (d *FakeDir) LockDatabase(t testing.TB) {
+	t.Helper()
+	db, err := sql.Open("sqlite", "file:"+filepath.ToSlash(filepath.Join(d.Path, "quaver.db")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	db.SetMaxOpenConns(1)
+	if _, err := db.Exec("BEGIN EXCLUSIVE"); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { db.Exec("ROLLBACK"); db.Close() })
+}

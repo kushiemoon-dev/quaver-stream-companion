@@ -58,7 +58,7 @@ func serve(ctx context.Context, args []string, out, errw io.Writer) (code int) {
 		_ = os.MkdirAll(filepath.Dir(opts.configPath), 0o755)
 		logPath = filepath.Join(filepath.Dir(opts.configPath), "qsc.log")
 	}
-	logger, logFile := logging.Setup(logPath, opts.verbose, errw)
+	logger, logFile := logging.Setup(logPath, opts.verbose, errw, diagnose.HomeRedactor(""))
 	defer logFile.Close()
 	previous := slog.Default()
 	slog.SetDefault(logger)
@@ -74,7 +74,7 @@ func serve(ctx context.Context, args []string, out, errw io.Writer) (code int) {
 	addr := fmt.Sprintf("127.0.0.1:%d", opts.port)
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
-		slog.Error("cannot listen", "addr", addr, "err", err.Error())
+		slog.Error("cannot listen", logging.FileOnly, "addr", addr, "err", err.Error())
 		fmt.Fprintln(errw, "error: "+bindMessage(opts.port, err))
 		return 1
 	}
@@ -154,22 +154,40 @@ func serve(ctx context.Context, args []string, out, errw io.Writer) (code int) {
 			return err
 		}
 		be.set(dir, store)
-		a := app.New(b, store)
+		a := app.New(b, be)
+		be.mu.Lock()
+		be.onReplaced = a.ForgetScores
+		be.onTick = func() { a.CheckRestore(ctx) }
+		be.mu.Unlock()
 		lines := make(chan string, 64)
 		logPath := paths.LogPath(dir)
+		game := ""
 		if seed, ok := gamestate.LastStateLine(logPath, seedMaxAge); ok {
 			a.Seed(ctx, seed)
+			if ln, ok := gamestate.ParseLine(seed); ok && ln.Kind == gamestate.KindState {
+				game = ln.State
+			}
 		}
-		spawn(func() { gamestate.Tail(ctx, logPath, logPollInterval, lines) })
+		st.Seed(a.SeedSnapshot(ctx, game))
+		raw := make(chan string, 64)
+		spawn(func() { gamestate.Tail(ctx, logPath, logPollInterval, raw) })
+		spawn(func() { relay(ctx, raw, lines, laneKeys.Touch) })
 		spawn(func() { a.Run(ctx, lines) })
 		slog.Info("Quaver folder found", "dir", dir)
 		fmt.Fprintf(out, "Quaver folder: %s\n", dir)
 		return nil
 	}
 	// A usable folder is picked up before the first request; otherwise keep looking.
-	if dir, err := find(); err != nil || start(dir) != nil {
-		spawn(func() { app.Watch(ctx, recheckInterval, find, start) })
+	started := false
+	if dir, err := find(); err == nil && start(dir) == nil {
+		started = true
 	}
+	spawn(func() {
+		if !started {
+			app.Watch(ctx, recheckInterval, find, start)
+		}
+		app.Supervise(ctx, recheckInterval, be.problem, be.reopen)
+	})
 
 	dashboard, err := fs.Sub(web.FS, "dashboard")
 	if err != nil {
