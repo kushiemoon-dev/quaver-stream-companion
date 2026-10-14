@@ -131,7 +131,7 @@ The dashboard is served at `http://127.0.0.1:7878/` and needs nothing but a brow
 | **History** | Your recent plays: map, difficulty with rate and mods, grade, accuracy, max combo and judgments |
 | **Settings** | Quaver folder, port, dashboard language, the config, themes and overlays paths, the version, the opt-in lane keys card and a Quit button |
 
-A **Twitch** tab is shown as "coming soon"; nothing behind it exists yet. The dashboard is available in English, French and German.
+A **Twitch** tab is shown as "coming soon"; nothing behind it exists yet. The dashboard is available in English, French and German. The dashboard uses a dark theme; the overlays have their own themes.
 
 ---
 

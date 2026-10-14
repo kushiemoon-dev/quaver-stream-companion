@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>QSC now playing</title>
+<link rel="icon" href="data:,">
 <link rel="stylesheet" href="/overlays/overlay.css">
 <script src="/overlays/i18n.js"></script>
 <script src="/overlays/model.js"></script>
@@ -37,11 +38,10 @@
       card.classList.add('hidden');
       return;
     }
-    document.getElementById('title').textContent = map.title;
-    document.getElementById('artist').textContent = map.artist;
-    const keys = map.keys ? ' · ' + map.keys + 'K' : '';
-    document.getElementById('diff').textContent =
-      map.difficulty_name + ' · ' + map.difficulty.toFixed(2) + '★' + keys;
+    const v = qscModel.nowPlayingView(map, params.lang);
+    document.getElementById('title').textContent = v.title;
+    document.getElementById('artist').textContent = v.artist;
+    document.getElementById('diff').textContent = v.line;
     card.classList.remove('hidden');
   }
 

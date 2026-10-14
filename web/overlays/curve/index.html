@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>QSC judgment curve</title>
+<link rel="icon" href="data:,">
 <link rel="stylesheet" href="/overlays/overlay.css">
 <script src="/overlays/i18n.js"></script>
 <script src="/overlays/model.js"></script>
@@ -32,7 +33,7 @@
   }
 
   function draw(timeline) {
-    const v = qscModel.timelineView(timeline, WIDTH, HEIGHT);
+    const v = qscModel.timelineView(timeline, WIDTH, HEIGHT, params.lang);
     if (!v) {
       card.classList.add('hidden');
       return;

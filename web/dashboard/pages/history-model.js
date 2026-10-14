@@ -6,15 +6,40 @@
   const DATE_LANGS = ['en', 'fr', 'de'];
   const FILTERS = { pb: 'is_pb', fc: 'full_combo', failed: 'failed' };
 
-  function formatRate(rate) {
+  const COMMA_LANGS = ['fr', 'de'];
+  const NBSP = String.fromCharCode(160);
+
+  // Decimal comma for fr and de, a point otherwise; falls back to toFixed when Intl is missing.
+  function formatDecimal(n, digits, lang) {
+    const fixed = n.toFixed(digits);
+    if (COMMA_LANGS.indexOf(lang) < 0) return fixed;
+    try {
+      return new Intl.NumberFormat(lang, { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(n);
+    } catch (e) {
+      return fixed.replace('.', ',');
+    }
+  }
+
+  function formatRate(rate, lang) {
     const n = Number(rate);
     const rounded = Number(n.toFixed(2));
-    return !isFinite(n) || rounded <= 0 || rounded === 1 ? '' : String(rounded) + 'x';
+    return !isFinite(n) || rounded <= 0 || rounded === 1 ? '' : String(rounded).replace('.', COMMA_LANGS.indexOf(lang) >= 0 ? ',' : '.') + 'x';
   }
 
   function modChips(mods) {
     const list = Array.isArray(mods) ? mods.map(String) : [];
     return { shown: list.slice(0, MAX_MODS), extra: Math.max(0, list.length - MAX_MODS), hidden: list.slice(MAX_MODS) };
+  }
+
+  const BADGE_MODS = { Paused: 'paused', Autoplay: 'autoplay' };
+
+  // A mod shown as a pill is not listed again as a chip.
+  function modsWithoutBadges(mods, flags) {
+    const list = Array.isArray(mods) ? mods.map(String) : [];
+    const on = flags && typeof flags === 'object' ? flags : {};
+    return list.filter(function (name) {
+      return !(Object.prototype.hasOwnProperty.call(BADGE_MODS, name) && on[BADGE_MODS[name]] === true);
+    });
   }
 
   function gradeText(grade) {
@@ -26,14 +51,14 @@
     return Object.prototype.hasOwnProperty.call(GRADE_CLASS, key) ? GRADE_CLASS[key] : 'muted';
   }
 
-  function formatStars(value) {
+  function formatStars(value, lang) {
     const n = Number(value);
-    return (isFinite(n) ? n : 0).toFixed(1);
+    return formatDecimal(isFinite(n) ? n : 0, 1, lang);
   }
 
-  function formatAccuracy(value) {
+  function formatAccuracy(value, lang) {
     const n = Number(value);
-    return (isFinite(n) ? n : 0).toFixed(2) + '%';
+    return formatDecimal(isFinite(n) ? n : 0, 2, lang) + (COMMA_LANGS.indexOf(lang) >= 0 ? NBSP + '%' : '%');
   }
 
   function formatPlayedAt(raw, lang) {
@@ -63,7 +88,7 @@
   }
 
   const api = {
-    LIMITS: LIMITS, DEFAULT_LIMIT: DEFAULT_LIMIT, formatRate: formatRate, modChips: modChips, gradeText: gradeText,
+    LIMITS: LIMITS, DEFAULT_LIMIT: DEFAULT_LIMIT, formatDecimal: formatDecimal, formatRate: formatRate, modChips: modChips, modsWithoutBadges: modsWithoutBadges, gradeText: gradeText,
     gradeClass: gradeClass, formatStars: formatStars, formatAccuracy: formatAccuracy, formatPlayedAt: formatPlayedAt,
     filterPlays: filterPlays, parseLimit: parseLimit, playsOf: playsOf,
   };

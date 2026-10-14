@@ -10,6 +10,7 @@
     'in use by this qsc': 'check.detail.owned',
     'free': 'check.detail.free',
     'Quaver folder not found': 'check.detail.folder_not_found',
+    'busy: Quaver is writing the database': 'check.detail.busy',
   };
   const REFRESH_MS = 5000;
 
@@ -27,9 +28,10 @@
   let diag = { checks: null, error: false, version: '', configPath: '' };
   let connection = 'connecting';
   let shownDegraded = '';
+  let offStop = null;
 
   function fmtRate(rate) {
-    return !rate || rate === 1 ? '' : String(Number(rate.toFixed(2))) + 'x';
+    return !rate || rate === 1 ? '' : window.qscHistoryModel.formatRate(rate, window.qscI18n.lang());
   }
 
   function cardLabel(key) {
@@ -62,7 +64,7 @@
     ui.now.appendChild(h('p', { class: 'map-artist' }, m.artist));
     ui.now.appendChild(h('div', { class: 'chips' },
       m.difficulty_name ? h('span', { class: 'chip' }, m.difficulty_name) : null,
-      h('span', { class: 'chip chip-accent' }, '★ ' + Number(m.difficulty || 0).toFixed(1)),
+      h('span', { class: 'chip chip-accent' }, '★ ' + window.qscHistoryModel.formatStars(m.difficulty, window.qscI18n.lang())),
       h('span', { class: 'chip' }, t('status.keys', { n: m.keys }))));
   }
 
@@ -85,7 +87,7 @@
         h('span', { class: 'sr-only' }, t('status.grade') + ' '), s.grade || '?'),
       h('div', { class: 'last-meta' },
         h('p', { class: 'map-title small' }, r.map.title),
-        h('p', { class: 'num acc' }, Number(s.accuracy).toFixed(2) + '%'),
+        h('p', { class: 'num acc' }, window.qscHistoryModel.formatAccuracy(s.accuracy, window.qscI18n.lang())),
         h('p', { class: 'muted' }, t('status.max_combo', { n: s.max_combo }))),
     ));
     ui.last.appendChild(h('div', { class: 'judgments' }, JUDGMENTS.map(function (j) {
@@ -95,7 +97,7 @@
     })));
     ui.last.appendChild(h('div', { class: 'chips' },
       rate ? h('span', { class: 'chip chip-accent' }, rate) : null,
-      (s.mods || []).map(function (m) { return h('span', { class: 'chip' }, m); }),
+      window.qscHistoryModel.modsWithoutBadges(s.mods, r).map(function (m) { return h('span', { class: 'chip' }, m); }),
       badge(r.is_pb, 'status.pb', 'pill-ok'),
       badge(r.full_combo, 'status.fc', 'pill-amber'),
       badge(r.failed, 'status.failed', 'pill-bad'),
@@ -105,6 +107,17 @@
 
   const WIN_PATH = ['C:', 'Program Files (x86)', 'Steam', 'steamapps', 'common', 'Quaver'].join(String.fromCharCode(92));
   const LINUX_PATH = '~/.local/share/Steam/steamapps/common/Quaver';
+
+  // A passing check reports a path. A failing one without a translation keeps its raw text after a generic line.
+  function detailNodes(detail, ok) {
+    if (Object.prototype.hasOwnProperty.call(DETAIL_KEYS, detail)) return qsc.pathNodes(t(DETAIL_KEYS[detail]));
+    if (ok) return qsc.pathNodes(detail);
+    return [t('check.detail.other'), ' ', h('code', null, qsc.pathNodes(detail))];
+  }
+
+  function isStale() {
+    return window.qscOffline.isOffline() || (diag.error && !!diag.checks);
+  }
 
   function failing(kind) {
     const ids = kind === 'folder' ? ['quaver_dir'] : ['log', 'database'];
@@ -120,7 +133,6 @@
     ui.degraded.hidden = !kind;
     ui.degraded.replaceChildren();
     if (!kind) return;
-    const detail = Object.prototype.hasOwnProperty.call(DETAIL_KEYS, bad.detail) ? t(DETAIL_KEYS[bad.detail]) : bad.detail;
     ui.degraded.appendChild(h('strong', null, t('status.degraded.' + kind + '_title')));
     ui.degraded.appendChild(h('p', null, t('status.degraded.intro')));
     if (kind === 'folder') {
@@ -130,7 +142,7 @@
         h('li', null, t('status.degraded.step_linux'), ' ', h('code', null, qsc.pathNodes(LINUX_PATH))),
         h('li', null, t('status.degraded.step_settings'))));
     }
-    ui.degraded.appendChild(h('p', { class: 'muted' }, qsc.pathNodes(detail)));
+    ui.degraded.appendChild(h('p', { class: 'muted' }, detailNodes(bad.detail, false)));
     ui.degraded.appendChild(h('p', null, t('status.degraded.auto')));
     if (kind === 'folder') ui.degraded.appendChild(h('a', { class: 'btn', href: '#/settings' }, t('status.degraded.open_settings')));
   }
@@ -138,17 +150,19 @@
   function renderDiag() {
     renderDegraded();
     ui.diag.replaceChildren();
+    const stale = isStale();
     const byId = {};
     (diag.checks || []).forEach(function (c) { byId[c.id] = c; });
     CHECKS.forEach(function (id) {
       const c = byId[id];
       const cls = !c ? 'unknown' : c.ok ? 'ok' : 'bad';
-      const detail = c ? (Object.prototype.hasOwnProperty.call(DETAIL_KEYS, c.detail) ? t(DETAIL_KEYS[c.detail]) : c.detail) : diag.error ? t('status.unreachable') : t('status.checking');
-      ui.diag.appendChild(h('section', { class: 'card diag diag-' + cls },
+      const detail = c ? detailNodes(c.detail, c.ok) : qsc.pathNodes(diag.error ? t('status.unreachable') : t('status.checking'));
+      ui.diag.appendChild(h('section', { class: 'card diag diag-' + cls + (stale ? ' is-stale' : '') },
         cardLabel('check.' + id),
+        stale ? h('p', { class: 'stale-label' }, t('status.stale')) : null,
         h('p', { class: 'diag-state' }, h('span', { class: 'dot', 'aria-hidden': 'true' }),
           t(!c ? 'status.unknown' : c.ok ? 'status.ok' : 'status.problem')),
-        h('p', { class: 'muted diag-detail' }, qsc.pathNodes(detail))));
+        h('p', { class: 'muted diag-detail' }, detail)));
     });
     const items = [];
     if (diag.version) items.push(h('span', null, t('status.version', { v: diag.version })));
@@ -159,7 +173,7 @@
       foot.push(item);
     });
     ui.foot.replaceChildren.apply(ui.foot, foot);
-    ui.diagErr.replaceChildren(diag.error && diag.checks ? t('status.refresh_failed') : '');
+    ui.diagErr.replaceChildren(stale && diag.checks ? t('status.refresh_failed') : '');
   }
 
   async function refreshDiag() {
@@ -282,7 +296,7 @@
     retryTimer = null;
     const source = new EventSource('/events');
     es = source;
-    source.onopen = function () { connection = 'live'; renderConnection(); };
+    source.onopen = function () { connection = 'live'; renderConnection(); window.qscOffline.report(true); };
     source.onerror = function () {
       connection = 'reconnecting';
       renderConnection();
@@ -334,6 +348,7 @@
     renderConnection();
     renderAll();
     renderDiag();
+    offStop = window.qscOffline.onChange(function () { if (ui) renderDiag(); });
     connect();
     refreshDiag();
     timer = setInterval(function () { if (!document.hidden) refreshDiag(); }, REFRESH_MS);
@@ -347,6 +362,8 @@
     es = null;
     clearTimeout(retryTimer);
     clearInterval(timer);
+    if (offStop) offStop();
+    offStop = null;
     document.removeEventListener('visibilitychange', onVisibility);
     ui = null;
   }

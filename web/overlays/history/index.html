@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>QSC accuracy history</title>
+<link rel="icon" href="data:,">
 <link rel="stylesheet" href="/overlays/overlay.css">
 <script src="/overlays/i18n.js"></script>
 <script src="/overlays/model.js"></script>
@@ -52,7 +53,7 @@
     root.appendChild(svgText({ class: 'tick', x: c.left - 4, y: yTop + 4, 'text-anchor': 'end' }, String(c.yMax)));
     root.appendChild(svgText({ class: 'tick', x: c.left - 4, y: yBottom + 4, 'text-anchor': 'end' }, String(c.yMin)));
     root.appendChild(svg('line', { class: 'avg', x1: c.left, x2: c.right, y1: c.avgY, y2: c.avgY }));
-    const best = params.best ? qscModel.bestLine(c) : null;
+    const best = params.best ? qscModel.bestLine(c, params.lang) : null;
     if (best) {
       root.appendChild(svg('line', { class: 'best', x1: best.x1, x2: best.x2, y1: best.y, y2: best.y }));
       root.appendChild(svgText({ class: 'best-label', x: best.label.x, y: best.label.y.toFixed(1), 'text-anchor': best.label.anchor }, qscT('history.best') + ' ' + best.text));
@@ -61,7 +62,7 @@
     c.points.forEach(function (p) {
       root.appendChild(svg('circle', { class: 'dot-' + qscModel.gradeClass(p.grade), cx: p.x.toFixed(1), cy: p.y.toFixed(1), r: p.last ? 6 : 3.5 }));
       if (p.last) {
-        const l = qscModel.lastLabel(c);
+        const l = qscModel.lastLabel(c, params.lang);
         root.appendChild(svgText({ x: l.x.toFixed(1), y: l.y.toFixed(1), 'text-anchor': l.anchor, 'font-weight': 700 }, l.text));
       }
     });
