@@ -37,7 +37,7 @@ func newHomeRedactor(home string, caseInsensitive bool, names []string) func(str
 	}
 	var homeRe, nameRe *regexp.Regexp
 	if home != "" {
-		variants := []string{home, filepath.ToSlash(home), strings.ReplaceAll(home, bs, bs+bs)}
+		variants := []string{home, filepath.ToSlash(home), strings.ReplaceAll(home, bs, "/"), strings.ReplaceAll(home, bs, bs+bs)}
 		homeRe = regexp.MustCompile(flags + "(?:" + quoteAll(variants) + ")(" + sep + "|$)")
 	}
 	var bare []string
@@ -76,6 +76,21 @@ func quoteAll(list []string) string {
 	return strings.Join(q, "|")
 }
 
+// lastSegment is the last element of a path written with either kind of separator, since a
+// Windows path can appear in a report built on any OS.
+func lastSegment(p string) string {
+	p = strings.TrimRight(p, bs+"/")
+	if i := strings.LastIndexAny(p, bs+"/"); i >= 0 {
+		return p[i+1:]
+	}
+	return p
+}
+
+// caseInsensitiveHome tells whether paths under home compare without case: Windows paths do, wherever the report is made.
+func caseInsensitiveHome(home string) bool {
+	return runtime.GOOS == "windows" || strings.Contains(home, bs) || (len(home) > 1 && home[1] == ':')
+}
+
 // userNames lists the bare names that identify the user: the home folder name, its short form and the login name.
 func userNames(home string) []string {
 	var out []string
@@ -85,9 +100,9 @@ func userNames(home string) []string {
 		}
 	}
 	if home != "" {
-		add(filepath.Base(home))
+		add(lastSegment(home))
 		if short := shortPath(home); short != "" {
-			add(filepath.Base(short))
+			add(lastSegment(short))
 		}
 	}
 	add(os.Getenv("USERNAME"))
@@ -101,9 +116,7 @@ func HomeRedactor(home string) func(string) string {
 	if home == "" {
 		home, _ = os.UserHomeDir()
 	}
-	ci := runtime.GOOS == "windows"
-	names := userNames(home)
-	return newHomeRedactor(home, ci, names)
+	return newHomeRedactor(home, caseInsensitiveHome(home), userNames(home))
 }
 
 // cutRunes shortens s to at most max bytes on a rune boundary.

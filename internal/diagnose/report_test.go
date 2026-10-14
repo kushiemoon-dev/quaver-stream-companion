@@ -193,3 +193,32 @@ func TestShortUserNamesAreNotReplacedAsWords(t *testing.T) {
 		t.Fatalf("a name of four letters or more is still hidden: %q", long)
 	}
 }
+
+// A Windows home folder is a legitimate input on any OS: the report can hold paths copied from Quaver's log.
+func TestWindowsStyleHomeIsHiddenWhateverTheOS(t *testing.T) {
+	bs := string(rune(92))
+	home := "C:" + bs + "Users" + bs + "Alice"
+	if names := userNames(home); !containsString(names, "Alice") {
+		t.Fatalf("userNames(%q) = %v, want the folder name Alice", home, names)
+	}
+	for in, want := range map[string]string{
+		"C:/Users/Alice/AppData/x":             "~/AppData/x",
+		"c:/users/alice/AppData/x":             "~/AppData/x",
+		home + bs + "x":                        "~" + bs + "x",
+		"hello Alice from " + home + bs + "x":  "hello ~ from ~" + bs + "x",
+		"unrelated D:/Games/Quaver is not hit": "unrelated D:/Games/Quaver is not hit",
+	} {
+		if got := HomeRedactor(home)(in); got != want {
+			t.Errorf("redact(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func containsString(list []string, s string) bool {
+	for _, v := range list {
+		if v == s {
+			return true
+		}
+	}
+	return false
+}
