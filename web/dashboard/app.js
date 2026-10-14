@@ -77,8 +77,14 @@
     return pages[name] ? name : 'status';
   }
 
+  function labelChrome() {
+    document.getElementById('skip').textContent = t('skip.link');
+    window.qscOffline.repaint();
+  }
+
   function render() {
     const name = routeName();
+    if (location.hash !== '#/' + name && !pages[location.hash.replace(/^#\/?/, '').split('/')[0]]) history.replaceState(null, '', '#/' + name);
     const main = document.getElementById('main');
     if (current && current.page.unmount) current.page.unmount();
     main.replaceChildren();
@@ -93,6 +99,7 @@
 
   function relabel() {
     buildNav();
+    labelChrome();
     const name = current ? current.name : routeName();
     document.querySelectorAll('.nav-item[data-page]').forEach(function (el) {
       if (el.getAttribute('data-page') === name) el.setAttribute('aria-current', 'page');
@@ -119,6 +126,12 @@
     }
     await window.qscI18n.load(language);
     buildNav();
+    labelChrome();
+    window.qscOffline.start();
+    document.getElementById('skip').addEventListener('click', function (ev) {
+      ev.preventDefault();
+      document.getElementById('main').focus();
+    });
     window.addEventListener('hashchange', function () {
       render();
       document.getElementById('main').focus();

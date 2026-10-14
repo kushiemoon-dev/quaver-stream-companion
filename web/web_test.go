@@ -95,6 +95,9 @@ func TestDashboardIndexLoadsOnlyRelativeAssets(t *testing.T) {
 	}
 	refs := regexp.MustCompile(`(?:src|href)="([^"]+)"`).FindAllStringSubmatch(html, -1)
 	for _, m := range refs {
+		if strings.HasPrefix(m[1], "#") {
+			continue
+		}
 		if strings.HasPrefix(m[1], "/") || strings.Contains(m[1], ":") {
 			t.Errorf("asset %q must be a relative path", m[1])
 			continue

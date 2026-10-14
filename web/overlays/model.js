@@ -13,6 +13,9 @@
   const MIN_COUNT = 5;
   const MAX_JUDGMENT = 999999;
   const MAX_KPS = 999;
+  const NBSP = String.fromCharCode(160);
+  const STAR = String.fromCharCode(9733);
+  const SEP = ' ' + String.fromCharCode(183) + ' ';
   const PAD = { l: 26, r: 14, t: 14, b: 10 };
 
   const has = function (obj, key) { return Object.prototype.hasOwnProperty.call(obj, key); };
@@ -35,20 +38,45 @@
     return isFinite(n) ? clamp(n, 0, 100) : NaN;
   }
 
-  function formatAccuracy(v) {
-    const n = accuracyValue(v);
-    return (isFinite(n) ? n : 0).toFixed(2) + '%';
+  const COMMA_LANGS = ['fr', 'de'];
+
+  // Decimal comma for fr and de, a point otherwise; falls back to toFixed when Intl is missing.
+  function decimal(n, digits, lang) {
+    const fixed = n.toFixed(digits);
+    if (COMMA_LANGS.indexOf(lang) < 0) return fixed;
+    try {
+      return new Intl.NumberFormat(lang, { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(n);
+    } catch (e) {
+      return fixed.replace('.', ',');
+    }
   }
 
-  function formatRate(rate) {
+  function formatAccuracy(v, lang) {
+    const n = accuracyValue(v);
+    return decimal(isFinite(n) ? n : 0, 2, lang) + (COMMA_LANGS.indexOf(lang) >= 0 ? NBSP + '%' : '%');
+  }
+
+  function formatRate(rate, lang) {
     const n = num(rate);
     const rounded = Number(n.toFixed(2));
-    return !isFinite(n) || rounded <= 0 || rounded > MAX_RATE || rounded === 1 ? '' : String(rounded) + 'x';
+    return !isFinite(n) || rounded <= 0 || rounded > MAX_RATE || rounded === 1 ? '' : String(rounded).replace('.', COMMA_LANGS.indexOf(lang) >= 0 ? ',' : '.') + 'x';
   }
 
-  function formatStars(v) {
+  function formatStars(v, lang) {
     const n = num(v);
-    return isFinite(n) && n >= 0 && n <= MAX_STARS ? n.toFixed(2) : '';
+    return isFinite(n) && n >= 0 && n <= MAX_STARS ? decimal(n, 2, lang) : '';
+  }
+
+  // Every field is optional: a map without a difficulty still gets a line.
+  function nowPlayingView(map, lang) {
+    const m = obj(map);
+    const stars = formatStars(m.difficulty, lang);
+    const k = Math.floor(num(m.keys));
+    return {
+      title: text(m.title),
+      artist: text(m.artist),
+      line: [text(m.difficulty_name), stars ? stars + STAR : '', k > 0 ? k + 'K' : ''].filter(Boolean).join(SEP),
+    };
   }
 
   function modList(mods) {
@@ -111,21 +139,21 @@
   function stateKey(state) { return 'state.' + knownState(state); }
   function stateTone(state) { return STATE_TONE[knownState(state)]; }
 
-  function resultView(result) {
+  function resultView(result, lang) {
     if (result === null || typeof result !== 'object') return null;
     const score = obj(result.score);
     const map = obj(result.map);
     return {
       grade: gradeText(score.grade),
       gradeClass: gradeClass(score.grade),
-      accuracy: formatAccuracy(score.accuracy),
+      accuracy: formatAccuracy(score.accuracy, lang),
       combo: isFinite(num(score.max_combo)) ? clamp(Math.floor(num(score.max_combo)), 0, MAX_JUDGMENT) : 0,
       judgments: judgments(score.judgments),
       title: text(map.title),
       artist: text(map.artist),
       difficultyName: text(map.difficulty_name),
-      stars: formatStars(map.difficulty),
-      rate: formatRate(score.rate),
+      stars: formatStars(map.difficulty, lang),
+      rate: formatRate(score.rate, lang),
       mods: modList(withoutBadgeMods(score.mods, result)),
       badges: BADGES.filter(function (b) { return result[b[0]] === true; }).map(function (b) { return b[1]; }),
     };
@@ -158,12 +186,12 @@
   const ALERT_BLOCKERS = ['failed', 'paused', 'autoplay'];
 
   // A saved score earns an alert when it is a personal best or a full combo, and was not failed, paused or autoplayed.
-  function alertView(result) {
+  function alertView(result, lang) {
     if (result === null || typeof result !== 'object') return null;
     if (ALERT_BLOCKERS.some(function (k) { return result[k] === true; })) return null;
     const kinds = ALERT_KINDS.filter(function (k) { return result[k[0]] === true; }).map(function (k) { return k[1]; });
     if (kinds.length === 0) return null;
-    return { kinds: kinds, title: text(obj(result.map).title), accuracy: formatAccuracy(obj(result.score).accuracy) };
+    return { kinds: kinds, title: text(obj(result.map).title), accuracy: formatAccuracy(obj(result.score).accuracy, lang) };
   }
 
   // Input is newest first (the API order); the curve runs oldest left to newest right.
@@ -211,20 +239,20 @@
   const overlaps = function (a, b) { return a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1; };
 
   // Where the accuracy label of the newest play goes: beside its dot, on the inner side near the right edge.
-  function lastLabel(c) {
+  function lastLabel(c, lang) {
     if (!c || c.points.length === 0) return null;
     const p = c.points[c.points.length - 1];
     const nearRight = p.x > c.right + PAD.r - 50;
-    return { x: p.x + (nearRight ? -10 : 10), y: Math.max(12, p.y - 8), anchor: nearRight ? 'end' : 'start', text: p.accuracy.toFixed(2) + '%' };
+    return { x: p.x + (nearRight ? -10 : 10), y: Math.max(12, p.y - 8), anchor: nearRight ? 'end' : 'start', text: formatAccuracy(p.accuracy, lang) };
   }
 
   // The line at the best accuracy of the window, from a curve() result. Its label is right aligned at
   // the plot edge, above or below the line, whichever collides less with the dots (a third spot sits just above the plot) and the newest label.
-  function bestLine(c) {
+  function bestLine(c, lang) {
     if (!c || c.points.length === 0) return null;
     const top = c.points.reduce(function (a, p) { return p.accuracy > a.accuracy ? p : a; });
     const taken = c.points.map(function (p) { return { x0: p.x - DOT_R, x1: p.x + DOT_R, y0: p.y - DOT_R, y1: p.y + DOT_R }; });
-    const last = lastLabel(c);
+    const last = lastLabel(c, lang);
     taken.push(box(last.x, last.y, last.anchor, LAST_W));
     const candidates = [top.y - 4, top.y + 13, c.yTop - 3].filter(function (y) { return y >= c.yTop - 3 && y <= c.yBottom - 2; });
     let label = null;
@@ -236,7 +264,7 @@
         label = { x: c.right, y: y, anchor: 'end' };
       }
     });
-    return { y: top.y, x1: c.left, x2: c.right, text: formatAccuracy(top.accuracy), label: label };
+    return { y: top.y, x1: c.left, x2: c.right, text: formatAccuracy(top.accuracy, lang), label: label };
   }
 
   const MAX_POINTS = 200;
@@ -245,7 +273,7 @@
   const WARMUP = 0.1;
 
   // The first tenth of the points is left out of the axis range so the first judgments do not flatten the curve.
-  function timelineView(tl, width, height) {
+  function timelineView(tl, width, height, lang) {
     const src = obj(tl);
     const points = (Array.isArray(src.points) ? src.points : []).slice(0, MAX_POINTS).map(accuracyValue).filter(isFinite);
     if (points.length === 0) return null;
@@ -267,7 +295,7 @@
       right: width - PAD.r,
       points: points.map(function (acc, i) { return { x: PAD.l + (innerW * (i + 1)) / points.length, y: yOf(acc) }; }),
       misses: misses.map(function (i) { return PAD.l + (innerW * (i + 0.5)) / total; }),
-      final: formatAccuracy(points[points.length - 1]),
+      final: formatAccuracy(points[points.length - 1], lang),
     };
   }
 
@@ -365,7 +393,7 @@
   const api = {
     createConnection: createConnection, createIdGate: createIdGate,
     gradeClass: gradeClass, gradeText: gradeText, formatAccuracy: formatAccuracy, formatRate: formatRate,
-    formatStars: formatStars, modList: modList, judgments: judgments, parseCount: parseCount,
+    formatStars: formatStars, nowPlayingView: nowPlayingView, modList: modList, judgments: judgments, parseCount: parseCount,
     parseScale: parseScale, parseAutohide: parseAutohide, parseLang: parseLang, parseHide: parseHide,
     isHiddenState: isHiddenState, stateKey: stateKey, stateTone: stateTone, resultView: resultView,
     curve: curve, createAutohide: createAutohide, alertView: alertView, bestLine: bestLine,

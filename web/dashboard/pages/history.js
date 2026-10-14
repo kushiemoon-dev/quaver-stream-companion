@@ -57,8 +57,8 @@
     })));
   }
 
-  function modsLine(mods) {
-    const chips = m.modChips(mods);
+  function modsLine(play) {
+    const chips = m.modChips(m.modsWithoutBadges(play.mods, play));
     if (chips.shown.length === 0) return null;
     const out = chips.shown.map(function (name) { return h('span', { class: 'chip' }, name); });
     if (chips.extra > 0) {
@@ -69,21 +69,22 @@
   }
 
   function row(p) {
-    const rate = m.formatRate(p.rate);
+    const lang = window.qscI18n.lang();
+    const rate = m.formatRate(p.rate, lang);
     return h('tr', null,
       h('td', { class: 'col-map' },
         h('div', { class: 'hist-title' }, p.title),
         h('div', { class: 'muted hist-artist' }, p.artist),
-        h('div', { class: 'muted hist-date nowrap' }, m.formatPlayedAt(p.played_at, window.qscI18n.lang()))),
+        h('div', { class: 'muted hist-date nowrap' }, m.formatPlayedAt(p.played_at, lang))),
       h('td', { class: 'col-diff' }, h('div', null, p.difficulty_name),
-        h('div', { class: 'num muted' }, '★ ' + m.formatStars(p.difficulty) + (rate ? ' ' + rate : '')),
-        modsLine(p.mods)),
+        h('div', { class: 'num muted' }, '★ ' + m.formatStars(p.difficulty, lang) + (rate ? ' ' + rate : '')),
+        modsLine(p)),
       h('td', null,
         h('div', null, h('span', { class: 'gr gr-' + m.gradeClass(p.grade) }, m.gradeText(p.grade))),
         h('div', { class: 'chips tight' }, BADGES.map(function (b) {
           return p[b[0]] === true ? h('span', { class: 'pill ' + b[2] }, t(b[1])) : null;
         }))),
-      h('td', { class: 'num' }, m.formatAccuracy(p.accuracy)),
+      h('td', { class: 'num' }, m.formatAccuracy(p.accuracy, lang)),
       h('td', { class: 'num' }, String(p.max_combo || 0) + 'x'),
       judgmentsCell(p.judgments));
   }

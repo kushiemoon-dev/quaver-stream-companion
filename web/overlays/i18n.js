@@ -58,7 +58,7 @@
       'result.great': 'Great',
       'result.good': 'Good',
       'result.okay': 'Okay',
-      'result.miss': 'Raté',
+      'result.miss': 'Miss',
       'badge.pb': 'PB',
       'badge.fc': 'FC',
       'badge.failed': 'Échec',

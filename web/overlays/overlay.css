@@ -5,8 +5,10 @@ html, body {
 }
 .card {
   display: inline-block;
+  box-sizing: border-box;
   min-width: 260px;
   max-width: 520px;
+  max-width: min(520px, 100%);
   padding: 12px 16px;
   background: var(--bg);
   color: var(--fg);
@@ -23,7 +25,14 @@ html, body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.sub { margin-top: 2px; font-size: calc(14px * var(--scale, 1)); color: var(--muted); }
+.sub {
+  margin-top: 2px;
+  font-size: calc(14px * var(--scale, 1));
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 html, body { overflow: hidden; }
 :root {
@@ -48,7 +57,13 @@ html, body { overflow: hidden; }
 .grade { font-size: calc(56px * var(--scale, 1)); font-weight: 800; line-height: 1; }
 .head { display: flex; align-items: center; gap: calc(12px * var(--scale, 1)); }
 .head > div { min-width: 0; }
-.big { font-size: calc(28px * var(--scale, 1)); font-weight: 700; }
+.big {
+  font-size: calc(28px * var(--scale, 1));
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .line { margin-top: calc(8px * var(--scale, 1)); display: flex; flex-wrap: wrap; gap: calc(6px * var(--scale, 1)); }
 .chip {
   padding: 1px calc(8px * var(--scale, 1));

@@ -20,7 +20,7 @@
   ];
 
   function step(titleKey, body) {
-    return h('li', { class: 'obs-step' }, h('h3', null, t(titleKey)), body);
+    return h('li', { class: 'obs-step' }, h('h2', null, t(titleKey)), body);
   }
 
   function copyLink(input, button) {
@@ -57,7 +57,7 @@
   }
 
   function sizeTable() {
-    return h('div', { class: 'table-wrap' }, h('table', { class: 'obs-table' },
+    return h('div', { class: 'table-wrap', role: 'region', tabindex: '0', 'aria-label': t('obs.table_label') }, h('table', { class: 'obs-table' },
       h('thead', null, h('tr', null,
         h('th', { scope: 'col' }, t('obs.col.overlay')),
         h('th', { scope: 'col' }, t('obs.col.size')),
@@ -122,7 +122,7 @@
 
   function troubleshooting() {
     return TROUBLES.map(function (k) {
-      return h('div', { class: 'obs-trouble' }, h('h4', null, t(k[0])), h('p', { class: 'muted' }, t(k[1])));
+      return h('div', { class: 'obs-trouble' }, h('h3', null, t(k[0])), h('p', { class: 'muted' }, t(k[1])));
     });
   }
 

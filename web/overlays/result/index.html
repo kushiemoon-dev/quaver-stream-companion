@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>QSC last result</title>
+<link rel="icon" href="data:,">
 <link rel="stylesheet" href="/overlays/overlay.css">
 <script src="/overlays/i18n.js"></script>
 <script src="/overlays/model.js"></script>
@@ -20,7 +21,7 @@
   const gate = qscModel.createIdGate();
 
   function render(result) {
-    const v = qscModel.resultView(result);
+    const v = qscModel.resultView(result, params.lang);
     if (!v) return;
     const head = qscEl('div', 'head');
     head.appendChild(qscEl('div', 'grade ' + v.gradeClass, v.grade));
