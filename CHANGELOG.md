@@ -6,20 +6,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-15
+
+Fixes for Linux and for every Quaver key mode, and data that follows the game more closely.
+
 ### Added
 
+- Lane keys and the keys overlay support every Quaver key mode, from 1K to 10K, and the scratch lane of the 7K+1 modes. Each layout has its own lane keys in the config (`k1` to `k10`, next to the existing `k4` and `k7`, which keep working) and in the Settings page, and an unsupported key mode no longer falls back to 4K.
+- A smoke test in CI starts qsc for real on Ubuntu (amd64 and arm64) and Windows against synthetic Steam folders (native, Flatpak, Snap, symlinked and extra libraries), serves every built-in overlay, runs `qsc doctor` and `qsc stop`, and checks the release archives and the AppImage before a release is drafted.
 - Every Quaver screen is its own state: `editor`, `importing`, `download`, `lobby`, `multiplayer`, `music` and `theatre` join `menu`, `select`, `loading`, `gameplay`, `results`, `initialization` and `closed`. The dashboard Status page and the state overlay show them with translated labels, and the state overlay `hide` list accepts them.
 - The `game.state` event carries a `screen` field with the raw lower case Quaver screen name when it is known.
 - A new `play.ended` event (`{ "map": <map object>, "saved": false }`) tells when a play left `gameplay` without a saved score, such as an autoplay, a replay, the theatre, an editor test play or a quit. The Status page shows "Last play was not saved" under the last play card until the next play.
 - Score results carry `local_rank`, `local_total` and `is_local_best`, which rank each play on the local leaderboard of its map the way Quaver does: across every play speed, mod set and local profile, the 50 plays with the highest score, failed plays last, then performance rating, then accuracy. The result overlay shows a `#k` chip and a `Best` badge, the alert overlay announces a new best, and the History page shows the rank and both badges.
 - Score results and `/api/history` carry `played_at_raw`, the date text exactly as Quaver saved it, and the History page formats the play time by language.
-- The `watch_quaver_process` setting (on by default, one checkbox in Settings) lets qsc look at the names of running programs to notice when Quaver has crashed or was killed: after 30 seconds without a Quaver process the state becomes `closed`. Nothing is stored or sent, and the check stays off on systems where qsc cannot list processes.
+- The `watch_quaver_process` setting (on by default, one checkbox in Settings) lets qsc look at the names of running programs to notice when Quaver has crashed or was killed: after about 20 to 30 seconds without a Quaver process the state becomes `closed`. Nothing is stored or sent, and the check stays off on systems where qsc cannot list processes.
 
 ### Changed
 
 - The format of `played_at` changed, its type is still a string: it was the date text Quaver saved, such as `10/14/2026 20:30`, and it is now an RFC 3339 timestamp with the local offset of the computer running qsc, such as `2026-10-14T20:30:00+02:00`. Text qsc cannot read is kept unchanged. Consumers of the old text should read `played_at_raw`.
 - `is_pb` keeps its meaning, the best play at the same speed and mod set, and is now documented as the same speed personal best next to the local leaderboard fields.
 - A mods value of `-1` (Quaver "None") counts as no mods, and mod bits qsc does not know stay in `mods_raw` without being listed in `mods`.
+- The release binaries are built reproducibly: the same tag and Go version give the same file.
+
+### Fixed
+
+- qsc finds the native Linux build of Quaver (the executable is named `Quaver`), not only `Quaver.exe`.
+- The AppImage runs every command (`doctor`, `stop`, `version`), not only the server.
+- Custom theme CSS without spaces after the semicolons no longer loses colors in the dashboard swatches.
+- A saved setting can no longer be overridden by a duplicate key in `config.json` that differs only by letter case.
 
 ## [0.1.0] - 2026-10-14
 
@@ -73,7 +87,8 @@ First release candidate, published as a pre-release.
 - A Quit button in the dashboard settings and a `qsc stop` command.
 - `qsc doctor`, `qsc version`, and release archives for Windows and Linux (amd64, arm64), a Linux AppImage and `checksums.txt`.
 
-[Unreleased]: https://github.com/kushiemoon-dev/quaver-stream-companion/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/kushiemoon-dev/quaver-stream-companion/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/kushiemoon-dev/quaver-stream-companion/releases/tag/v0.1.1
 [0.1.0]: https://github.com/kushiemoon-dev/quaver-stream-companion/releases/tag/v0.1.0
 [0.1.0-rc2]: https://github.com/kushiemoon-dev/quaver-stream-companion/releases/tag/v0.1.0-rc2
 [0.1.0-rc1]: https://github.com/kushiemoon-dev/quaver-stream-companion/releases/tag/v0.1.0-rc1
