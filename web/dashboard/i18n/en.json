@@ -167,6 +167,8 @@
   "settings.port_invalid": "Enter a whole number from 1 to 65535.",
   "settings.language": "Language",
   "settings.language_help": "Applies right away.",
+  "settings.watch": "Notice when Quaver has crashed",
+  "settings.watch_help": "qsc looks at the names of running programs to notice when Quaver has crashed (on Linux, the command line of Wine processes, only to find Quaver.exe); nothing is stored or sent. Applies right away.",
   "settings.lang.auto": "Auto (browser language)",
   "settings.lang.en": "English",
   "settings.lang.fr": "Français",

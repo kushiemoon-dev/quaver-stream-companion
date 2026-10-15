@@ -167,6 +167,8 @@
   "settings.port_invalid": "Gib eine ganze Zahl von 1 bis 65535 ein.",
   "settings.language": "Sprache",
   "settings.language_help": "Wird sofort übernommen.",
+  "settings.watch": "Absturz von Quaver erkennen",
+  "settings.watch_help": "qsc prüft die Namen der laufenden Programme, um einen Absturz von Quaver zu bemerken (unter Linux die Befehlszeile von Wine-Prozessen, nur um Quaver.exe zu finden); nichts wird gespeichert oder gesendet. Wird sofort übernommen.",
   "settings.lang.auto": "Auto (Browsersprache)",
   "settings.lang.en": "English",
   "settings.lang.fr": "Français",

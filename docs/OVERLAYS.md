@@ -132,7 +132,7 @@ A comment line `: ping` is sent every 15 seconds to keep the connection open. Th
 | `multiplayer` | Inside a multiplayer room |
 | `music` | The music player |
 | `theatre` | Watching a replay |
-| `closed` | The game has closed |
+| `closed` | The game has closed: Quaver wrote its exit line, or `qsc` found no Quaver process on three checks in a row, about 20 to 30 seconds (see Crash detection in the README) |
 | `unknown` | Nothing seen yet (only in a snapshot) |
 
 The game can report other screen names. They are passed through in lower case, so treat any value you do not know as "something else" instead of failing. The built-in overlays show it as `unknown`.

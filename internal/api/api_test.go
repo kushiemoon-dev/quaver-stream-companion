@@ -714,3 +714,24 @@ func TestPutConfigRejectsABodyWithoutSettings(t *testing.T) {
 		t.Fatalf("a document with a known key is saved as a whole, got %d %s", w.Code, w.Body.String())
 	}
 }
+
+func TestPutProcessSettingIsAcceptedAndOmittedMeansOn(t *testing.T) {
+	e := newEnv(t)
+	var got cfgResp
+	w := e.put(`{"port":5555,"watch_quaver_process":false}`, nil)
+	decode(t, w, &got)
+	if w.Code != 200 || got.Config.WatchQuaverProcess || got.RestartRequired {
+		t.Fatalf("code %d %s", w.Code, w.Body.String())
+	}
+	if saved, err := config.Load(e.cfgPath); err != nil || saved.WatchQuaverProcess {
+		t.Fatalf("saved = %+v, %v", saved, err)
+	}
+	w = e.put(`{"port":5555}`, nil)
+	decode(t, w, &got)
+	if w.Code != 200 || !got.Config.WatchQuaverProcess {
+		t.Fatalf("omitted key must mean on: code %d %s", w.Code, w.Body.String())
+	}
+	if w = e.put(`{"watch_quaver_process":"no"}`, nil); w.Code != 400 {
+		t.Fatalf("a non boolean must be rejected, code %d", w.Code)
+	}
+}
