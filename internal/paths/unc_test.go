@@ -23,6 +23,9 @@ func TestIsUNCSpellings(t *testing.T) {
 	}{
 		{uncPath("host", "share"), true},
 		{`//host/share`, true},
+		{`//`, true},
+		{bs + bs, true},
+		{bs + `/`, true},
 		{bs + `/host` + bs + `share`, true},
 		{`/` + bs + `host/share`, true},
 		{uncPath("?", "UNC", "h", "s"), true},
