@@ -30,7 +30,7 @@ func TestDocsStateLinuxAndMacOSAccurately(t *testing.T) {
 	if strings.Contains(install, "Quaver is a Windows game") {
 		t.Error("INSTALL.md must not say Quaver is only a Windows game")
 	}
-	for _, want := range []string{"native Linux build", "steamapps/common/Quaver", "not been run on a real Linux machine"} {
+	for _, want := range []string{"native Linux build", "steamapps/common/Quaver", "What is tested.", "What is not verified.", "synthetic Steam folders"} {
 		if !strings.Contains(install, want) {
 			t.Errorf("INSTALL.md lacks %q", want)
 		}

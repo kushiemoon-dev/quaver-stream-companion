@@ -84,7 +84,7 @@ func TestPackagingFiles(t *testing.T) {
 
 func TestNoDashes(t *testing.T) {
 	for _, rel := range []string{
-		".github/workflows/release.yml", "docs/INSTALL.md", "README.md",
+		".github/workflows/release.yml", ".github/workflows/smoke.yml", "scripts/smoke/fixture.mjs", "scripts/smoke/drive.mjs", "docs/INSTALL.md", "README.md",
 		"packaging/build-archive.sh", "packaging/build-appimage.sh", "packaging/qsc.service",
 		"packaging/appimage/AppRun", "packaging/appimage/qsc.desktop",
 	} {
@@ -96,7 +96,7 @@ func TestNoDashes(t *testing.T) {
 
 func TestInstallDocCoversTopics(t *testing.T) {
 	doc := read(t, "docs/INSTALL.md")
-	for _, want := range []string{"checksums.txt", "sha256sum", "shell:startup", "qsc.service", "systemctl --user", "AppImage", "not been run", "Uninstall", "config.json"} {
+	for _, want := range []string{"checksums.txt", "sha256sum", "shell:startup", "qsc.service", "systemctl --user", "AppImage", "What is tested", "APPIMAGE_EXTRACT_AND_RUN=1", "Uninstall", "config.json"} {
 		if !strings.Contains(doc, want) {
 			t.Errorf("INSTALL.md does not mention %q", want)
 		}
@@ -107,7 +107,7 @@ func TestInstallDocCoversTopics(t *testing.T) {
 func jobBlock(t *testing.T, wf, name string) string {
 	t.Helper()
 	jobs := wf[strings.Index(wf, "\njobs:\n"):]
-	re := regexp.MustCompile(`(?ms)^  ` + name + `:\n(.*?)(?:^  [a-z]+:\n|\z)`)
+	re := regexp.MustCompile(`(?ms)^  ` + name + `:\n(.*?)(?:^  [a-z-]+:\n|\z)`)
 	m := re.FindStringSubmatch(jobs)
 	if m == nil {
 		t.Fatalf("job %q not found in release.yml", name)
@@ -132,9 +132,11 @@ func TestReleaseWorkflowStructure(t *testing.T) {
 	}
 
 	for job, needs := range map[string]string{
-		"build":    `needs: test`,
-		"appimage": `needs: test`,
-		"release":  `needs: [build, appimage]`,
+		"build":         `needs: test`,
+		"appimage":      `needs: test`,
+		"release":       `needs: [build, appimage, smoke-linux, smoke-windows]`,
+		"smoke-linux":   `needs: [build, appimage]`,
+		"smoke-windows": `needs: build`,
 	} {
 		if !strings.Contains(jobBlock(t, wf, job), needs) {
 			t.Errorf("job %s must have %q", job, needs)
@@ -157,7 +159,7 @@ func TestReleaseWorkflowStructure(t *testing.T) {
 }
 
 func TestWorkflowsArePinned(t *testing.T) {
-	for _, rel := range []string{".github/workflows/ci.yml", ".github/workflows/release.yml"} {
+	for _, rel := range []string{".github/workflows/ci.yml", ".github/workflows/release.yml", ".github/workflows/smoke.yml"} {
 		wf := read(t, rel)
 		uses := regexp.MustCompile(`(?m)^\s*- uses:\s*(\S+)(.*)$`).FindAllStringSubmatch(wf, -1)
 		if len(uses) == 0 {
@@ -265,7 +267,7 @@ func TestWorkflowsUseTheToolchainOfGoMod(t *testing.T) {
 	if want == nil {
 		t.Fatal("go.mod has no go1.26.x toolchain line")
 	}
-	for _, rel := range []string{".github/workflows/ci.yml", ".github/workflows/release.yml"} {
+	for _, rel := range []string{".github/workflows/ci.yml", ".github/workflows/release.yml", ".github/workflows/smoke.yml"} {
 		wf := read(t, rel)
 		n := strings.Count(wf, "actions/setup-go@")
 		if n == 0 || strings.Count(wf, "go-version: '"+want[1]+"'") != n || strings.Count(wf, "check-latest: false") != n {

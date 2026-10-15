@@ -26,7 +26,7 @@ It runs next to the game, keeps everything on your machine, and gives OBS a read
 
 > **Unofficial project.** Quaver is a trademark of its respective owners. QuaverStreamCompanion is an unofficial tool and is not affiliated with Quaver. It is not related to the osu! StreamCompanion tool despite the similar name.
 
-> **Status: first stable release.** [`v0.1.0`](https://github.com/kushiemoon-dev/quaver-stream-companion/releases/tag/v0.1.0) is out. The features below are built and tested on Windows; Linux (native Quaver or Proton) is best effort and feedback is welcome. What is planned is listed under [Roadmap](#roadmap).
+> **Status: first stable release.** [`v0.1.0`](https://github.com/kushiemoon-dev/quaver-stream-companion/releases/tag/v0.1.0) is out. The features below are built and tested on Windows; Linux is tested in CI with simulated Steam folders, and feedback from real setups is welcome. What is planned is listed under [Roadmap](#roadmap).
 
 ---
 
@@ -60,7 +60,7 @@ The one optional exception is the lane keys overlay (see [Lane keys](#lane-keys)
 | Platform | Status |
 |----------|--------|
 | Windows 10 and later | Tested |
-| Linux with Steam (native build or Proton) | Best effort. Steam layouts (native, Flatpak, Snap, extra libraries) are covered by tests that simulate them, but it has not been run on a real Linux machine yet |
+| Linux with Steam (native build or Proton) | Tested in CI on Ubuntu (amd64 and arm64) with synthetic Steam folders (native, Flatpak, Snap, extra libraries). Not yet confirmed with a real Quaver install or Proton, and lane keys and KPS are unavailable. |
 | macOS | Not supported yet. Quaver has a macOS build, but `qsc` is not built or tested there |
 
 Lane keys and KPS work on Windows only for now. See the [installation guide](docs/INSTALL.md#linux-and-proton) for the Linux details.
@@ -336,7 +336,7 @@ The server only answers requests whose Host is `127.0.0.1:<port>` or `localhost:
 
 ## Install
 
-Releases come as a Windows zip, Linux `.tar.gz` archives (amd64 and arm64), a Linux AppImage and a `checksums.txt` file. There is no installer: unzip, check the checksum, run `qsc`. The [installation guide](docs/INSTALL.md) covers verification, starting with your computer on Windows and Linux, updating and uninstalling. The AppImage is built by the release workflow and has not been run by the author on Linux yet. Release notes are in the [changelog](CHANGELOG.md).
+Releases come as a Windows zip, Linux `.tar.gz` archives (amd64 and arm64), a Linux AppImage and a `checksums.txt` file. There is no installer: unzip, check the checksum, run `qsc`. The [installation guide](docs/INSTALL.md) covers verification, starting with your computer on Windows and Linux, updating and uninstalling. The archives and the AppImage are started by the release workflow on Linux and Windows before the draft is created. Release notes are in the [changelog](CHANGELOG.md).
 
 ---
 
