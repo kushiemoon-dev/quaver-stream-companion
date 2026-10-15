@@ -73,7 +73,7 @@ func folderChecks(ctx context.Context, override string, steamRoots []string) (st
 func Advice() []string {
 	return []string{
 		`Steam usually installs Quaver in C:\Program Files (x86)\Steam\steamapps\common\Quaver on Windows,`,
-		"and in ~/.local/share/Steam/steamapps/common/Quaver on Linux, where Quaver runs through Proton.",
+		"and in ~/.local/share/Steam/steamapps/common/Quaver on Linux, for the native Linux build and under Proton alike.",
 		"Flatpak and snap Steam use their own Steam library folders under ~/.var/app/com.valvesoftware.Steam and ~/snap/steam.",
 		"Where Proton keeps Quaver files outside the game folder is not verified: qsc reads the game folder only.",
 		"Install and start Quaver once, or set its folder in the dashboard Settings,",

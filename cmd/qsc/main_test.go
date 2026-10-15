@@ -80,7 +80,7 @@ func TestDoctorFailsOnWrongFolder(t *testing.T) {
 	if code := run(context.Background(), args, &out, &errw); code != 1 {
 		t.Fatalf("code = %d", code)
 	}
-	if !strings.Contains(out.String(), "[FAIL]") || !strings.Contains(out.String(), "Quaver.exe") {
+	if !strings.Contains(out.String(), "[FAIL]") || !strings.Contains(out.String(), "Quaver or Quaver.exe") {
 		t.Fatalf("out = %q", out.String())
 	}
 }

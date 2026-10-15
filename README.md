@@ -12,7 +12,7 @@
 [![Go](https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat-square&logo=go&logoColor=white)](https://go.dev)
 
 ![Windows](https://img.shields.io/badge/Windows-10+-0078D6?style=flat-square&logo=windows&logoColor=white)
-![Linux](https://img.shields.io/badge/Linux-Steam%20%2B%20Proton-FCC624?style=flat-square&logo=linux&logoColor=black)
+![Linux](https://img.shields.io/badge/Linux-Steam%20native%20or%20Proton-FCC624?style=flat-square&logo=linux&logoColor=black)
 
 </div>
 
@@ -26,7 +26,7 @@ It runs next to the game, keeps everything on your machine, and gives OBS a read
 
 > **Unofficial project.** Quaver is a trademark of its respective owners. QuaverStreamCompanion is an unofficial tool and is not affiliated with Quaver. It is not related to the osu! StreamCompanion tool despite the similar name.
 
-> **Status: first stable release.** [`v0.1.0`](https://github.com/kushiemoon-dev/quaver-stream-companion/releases/tag/v0.1.0) is out. The features below are built and tested on Windows; Linux and Proton are best effort and feedback is welcome. What is planned is listed under [Roadmap](#roadmap).
+> **Status: first stable release.** [`v0.1.0`](https://github.com/kushiemoon-dev/quaver-stream-companion/releases/tag/v0.1.0) is out. The features below are built and tested on Windows; Linux (native Quaver or Proton) is best effort and feedback is welcome. What is planned is listed under [Roadmap](#roadmap).
 
 ---
 
@@ -60,8 +60,8 @@ The one optional exception is the lane keys overlay (see [Lane keys](#lane-keys)
 | Platform | Status |
 |----------|--------|
 | Windows 10 and later | Tested |
-| Linux with Steam and Proton | Best effort. Steam layouts (native, Flatpak, Snap, extra libraries) are covered by tests that simulate them, but it has not been run on a real Linux machine yet |
-| macOS | Untested |
+| Linux with Steam (native build or Proton) | Best effort. Steam layouts (native, Flatpak, Snap, extra libraries) are covered by tests that simulate them, but it has not been run on a real Linux machine yet |
+| macOS | Not supported yet. Quaver has a macOS build, but `qsc` is not built or tested there |
 
 Lane keys and KPS work on Windows only for now. See the [installation guide](docs/INSTALL.md#linux-and-proton) for the Linux details.
 
@@ -115,7 +115,6 @@ Each link starts with `http://127.0.0.1:7878`. Use the size as the width and hei
 
 - **Windows:** press Win+R, run `shell:startup`, and put a shortcut to `qsc.exe` in that folder. In the shortcut properties set Run to Minimized.
 - **Linux:** run it from a systemd user service, or from your desktop autostart entries.
-- **macOS:** add `qsc` to Login Items in System Settings.
 
 ---
 

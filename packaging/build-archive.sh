@@ -20,7 +20,7 @@ bin=qsc
 
 rm -rf "$stage"
 mkdir -p "$stage/docs"
-CGO_ENABLED=0 GOOS=$goos GOARCH=$goarch go build -trimpath \
+CGO_ENABLED=0 GOOS=$goos GOARCH=$goarch go build -trimpath -buildvcs=false \
   -ldflags "-s -w -X github.com/kushiemoon-dev/quaver-stream-companion/internal/version.Version=$tag" \
   -o "$stage/$bin" ./cmd/qsc
 cp LICENSE THIRD_PARTY_NOTICES.md README.md "$stage/"

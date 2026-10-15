@@ -111,7 +111,7 @@ The service does not open a browser. If Quaver is not found yet when you log in,
 
 ## Linux and Proton
 
-Quaver is a Windows game, so on Linux it runs through Proton. Steam still keeps the game folder at `steamapps/common/Quaver` inside a Steam library, and `qsc` finds Quaver by that folder (it must contain `Quaver.exe`). It looks in these Steam folders, plus every local library listed in their `steamapps/libraryfolders.vdf`:
+Quaver has a native Linux build on Steam and can also run under Proton. In both cases Steam keeps the game folder at `steamapps/common/Quaver` inside a Steam library, and `qsc` expects `Logs/runtime.log`, `quaver.db` and `Data/` to be in it (they should be, but this is not verified for the native build), and finds Quaver by that folder (it must contain `Quaver`, the native executable, or `Quaver.exe`). It looks in these Steam folders, plus every local library listed in their `steamapps/libraryfolders.vdf`:
 
 - `~/.steam/steam`
 - `~/.local/share/Steam`
@@ -122,7 +122,7 @@ Symlinked Steam folders are followed once and a folder reached by two paths is o
 
 Linux file systems tell `Logs` from `logs`. `qsc` first looks for `Logs/runtime.log` and `quaver.db` with the exact spelling Quaver uses on Windows, then falls back to a case-insensitive match (ASCII letters only) for `Logs`, `runtime.log` and `quaver.db` only, reading at most 4096 directory entries.
 
-What is not verified: the author has not run Quaver under Proton and has not confirmed where Proton places `Logs`, `quaver.db`, `Data` or `quaver.cfg`. The detection assumes they sit in the game folder, as in the Windows install. If your install keeps them elsewhere (for example inside the Wine prefix under `steamapps/compatdata`), point `quaver_dir` at the folder that holds them, or open an issue. This layout code is covered by tests on simulated Steam trees, not by a run on a real Linux machine.
+What is not verified: the author has not run Quaver on Linux, native or under Proton, and has not confirmed where Proton places `Logs`, `quaver.db`, `Data` or `quaver.cfg`. The detection assumes they sit in the game folder, as in the Windows install. If your install keeps them elsewhere (for example inside the Wine prefix under `steamapps/compatdata`), point `quaver_dir` at the folder that holds them, or open an issue. `qsc` has not been run on a real Linux machine: this layout code is covered by tests on simulated Steam trees.
 
 Lane key sampling (the opt-in keys overlay) is Windows only for now. On Linux the Settings card and `qsc doctor` report it as not supported, and everything else works. A Linux version based on evdev is not implemented.
 
