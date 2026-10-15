@@ -33,7 +33,7 @@ var builtinOrder = []string{"neutral-light", "neutral-dark", "catppuccin-mocha",
 
 var (
 	rootBlock = regexp.MustCompile(`:root\s*\{([^}]*)\}`)
-	property  = regexp.MustCompile(`(?:^|[;{\s])--(bg|fg|accent)\s*:\s*([^;]*?)\s*(?:;|$)`)
+	property  = regexp.MustCompile(`(?:^|[;{\s])--(bg|fg|accent)\s*:\s*([^;]*)`)
 	hexColor  = regexp.MustCompile(`^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$`)
 	comment   = regexp.MustCompile(`(?s)/\*.*?\*/`)
 	themeID   = regexp.MustCompile(`^[a-z0-9-]+$`)
@@ -49,7 +49,7 @@ func ParseColors(css string) Colors {
 		return c
 	}
 	for _, m := range property.FindAllStringSubmatch(block[1], -1) {
-		v := m[2]
+		v := strings.TrimSpace(m[2])
 		if !validHex(v) {
 			v = ""
 		}

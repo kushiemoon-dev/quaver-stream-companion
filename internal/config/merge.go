@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"os"
+	"strings"
 )
 
 // FormatVersion is the version written to the settings file. A file without one is version 1.
@@ -49,10 +50,14 @@ func readObject(path string) object {
 }
 
 // mergeObjects returns old with every key of next set on top; objects present in both are merged the same way.
+// A key of old that only differs from a key of next by case folding is dropped: the JSON decoder reads
+// both as the same field and the later one would win on the next Load.
 func mergeObjects(old, next object) object {
 	out := make(object, len(old)+len(next))
 	for k, v := range old {
-		out[k] = v
+		if !foldsToAnother(k, next) {
+			out[k] = v
+		}
 	}
 	for k, v := range next {
 		var a, b object
@@ -64,4 +69,14 @@ func mergeObjects(old, next object) object {
 		out[k] = v
 	}
 	return out
+}
+
+// foldsToAnother reports whether k equals a different key of o under Unicode case folding.
+func foldsToAnother(k string, o object) bool {
+	for other := range o {
+		if other != k && strings.EqualFold(other, k) {
+			return true
+		}
+	}
+	return false
 }
