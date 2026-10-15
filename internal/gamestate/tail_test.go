@@ -11,9 +11,10 @@ import (
 func startTail(t *testing.T, path string) <-chan string {
 	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(cancel)
 	ch := make(chan string, 16)
-	go Tail(ctx, path, 10*time.Millisecond, ch)
+	done := make(chan struct{})
+	t.Cleanup(func() { cancel(); <-done })
+	go func() { defer close(done); Tail(ctx, path, 10*time.Millisecond, ch) }()
 	time.Sleep(60 * time.Millisecond) // let Tail take its baseline
 	return ch
 }
