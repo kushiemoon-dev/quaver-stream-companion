@@ -9,6 +9,7 @@
   const JUDGMENTS = ['marv', 'perf', 'great', 'good', 'okay', 'miss'];
   const BADGES = [
     ['is_pb', 'status.pb', 'pill-amber'],
+    ['is_local_best', 'status.best', 'pill-ok'],
     ['full_combo', 'status.fc', 'pill-ok'],
     ['failed', 'status.failed', 'pill-bad'],
     ['paused', 'status.paused', 'pill-muted'],
@@ -68,6 +69,13 @@
     return h('div', { class: 'chips tight' }, out);
   }
 
+  function rankPill(p) {
+    const label = m.rankLabel(p);
+    if (!label) return null;
+    const text = t('history.rank', { rank: p.local_rank, total: p.local_total || p.local_rank });
+    return h('span', { class: 'pill pill-muted', title: text }, label, h('span', { class: 'sr-only' }, ' ' + text));
+  }
+
   function row(p) {
     const lang = window.qscI18n.lang();
     const rate = m.formatRate(p.rate, lang);
@@ -81,7 +89,7 @@
         modsLine(p)),
       h('td', null,
         h('div', null, h('span', { class: 'gr gr-' + m.gradeClass(p.grade) }, m.gradeText(p.grade))),
-        h('div', { class: 'chips tight' }, BADGES.map(function (b) {
+        h('div', { class: 'chips tight' }, rankPill(p), BADGES.map(function (b) {
           return p[b[0]] === true ? h('span', { class: 'pill ' + b[2] }, t(b[1])) : null;
         }))),
       h('td', { class: 'num' }, m.formatAccuracy(p.accuracy, lang)),

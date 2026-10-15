@@ -15,7 +15,7 @@ import (
 
 const (
 	mapTable   = `CREATE TABLE Map (Id integer primary key autoincrement not null, Md5Checksum varchar, Artist varchar, Title varchar, DifficultyName varchar, LastTimePlayed integer, Mode integer, Difficulty10X float, Difficulty09X float, Difficulty115X float, HasScratchKey integer)`
-	scoreTable = `CREATE TABLE Score (Id integer primary key autoincrement not null, MapMd5 varchar, TotalScore integer, Grade integer, Accuracy float, MaxCombo integer, CountMarv integer, CountPerf integer, CountGreat integer, CountGood integer, CountOkay integer, CountMiss integer, Mods integer, DateTime varchar, PerformanceRating float, JudgementBreakdown varchar)`
+	scoreTable = `CREATE TABLE Score (Id integer primary key autoincrement not null, MapMd5 varchar, TotalScore integer, Grade integer, Accuracy float, MaxCombo integer, CountMarv integer, CountPerf integer, CountGreat integer, CountGood integer, CountOkay integer, CountMiss integer, Mods integer, DateTime varchar, PerformanceRating float, JudgementBreakdown varchar, LocalProfileId integer)`
 )
 
 // FakeDir is a temporary Quaver folder with a synthetic quaver.db.
@@ -42,6 +42,8 @@ type ScoreRow struct {
 	MaxCombo, Marv, Perf, Great, Good, Okay, Miss int
 	Mods                                          int64
 	Breakdown                                     string
+	// Profile is the LocalProfileId of the play.
+	Profile int
 }
 
 // NewQuaverDir creates Quaver.exe, an empty Logs/runtime.log and quaver.db.
@@ -146,8 +148,8 @@ func (d *FakeDir) AddMap(t testing.TB, m MapRow) {
 // AddScore inserts a score row and returns its id.
 func (d *FakeDir) AddScore(t testing.TB, s ScoreRow) int64 {
 	t.Helper()
-	res := d.exec(t, `INSERT INTO Score (MapMd5, TotalScore, Grade, Accuracy, MaxCombo, CountMarv, CountPerf, CountGreat, CountGood, CountOkay, CountMiss, Mods, DateTime, PerformanceRating, JudgementBreakdown) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'2026-10-12 13:06:06',?,?)`,
-		s.MapMD5, s.Total, s.Grade, s.Accuracy, s.MaxCombo, s.Marv, s.Perf, s.Great, s.Good, s.Okay, s.Miss, s.Mods, s.Rating, s.Breakdown)
+	args := []any{s.MapMD5, s.Total, s.Grade, s.Accuracy, s.MaxCombo, s.Marv, s.Perf, s.Great, s.Good, s.Okay, s.Miss, s.Mods, s.Rating, s.Breakdown, s.Profile}
+	res := d.exec(t, `INSERT INTO Score (MapMd5, TotalScore, Grade, Accuracy, MaxCombo, CountMarv, CountPerf, CountGreat, CountGood, CountOkay, CountMiss, Mods, DateTime, PerformanceRating, JudgementBreakdown, LocalProfileId) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'2026-10-12 13:06:06',?,?,?)`, args...)
 	id, err := res.LastInsertId()
 	if err != nil {
 		t.Fatal(err)

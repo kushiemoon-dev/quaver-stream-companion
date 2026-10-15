@@ -2,6 +2,7 @@
   const LIMITS = [25, 50, 100, 200];
   const DEFAULT_LIMIT = 50;
   const MAX_MODS = 3;
+  const MAX_RANK = 999;
   const GRADE_CLASS = { X: 'gold', SS: 'gold', S: 'gold', A: 'green', B: 'blue', C: 'amber', D: 'amber', F: 'red' };
   const DATE_LANGS = ['en', 'fr', 'de'];
   const FILTERS = { pb: 'is_pb', fc: 'full_combo', failed: 'failed' };
@@ -72,6 +73,12 @@
     }
   }
 
+  // "#k" for a whole local rank of 1 or more, empty otherwise.
+  function rankLabel(play) {
+    const n = play && typeof play.local_rank === 'number' ? play.local_rank : 0;
+    return Number.isInteger(n) && n >= 1 ? '#' + Math.min(n, MAX_RANK) : '';
+  }
+
   function filterPlays(plays, filter) {
     const list = Array.isArray(plays) ? plays : [];
     const flag = Object.prototype.hasOwnProperty.call(FILTERS, filter) ? FILTERS[filter] : '';
@@ -90,7 +97,7 @@
   const api = {
     LIMITS: LIMITS, DEFAULT_LIMIT: DEFAULT_LIMIT, formatDecimal: formatDecimal, formatRate: formatRate, modChips: modChips, modsWithoutBadges: modsWithoutBadges, gradeText: gradeText,
     gradeClass: gradeClass, formatStars: formatStars, formatAccuracy: formatAccuracy, formatPlayedAt: formatPlayedAt,
-    filterPlays: filterPlays, parseLimit: parseLimit, playsOf: playsOf,
+    filterPlays: filterPlays, rankLabel: rankLabel, parseLimit: parseLimit, playsOf: playsOf,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else window.qscHistoryModel = api;

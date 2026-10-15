@@ -34,9 +34,11 @@ Options go in the query string, for example `/overlays/result/?theme=nord&autohi
 | `layout`, `lanes`, `scratch` | keys | Only with `demo=1`, to preview a layout: `layout=7k` or `lanes=7` (1 to 10 key lanes), and `scratch=1` to add a scratch lane | 4 lanes |
 | `hide` | state | Comma separated state names (see section 4) for which the badge is hidden, for example `menu,closed` | none |
 
+The result overlay shows the grade, accuracy and judgments, the play speed and mods, a `#k` chip with the position of the play on the local leaderboard when it has one, and the badges `PB` (`is_pb`, the same speed personal best), `Best` (`is_local_best`), `FC`, failed, paused and autoplay. The History page of the dashboard shows the same rank and badges.
+
 The lane keys overlay draws one lane bar per lane, from 1K to 10K plus the scratch lane of maps that have one (each lit while the key is down, with a smooth release), a press counter per lane, the KPS and the peak. It is hidden until lane data arrives (except with `demo=1`). When the feature is off or unsupported it shows a short hint line instead. Use 480 x 200 for 4K, 560 x 200 for 7K and 640 x 200 for 10K: the lanes share the width, so a narrower source still works but gets thinner bars. It needs lane keys turned on in the settings, see Lane keys below.
 
-The alert overlay stays hidden until a saved play is a personal best or a full combo (and was not failed, paused or played with autoplay). It then shows "New personal best", "Full combo" or both, with the map title and accuracy. It never replays an old play when it connects.
+The alert overlay stays hidden until a saved play is a personal best, a new best on the local leaderboard or a full combo (and was not failed, paused or played with autoplay). It then shows "New personal best", "New best", "Full combo" or a pair of them, with the map title and accuracy; "New best" replaces "New personal best" when both apply. It never replays an old play when it connects.
 
 The curve overlay stays hidden until a play is saved. It then reads the judgment timeline of that play (see `GET /api/scores/{id}/timeline`) and draws the accuracy after each judgment as a line, with a red tick at the bottom for every miss and the final accuracy at the top right. The horizontal axis is the judgment index, not time: the database stores no timestamps. It never replays an old play when it connects. Use 520 x 180.
 
@@ -188,12 +190,17 @@ Used by `score.saved` and `last_score`.
 |-------|------|---------|
 | `score` | object | See the score object below |
 | `map` | object | The map object, with the difficulty at the played rate |
-| `is_pb` | boolean | A new personal best on this map. Never true for a failed, paused or autoplay play |
+| `is_pb` | boolean | A new personal best at the same play speed and mod set. Never true for a failed, paused or autoplay play |
+| `local_rank` | number | Position of the play in the map's local leaderboard, counted from `1`, as the leaderboard stood right after the play. `0` when the play is not among its 50 entries |
+| `local_total` | number | How many plays that leaderboard holds, at most `50` |
+| `is_local_best` | boolean | The play leads the local leaderboard over at least one earlier play. Never true for a failed play |
 | `first_play` | boolean | The first saved score on this map |
 | `full_combo` | boolean | No miss, not failed and not autoplay |
 | `failed` | boolean | The play was failed or quit |
 | `paused` | boolean | The play was paused |
 | `autoplay` | boolean | Autoplay was on |
+
+The local leaderboard fields (`local_rank`, `local_total`, `is_local_best`) rank the plays of the map the way Quaver orders its local scores, across every play speed, mod set and local profile: Quaver mixes the local profiles in that leaderboard, and qsc follows it. The 50 plays with the highest `total_score` are kept (the earliest play wins a tie), then failed plays go last, then a higher performance `rating` goes first, then a higher `accuracy`; plays that still tie keep the earlier order. Quaver recalculates stale performance ratings when it opens a leaderboard, while qsc reads the stored value, so the rank of an old play can differ until the game has recomputed it. `is_pb` is the separate same speed rule: see Personal bests in the README. In `/api/history` the fields are flat, like the others.
 
 The score object:
 
@@ -238,7 +245,10 @@ For pages served by the companion itself (the built-in History overlay uses it).
   "paused": false,
   "is_pb": false,
   "full_combo": true,
-  "autoplay": false
+  "autoplay": false,
+  "local_rank": 3,
+  "local_total": 12,
+  "is_local_best": false
 }
 ```
 

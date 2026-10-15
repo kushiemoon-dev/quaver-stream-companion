@@ -45,6 +45,7 @@
     if (v.rate) chips.appendChild(qscEl('span', 'chip', v.rate));
     v.mods.shown.forEach(function (m) { chips.appendChild(qscEl('span', 'chip', m)); });
     if (v.mods.extra > 0) chips.appendChild(qscEl('span', 'chip', '+' + v.mods.extra));
+    if (v.rank) chips.appendChild(qscEl('span', 'chip', v.rank));
     v.badges.forEach(function (b) { chips.appendChild(qscEl('span', 'chip', qscT('badge.' + b))); });
 
     card.replaceChildren(title, sub, head, grid, chips);
@@ -56,7 +57,7 @@
     render({
       score: { grade: 'S', accuracy: 97.42, max_combo: 812, rate: 1.15, mods: ['Mirror'], judgments: { marv: 640, perf: 120, great: 32, good: 6, okay: 2, miss: 3 } },
       map: { title: 'Example Song', difficulty_name: 'Hard', difficulty: 18.5 },
-      is_pb: true, full_combo: false, failed: false, paused: false, autoplay: false,
+      is_pb: true, local_rank: 1, local_total: 14, is_local_best: true, full_combo: false, failed: false, paused: false, autoplay: false,
     });
   } else {
     qscConnect({

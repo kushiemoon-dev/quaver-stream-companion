@@ -3,13 +3,15 @@
   const GRADE_CLASS = { X: 'gold', SS: 'gold', S: 'gold', A: 'green', B: 'blue', C: 'amber', D: 'amber', F: 'red' };
   const STATE_TONE = { initialization: 'amber', menu: 'blue', select: 'blue', loading: 'amber', gameplay: 'green', results: 'gold', editor: 'blue', importing: 'amber', download: 'amber', lobby: 'blue', multiplayer: 'blue', music: 'blue', theatre: 'blue', closed: 'muted', unknown: 'muted' };
   const JUDGMENTS = ['marv', 'perf', 'great', 'good', 'okay', 'miss'];
-  const BADGES = [['is_pb', 'pb'], ['full_combo', 'fc'], ['failed', 'failed'], ['paused', 'paused'], ['autoplay', 'autoplay']];
+  const BADGES = [['is_pb', 'pb'], ['is_local_best', 'best'], ['full_combo', 'fc'], ['failed', 'failed'], ['paused', 'paused'], ['autoplay', 'autoplay']];
   const MAX_SHOWN_MODS = 6;
   const MAX_MOD_LEN = 12;
   const MAX_TEXT = 200;
   const MAX_RATE = 10;
   const MAX_STARS = 999;
   const MAX_COUNT = 50;
+  const MAX_RANK = 999;
+  const MAX_CHIPS = 8;
   const MIN_COUNT = 5;
   const MAX_JUDGMENT = 999999;
   const MAX_KPS = 999;
@@ -81,10 +83,14 @@
     };
   }
 
-  function modList(mods) {
+  // room is how many chips are left for mods, the "+N" chip included; without it six mods are shown.
+  function modList(mods, room) {
     if (!Array.isArray(mods)) return { shown: [], extra: 0 };
-    const shown = mods.slice(0, MAX_SHOWN_MODS).map(function (m) { return String(m).slice(0, MAX_MOD_LEN); });
-    return { shown: shown, extra: mods.length - shown.length };
+    let count = mods.length;
+    if (room !== undefined && count > room) count = Math.max(0, room - 1);
+    count = Math.min(count, MAX_SHOWN_MODS);
+    const shown = mods.slice(0, count).map(function (m) { return String(m).slice(0, MAX_MOD_LEN); });
+    return { shown: shown, extra: room !== undefined && room < 1 ? 0 : mods.length - count };
   }
 
   function judgments(j) {
@@ -141,10 +147,20 @@
   function stateKey(state) { return 'state.' + knownState(state); }
   function stateTone(state) { return STATE_TONE[knownState(state)]; }
 
+  // "#k" for a whole rank of 1 or more, empty otherwise.
+  function rankLabel(v) {
+    return typeof v === 'number' && Number.isInteger(v) && v >= 1 ? '#' + Math.min(v, MAX_RANK) : '';
+  }
+
+  // The result card has room for MAX_CHIPS chips: badges and the rank come first, then the rate, then the mods.
   function resultView(result, lang) {
     if (result === null || typeof result !== 'object') return null;
     const score = obj(result.score);
     const map = obj(result.map);
+    const badges = BADGES.filter(function (b) { return result[b[0]] === true; }).map(function (b) { return b[1]; });
+    const rank = rankLabel(result.local_rank);
+    const rate = formatRate(score.rate, lang);
+    const room = MAX_CHIPS - badges.length - (rank ? 1 : 0) - (rate ? 1 : 0);
     return {
       grade: gradeText(score.grade),
       gradeClass: gradeClass(score.grade),
@@ -155,9 +171,10 @@
       artist: text(map.artist),
       difficultyName: text(map.difficulty_name),
       stars: formatStars(map.difficulty, lang),
-      rate: formatRate(score.rate, lang),
-      mods: modList(withoutBadgeMods(score.mods, result)),
-      badges: BADGES.filter(function (b) { return result[b[0]] === true; }).map(function (b) { return b[1]; }),
+      rate: rate,
+      mods: modList(withoutBadgeMods(score.mods, result), room),
+      rank: rank,
+      badges: badges,
     };
   }
 
@@ -184,14 +201,16 @@
     };
   }
 
-  const ALERT_KINDS = [['is_pb', 'pb'], ['full_combo', 'fc']];
+  const ALERT_KINDS = [['is_pb', 'pb'], ['is_local_best', 'best'], ['full_combo', 'fc']];
   const ALERT_BLOCKERS = ['failed', 'paused', 'autoplay'];
 
-  // A saved score earns an alert when it is a personal best or a full combo, and was not failed, paused or autoplayed.
+  // A saved score earns an alert when it is a personal best, the local best or a full combo, and was not failed, paused or autoplayed.
+  // The local best replaces the personal best, which it already says.
   function alertView(result, lang) {
     if (result === null || typeof result !== 'object') return null;
     if (ALERT_BLOCKERS.some(function (k) { return result[k] === true; })) return null;
-    const kinds = ALERT_KINDS.filter(function (k) { return result[k[0]] === true; }).map(function (k) { return k[1]; });
+    const kinds = ALERT_KINDS.filter(function (k) { return result[k[0]] === true; }).map(function (k) { return k[1]; })
+      .filter(function (k, _, all) { return !(k === 'pb' && all.indexOf('best') >= 0); });
     if (kinds.length === 0) return null;
     return { kinds: kinds, title: text(obj(result.map).title), accuracy: formatAccuracy(obj(result.score).accuracy, lang) };
   }
@@ -419,7 +438,7 @@
     gradeClass: gradeClass, gradeText: gradeText, formatAccuracy: formatAccuracy, formatRate: formatRate,
     formatStars: formatStars, nowPlayingView: nowPlayingView, modList: modList, judgments: judgments, parseCount: parseCount,
     parseScale: parseScale, parseAutohide: parseAutohide, parseLang: parseLang, parseHide: parseHide,
-    isHiddenState: isHiddenState, stateKey: stateKey, stateTone: stateTone, resultView: resultView,
+    isHiddenState: isHiddenState, rankLabel: rankLabel, stateKey: stateKey, stateTone: stateTone, resultView: resultView,
     curve: curve, createAutohide: createAutohide, alertView: alertView, bestLine: bestLine,
     lastLabel: lastLabel, keysView: keysView, demoKeys: demoKeys, keysUnknown: keysUnknown, keysHint: keysHint, timelineView: timelineView,
   };

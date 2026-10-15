@@ -109,6 +109,8 @@ The full walkthrough, with troubleshooting, is in the [OBS setup guide](docs/OBS
 
 Each link starts with `http://127.0.0.1:7878`. Use the size as the width and height of the OBS Browser source.
 
+The result overlay shows a `#k` chip with the rank of the play on the local leaderboard of the map, a `PB` badge for a same speed personal best and a `Best` badge when the play leads the local leaderboard. The alert overlay announces a new best, a personal best or a full combo. See [Personal bests](#personal-bests).
+
 ### Run at startup
 
 `qsc` never opens a browser unless you pass `--open`, so it can start with your computer without opening anything. It is a console program, so its window stays open: set the shortcut to run minimized. If it cannot find the Quaver folder it still starts in a degraded mode: the dashboard, the overlays and the settings work, the game state stays `unknown`, and the Status page explains what to do. Set the folder in Settings, with `quaver_dir` in the config file or with `--quaver-dir <folder>`; `qsc` re-checks every 15 seconds and starts reading Quaver by itself as soon as the folder is valid. `qsc doctor` still exits with an error in that case and prints the same advice.
@@ -222,7 +224,7 @@ Every event is wrapped in the same versioned envelope so your overlay keeps work
 | `game.state` | The game moved to `menu`, `select`, `loading`, `gameplay` or `results` (also `initialization` while the game starts, `editor`, `importing`, `download`, `lobby`, `multiplayer`, `music` or `theatre` for the other Quaver screens, and `closed` when Quaver is closed). The `/state` snapshot reports `unknown` before the first log line |
 | `play.ended` | A play left `gameplay` without a saved score (autoplay, replay, quit, editor test play): `{ "map": <map object>, "saved": false }`. `game.state` also carries the raw `screen` name |
 | `map.started` | A map started: title, artist, difficulty, stars, key count |
-| `score.saved` | A play finished: judgments, accuracy, grade, max combo, performance `rating`, `is_pb`, `first_play`, `full_combo`, `failed`, play `rate`, `mods`, `mods_raw`, `paused` and `autoplay` |
+| `score.saved` | A play finished: judgments, accuracy, grade, max combo, performance `rating`, `is_pb`, `local_rank`, `local_total`, `is_local_best`, `first_play`, `full_combo`, `failed`, play `rate`, `mods`, `mods_raw`, `paused` and `autoplay` |
 | `keys.frame` | Lane key state, only on `GET /events?keys=1` and only when lane keys are on (see [Lane keys](#lane-keys)) |
 
 Score details:
@@ -235,7 +237,9 @@ Score details:
 
 ### Personal bests
 
-A play is compared only with earlier plays of the same map, at the same play speed, with the same mod set. A 1.15x play is never compared with a 1.0x play, and a play with a given mod is never compared with one without it. NoFail and NoPause do not separate plays. Paused and Autoplay plays never count, and neither do failed plays.
+A play is compared only with earlier plays of the same map, at the same play speed, with the same mod set. A 1.15x play is never compared with a 1.0x play, and a play with a given mod is never compared with one without it. NoFail and NoPause do not separate plays. Paused and Autoplay plays never count, and neither do failed plays. This is `is_pb`, the same speed personal best.
+
+Quaver also keeps a local leaderboard per map that mixes every play speed and mod set. qsc ranks a play in it as `local_rank` out of `local_total`, and sets `is_local_best` when the play leads it. Quaver keeps the 50 plays with the highest score, puts failed plays last and orders the rest by performance rating, then accuracy. Quaver mixes the local profiles in that leaderboard, and so does qsc. Quaver recalculates stale performance ratings when it opens a leaderboard while qsc reads the stored value, so the rank of an old play can differ until the game has recomputed it.
 
 ### Why the result arrives at the end of the map
 

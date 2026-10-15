@@ -105,6 +105,7 @@
       rate ? h('span', { class: 'chip chip-accent' }, rate) : null,
       window.qscHistoryModel.modsWithoutBadges(s.mods, r).map(function (m) { return h('span', { class: 'chip' }, m); }),
       badge(r.is_pb, 'status.pb', 'pill-ok'),
+      badge(r.is_local_best, 'status.best', 'pill-amber'),
       badge(r.full_combo, 'status.fc', 'pill-amber'),
       badge(r.failed, 'status.failed', 'pill-bad'),
       badge(r.paused, 'status.paused', 'pill-muted'),

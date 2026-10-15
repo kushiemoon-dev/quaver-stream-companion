@@ -78,6 +78,10 @@ type Result struct {
 	Failed    bool  `json:"failed"`
 	Paused    bool  `json:"paused"`
 	Autoplay  bool  `json:"autoplay"`
+	// LocalRank, LocalTotal and IsLocalBest follow the local leaderboard of the map (see boardStandings).
+	LocalRank   int  `json:"local_rank"`
+	LocalTotal  int  `json:"local_total"`
+	IsLocalBest bool `json:"is_local_best"`
 }
 
 // Store reads quaver.db. The database is always opened read-only.
@@ -308,6 +312,11 @@ func (s *Store) scoreByID(ctx context.Context, id int64) (Result, error) {
 		return Result{}, fmt.Errorf("read previous scores of %q: %w", rw.mapMD5, err)
 	}
 	applyPrevious(&r, prevCount, prevMax)
+	board, err := s.boardPlays(ctx, s.db, `MapMd5 = ? AND Id <= ?`, []any{rw.mapMD5, id})
+	if err != nil {
+		return Result{}, err
+	}
+	applyLocalRank(&r, boardStandings(board[rw.mapMD5], map[int64]bool{id: true})[id])
 	return r, nil
 }
 
