@@ -214,7 +214,7 @@ func (a api) getConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 // settingsKeys are the top-level keys of a settings document.
-var settingsKeys = map[string]bool{"quaver_dir": true, "port": true, "language": true, "overlay": true, "keys": true, "version": true}
+var settingsKeys = map[string]bool{"quaver_dir": true, "port": true, "language": true, "overlay": true, "keys": true, "watch_quaver_process": true, "version": true}
 
 // parseSettings reads a PUT body: a settings document with at least one key and no key that is
 // not a setting. As documented, the document replaces the saved one: keys left out take their default.

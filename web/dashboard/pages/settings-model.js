@@ -40,7 +40,13 @@
     if (!isOverridden(overridden, 'quaver_dir')) body.quaver_dir = String(form.quaver_dir).trim();
     if (!isOverridden(overridden, 'port')) body.port = form.port;
     body.language = form.language;
+    if (typeof form.watch_quaver_process === 'boolean') body.watch_quaver_process = form.watch_quaver_process;
     return body;
+  }
+
+  // A config without the key (a v0.1.0 file) means the check is on.
+  function watchFromConfig(config) {
+    return !config || config.watch_quaver_process !== false;
   }
 
   function fieldFor(apiField) {
@@ -80,7 +86,7 @@
   }
 
   const api = {
-    LANGUAGES: LANGUAGES, validatePort: validatePort, buildConfigBody: buildConfigBody, fieldFor: fieldFor, isOverridden: isOverridden,
+    LANGUAGES: LANGUAGES, watchFromConfig: watchFromConfig, validatePort: validatePort, buildConfigBody: buildConfigBody, fieldFor: fieldFor, isOverridden: isOverridden,
     LAYOUTS: LAYOUTS, LISTS: LISTS, LANES: LANES, KEY_NAMES: KEY_NAMES, keysFromConfig: keysFromConfig, buildKeysBody: buildKeysBody, keysFieldFor: keysFieldFor,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

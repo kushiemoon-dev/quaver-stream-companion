@@ -27,6 +27,7 @@ import (
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/logging"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/overlays"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/paths"
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/procwatch"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/scores"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/server"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/state"
@@ -175,6 +176,14 @@ func serve(ctx context.Context, args []string, out, errw io.Writer) (code int) {
 		spawn(func() { gamestate.Tail(ctx, logPath, logPollInterval, raw) })
 		spawn(func() { relay(ctx, raw, lines, laneKeys.Touch) })
 		spawn(func() { a.Run(ctx, lines) })
+		if l, ok := processLister.get()(); ok {
+			alive := func() (bool, error) { return procwatch.Running(l) }
+			spawn(func() {
+				tick := time.NewTicker(processInterval.get())
+				defer tick.Stop()
+				a.WatchProcess(ctx, tick.C, alive, observedEnabled(opts.configPath))
+			})
+		}
 		slog.Info("Quaver folder found", "dir", dir)
 		fmt.Fprintf(out, "Quaver folder: %s\n", dir)
 		return nil

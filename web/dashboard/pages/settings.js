@@ -75,6 +75,7 @@
     f.quaver_dir.control.value = m.isOverridden(overridden, 'quaver_dir') ? String(effective.quaver_dir || '') : current.quaver_dir || '';
     f.port.control.value = String(m.isOverridden(overridden, 'port') ? effective.port : current.port);
     f.language.control.value = m.LANGUAGES.indexOf(current.language) >= 0 ? current.language : '';
+    ui.watch.checked = m.watchFromConfig(current);
     FIELDS.forEach(function (name) {
       const locked = m.isOverridden(overridden, name);
       f[name].control.disabled = locked;
@@ -99,7 +100,7 @@
     const port = m.validatePort(f.port.control.value);
     return {
       port: port,
-      values: { quaver_dir: f.quaver_dir.control.value, port: port.value, language: f.language.control.value },
+      values: { quaver_dir: f.quaver_dir.control.value, port: port.value, language: f.language.control.value, watch_quaver_process: ui.watch.checked },
     };
   }
 
@@ -213,11 +214,15 @@
     const lang = h('select', { id: 'set-lang' }, m.LANGUAGES.map(function (code) {
       return h('option', { value: code, lang: LANG_ATTR[code] }, t('settings.lang.' + (code || 'auto')));
     }));
+    ui.watch = h('input', { id: 'set-watch', type: 'checkbox', 'aria-describedby': 'set-watch-help' });
     return h('form', { class: 'card settings-form', onsubmit: onSubmit },
       ui.banner,
       field('quaver_dir', 'set-dir', 'settings.dir', dir, ui.dirHelp),
       field('port', 'set-port', 'settings.port', port, h('div', { id: 'set-port-help' }, h('p', { class: 'muted hint' }, t('settings.port_help')), ui.portNote)),
       field('language', 'set-lang', 'settings.language', lang, h('p', { id: 'set-lang-help', class: 'muted hint' }, t('settings.language_help'))),
+      h('div', { class: 'field' },
+        h('label', { class: 'check' }, ui.watch, h('span', null, t('settings.watch'))),
+        h('p', { id: 'set-watch-help', class: 'muted hint' }, t('settings.watch_help'))),
       ui.general,
       h('div', { class: 'save-row' }, ui.save, ui.reload, ui.status));
   }

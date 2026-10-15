@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/procwatch"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/testutil"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/themes"
 )
@@ -26,6 +27,7 @@ func TestMain(m *testing.M) {
 		os.Setenv(k, dir)
 	}
 	useFakeSampler()
+	processLister.set(func() (procwatch.Lister, bool) { return nil, false })
 	code := m.Run()
 	os.RemoveAll(dir)
 	os.Exit(code)

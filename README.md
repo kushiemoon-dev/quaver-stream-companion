@@ -51,7 +51,20 @@ QuaverStreamCompanion only reads files that Quaver already writes itself:
 | `Logs/runtime.log` | Live game state (menu, select, loading, gameplay, results) and the "score saved" signal |
 | `quaver.db` | Map being played and the result of each play (opened **read-only**) |
 
-The one optional exception is the lane keys overlay (see [Lane keys](#lane-keys)), which is off by default and works on Windows only. Apart from it, `qsc` never reads game memory, never modifies or injects into the game, never talks to the game's internal ports, and never writes anything to the Quaver folder. There is no telemetry, no account and no online service: nothing is ever sent anywhere, and the server listens on `127.0.0.1` only (requests with another `Host` header are rejected). `qsc` never opens a browser by itself: it only does so with `--open`.
+The optional exceptions are the lane keys overlay (see [Lane keys](#lane-keys)), which is off by default and works on Windows only, and the crash detection described below, which reads program names only (on Linux, plus a short look at the command line of Wine processes to find `Quaver.exe`) and can be turned off. Apart from them, `qsc` never reads game memory, never modifies or injects into the game, never talks to the game's internal ports, and never writes anything to the Quaver folder. There is no telemetry, no account and no online service: nothing is ever sent anywhere, and the server listens on `127.0.0.1` only (requests with another `Host` header are rejected). `qsc` never opens a browser by itself: it only does so with `--open`.
+
+### Crash detection
+
+Quaver only writes its exit line when it closes cleanly, so after a crash or a kill the game state would stay stuck until the next launch. To notice that, `qsc` looks every 10 seconds at the **names of the running programs**, only while the game is not already shown as closed, and checks whether a process named `Quaver.exe` (or `Quaver`, the native Linux build) exists. After 3 checks in a row without one (about 20 to 30 seconds) it publishes the `closed` state and writes one line in `qsc.log`. When Quaver starts again its log lines move the state out of `closed` as usual.
+
+What is read, exactly:
+
+- **Windows**: the executable name of each process, from the system process list.
+- **Linux**: the short name of each process in `/proc/<pid>/comm`. Under Proton, a Wine loader process (a name starting with `wine`) has its command line read for a moment, only to look for the text `Quaver.exe`; it is dropped at once.
+- Nothing else: no window titles, files, memory, users or other process data. No name is stored, logged, sent or served on any endpoint.
+- If the list cannot be read, `qsc` does nothing and never marks the game closed. If the config file itself cannot be read, the check turns off (the conservative choice) and one line is written to the debug log. On a system where the list is not supported, the check is off.
+
+You can turn it off with the **Notice when Quaver has crashed** checkbox in Settings (it applies right away) or with `"watch_quaver_process": false` in the config file. It is on by default, and a config file written by an earlier version without this key counts as on.
 
 ---
 
@@ -130,7 +143,7 @@ The dashboard is served at `http://127.0.0.1:7878/` and needs nothing but a brow
 | **Overlays** | Copy the OBS browser source link, pick a theme from the visual theme picker (built-in or your own custom themes) and an accent color, preview the result, and save it as your default look |
 | **OBS** | A step by step guide to add the overlays to OBS, with the recommended sizes, copyable links and a connection check |
 | **History** | Your recent plays: map, difficulty with rate and mods, grade, accuracy, max combo and judgments |
-| **Settings** | Quaver folder, port, dashboard language, the config, themes and overlays paths, the version, the opt-in lane keys card and a Quit button |
+| **Settings** | Quaver folder, port, dashboard language, the config, themes and overlays paths, the version, the crash detection option, the opt-in lane keys card and a Quit button |
 
 A **Twitch** tab is shown as "coming soon"; nothing behind it exists yet. The dashboard is available in English, French and German. The dashboard uses a dark theme; the overlays have their own themes.
 
@@ -282,11 +295,12 @@ Settings are stored in a JSON file, written by the Settings and Overlays pages o
   "port": 7878,
   "language": "en",
   "overlay": { "theme": "neutral-light", "accent": "" },
-  "keys": { "enabled": false }
+  "keys": { "enabled": false },
+  "watch_quaver_process": true
 }
 ```
 
-An empty `quaver_dir` means auto-detection from your Steam libraries. `language` is `en`, `fr` or `de`. `accent` is a hex color without `#`. A missing file gives the defaults. Saving writes a `"version": 1` key, and keys that `qsc` does not know are kept when settings are saved from the dashboard. A change of port, or of the Quaver folder once it is in use, takes effect the next time `qsc` starts; a folder saved while `qsc` is still looking for Quaver is picked up within 15 seconds. In a hand-edited JSON path, double each backslash (`\\`) or use forward slashes.
+An empty `quaver_dir` means auto-detection from your Steam libraries. `language` is `en`, `fr` or `de`. `watch_quaver_process` turns the [crash detection](#crash-detection) on or off. `accent` is a hex color without `#`. A missing file gives the defaults. Saving writes a `"version": 1` key, and keys that `qsc` does not know are kept when settings are saved from the dashboard. A change of port, or of the Quaver folder once it is in use, takes effect the next time `qsc` starts; a folder saved while `qsc` is still looking for Quaver is picked up within 15 seconds. In a hand-edited JSON path, double each backslash (`\\`) or use forward slashes.
 
 #### Lane keys
 

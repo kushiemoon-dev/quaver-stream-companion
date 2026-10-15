@@ -167,6 +167,8 @@
   "settings.port_invalid": "Saisissez un nombre entier de 1 à 65535.",
   "settings.language": "Langue",
   "settings.language_help": "S'applique immédiatement.",
+  "settings.watch": "Détecter un plantage de Quaver",
+  "settings.watch_help": "qsc regarde les noms des programmes en cours pour remarquer que Quaver a planté (sous Linux, la ligne de commande des processus Wine, uniquement pour trouver Quaver.exe) ; rien n'est enregistré ni envoyé. S'applique immédiatement.",
   "settings.lang.auto": "Auto (langue du navigateur)",
   "settings.lang.en": "English",
   "settings.lang.fr": "Français",

@@ -128,6 +128,8 @@ What is not verified. The folders in these tests are generated, not a real Steam
 
 Lane key sampling (the opt-in keys overlay) is Windows only for now. On Linux the Settings card and `qsc doctor` report it as not supported, and everything else works. A Linux version based on evdev is not implemented.
 
+The crash detection (see Crash detection in the README) works on Linux too. It lists the process names in `/proc`, and recognises a Proton game by a Wine loader whose command line holds `Quaver.exe`; the author has not tried it with a real Proton install. If it does not see your game, or if you prefer it off, untick **Notice when Quaver has crashed** in Settings or set `"watch_quaver_process": false`. Without a way to list processes (another operating system) it stays off.
+
 ## Stopping qsc
 
 - Dashboard: open Settings, press Quit qsc at the bottom, then Quit now. The page says when qsc is stopped and the tab can be closed. The OBS overlays go blank until you start qsc again.

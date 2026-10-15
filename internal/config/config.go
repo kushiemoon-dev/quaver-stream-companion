@@ -35,6 +35,8 @@ type Config struct {
 	Language  string      `json:"language"`
 	Overlay   Overlay     `json:"overlay"`
 	Keys      keys.Config `json:"keys"`
+	// WatchQuaverProcess lets qsc look at the names of running programs to notice a Quaver crash.
+	WatchQuaverProcess bool `json:"watch_quaver_process"`
 }
 
 // FieldError describes an invalid setting.
@@ -46,7 +48,7 @@ func (e *FieldError) Error() string { return e.Field + ": " + e.Msg }
 
 // Defaults returns the settings used when no file exists.
 func Defaults() Config {
-	return Config{Port: DefaultPort, Overlay: Overlay{Theme: defaultTheme}, Keys: keys.Defaults()}
+	return Config{Port: DefaultPort, Overlay: Overlay{Theme: defaultTheme}, Keys: keys.Defaults(), WatchQuaverProcess: true}
 }
 
 // DefaultPath returns the per-user location of the settings file.

@@ -52,6 +52,8 @@ type App struct {
 	stateSeq int
 	// nextState is closed and replaced each time a state is published.
 	nextState chan struct{}
+	// state is the last state published, "" before the first.
+	state string
 
 	// cur is the play in progress, guarded by pubMu.
 	cur *playRec
@@ -245,7 +247,13 @@ const noSeq = -1
 func (a *App) publishState(state, screen string) int {
 	a.pubMu.Lock()
 	defer a.pubMu.Unlock()
+	return a.setState(state, screen)
+}
+
+// setState publishes a state with pubMu held and returns its sequence number.
+func (a *App) setState(state, screen string) int {
 	a.stateSeq++
+	a.state = state
 	if a.nextState != nil {
 		close(a.nextState)
 		a.nextState = nil

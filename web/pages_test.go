@@ -189,6 +189,19 @@ assert.deepStrictEqual(m.LANGUAGES, ['', 'en', 'fr', 'de']);
 assert.strictEqual(m.isOverridden(['port'], 'port'), true);
 assert.strictEqual(m.isOverridden(['port'], 'language'), false);
 assert.strictEqual(m.isOverridden(null, 'port'), false);
+
+assert.strictEqual(m.watchFromConfig({}), true);
+assert.strictEqual(m.watchFromConfig({ port: 1 }), true);
+assert.strictEqual(m.watchFromConfig({ watch_quaver_process: true }), true);
+assert.strictEqual(m.watchFromConfig({ watch_quaver_process: false }), false);
+assert.strictEqual(m.watchFromConfig(null), true);
+const off = m.buildConfigBody({ ...current, future_field: 1, watch_quaver_process: true }, { quaver_dir: '', port: 1, language: 'en', watch_quaver_process: false }, []);
+assert.strictEqual(off.watch_quaver_process, false);
+assert.strictEqual(off.future_field, 1);
+const on = m.buildConfigBody({ ...current, watch_quaver_process: false }, { quaver_dir: '', port: 1, language: 'en', watch_quaver_process: true }, []);
+assert.strictEqual(on.watch_quaver_process, true);
+const untouched = m.buildConfigBody({ ...current, watch_quaver_process: false }, { quaver_dir: '', port: 1, language: 'en' }, []);
+assert.strictEqual(untouched.watch_quaver_process, false);
 `
 
 func TestPagesCreateTextOnlyThroughHelper(t *testing.T) {

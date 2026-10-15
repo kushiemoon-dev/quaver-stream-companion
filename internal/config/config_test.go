@@ -37,11 +37,11 @@ func TestLoad(t *testing.T) {
 	}{
 		{"empty file", "", Defaults()},
 		{"empty object", "{}", Defaults()},
-		{"partial", `{"port": 9000}`, Config{Port: 9000, Overlay: Overlay{Theme: "neutral-light"}, Keys: keys.Defaults()}},
-		{"zero port", `{"port": 0, "language": "fr"}`, Config{Port: DefaultPort, Language: "fr", Overlay: Overlay{Theme: "neutral-light"}, Keys: keys.Defaults()}},
-		{"empty theme", `{"overlay": {"theme": "", "accent": "ff00aa"}}`, Config{Port: DefaultPort, Overlay: Overlay{Theme: "neutral-light", Accent: "ff00aa"}, Keys: keys.Defaults()}},
-		{"unknown fields", `{"port": 9001, "extra": true, "overlay": {"x": 1}}`, Config{Port: 9001, Overlay: Overlay{Theme: "neutral-light"}, Keys: keys.Defaults()}},
-		{"full", `{"quaver_dir":"/q","port":8000,"language":"de","overlay":{"theme":"dark","accent":"fff"}}`, Config{QuaverDir: "/q", Port: 8000, Language: "de", Overlay: Overlay{Theme: "dark", Accent: "fff"}, Keys: keys.Defaults()}},
+		{"partial", `{"port": 9000}`, Config{Port: 9000, Overlay: Overlay{Theme: "neutral-light"}, Keys: keys.Defaults(), WatchQuaverProcess: true}},
+		{"zero port", `{"port": 0, "language": "fr"}`, Config{Port: DefaultPort, Language: "fr", Overlay: Overlay{Theme: "neutral-light"}, Keys: keys.Defaults(), WatchQuaverProcess: true}},
+		{"empty theme", `{"overlay": {"theme": "", "accent": "ff00aa"}}`, Config{Port: DefaultPort, Overlay: Overlay{Theme: "neutral-light", Accent: "ff00aa"}, Keys: keys.Defaults(), WatchQuaverProcess: true}},
+		{"unknown fields", `{"port": 9001, "extra": true, "overlay": {"x": 1}}`, Config{Port: 9001, Overlay: Overlay{Theme: "neutral-light"}, Keys: keys.Defaults(), WatchQuaverProcess: true}},
+		{"full", `{"quaver_dir":"/q","port":8000,"language":"de","overlay":{"theme":"dark","accent":"fff"}}`, Config{QuaverDir: "/q", Port: 8000, Language: "de", Overlay: Overlay{Theme: "dark", Accent: "fff"}, Keys: keys.Defaults(), WatchQuaverProcess: true}},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
