@@ -75,7 +75,7 @@ chmod +x qsc_<version>_linux_x86_64.AppImage
 
 Double clicking it in a file manager works too, no terminal needed. It runs `qsc serve --open`, so the dashboard opens in your browser. Extra options can be added after the file name, for example `--port 7979`. AppImages need FUSE 2 on most distributions; if yours has none, run it with `--appimage-extract-and-run`.
 
-**Untested so far.** The AppImage is built by the release workflow on GitHub. The author builds on Windows, so the AppImage has not been run on a Linux machine yet. If it does not start for you, use the `.tar.gz` and please open an issue.
+The AppImage is built by the release workflow and started with `doctor` and a short session on Ubuntu (amd64) before each release is drafted. That run uses `APPIMAGE_EXTRACT_AND_RUN=1` because the runners have no FUSE. It has not been tried on a real desktop. If it does not start for you, use the `.tar.gz` and please open an issue.
 
 ## Start with your computer
 
@@ -122,7 +122,9 @@ Symlinked Steam folders are followed once and a folder reached by two paths is o
 
 Linux file systems tell `Logs` from `logs`. `qsc` first looks for `Logs/runtime.log` and `quaver.db` with the exact spelling Quaver uses on Windows, then falls back to a case-insensitive match (ASCII letters only) for `Logs`, `runtime.log` and `quaver.db` only, reading at most 4096 directory entries.
 
-What is not verified: the author has not run Quaver on Linux, native or under Proton, and has not confirmed where Proton places `Logs`, `quaver.db`, `Data` or `quaver.cfg`. The detection assumes they sit in the game folder, as in the Windows install. If your install keeps them elsewhere (for example inside the Wine prefix under `steamapps/compatdata`), point `quaver_dir` at the folder that holds them, or open an issue. `qsc` has not been run on a real Linux machine: this layout code is covered by tests on simulated Steam trees.
+What is tested. On every change, GitHub Actions starts `qsc` on Ubuntu (amd64 and arm64) against synthetic Steam folders: `~/.steam/steam`, `~/.local/share/Steam`, Flatpak, Snap, a symlinked Steam root and a second library, with both a native `Quaver` file and a `Quaver.exe`. It checks that `qsc` finds the game, follows a scripted log and database session, serves every built-in overlay, passes `qsc doctor` and stops cleanly with `qsc stop`. The release archives and the AppImage get the same smoke run before a release is drafted.
+
+What is not verified. The folders in these tests are generated, not a real Steam install. The author has not run Quaver on Linux, native or under Proton, and has not confirmed where Proton places `Logs`, `quaver.db`, `Data` or `quaver.cfg`. Lane key sampling is not available on Linux and has not been tried. The detection assumes those files sit in the game folder, as on Windows. If yours are elsewhere (for example inside the Wine prefix under `steamapps/compatdata`), point `quaver_dir` at the folder that holds them, or open an issue.
 
 Lane key sampling (the opt-in keys overlay) is Windows only for now. On Linux the Settings card and `qsc doctor` report it as not supported, and everything else works. A Linux version based on evdev is not implemented.
 

@@ -8,8 +8,11 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version: '1.26.9'
@@ -22,6 +25,7 @@ jobs:
   build:
     needs: test
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       matrix:
         include:
@@ -33,6 +37,8 @@ jobs:
             goarch: arm64
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version: '1.26.9'
@@ -51,8 +57,11 @@ jobs:
   appimage:
     needs: test
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version: '1.26.9'
@@ -66,9 +75,78 @@ jobs:
           name: dist-appimage
           path: dist/*.AppImage
           if-no-files-found: error
-  release:
+  smoke-linux:
     needs: [build, appimage]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: amd64
+          - os: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      # The smoke fixture uses node:sqlite, which needs Node 22.13 or newer.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: dist-*
+          path: dist
+          merge-multiple: true
+      - name: Run the release archive
+        env:
+          ARCH: ${{ matrix.arch }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          mkdir extract
+          tar -xzf dist/qsc_*_linux_"$ARCH".tar.gz -C extract
+          bin=$(echo "$PWD"/extract/qsc_*_linux_"$ARCH"/qsc)
+          file "$bin"
+          node scripts/smoke/drive.mjs --bin "$bin" --layout local-share --expect-keys unsupported --expect-version "$TAG"
+      - name: Run the AppImage
+        if: matrix.arch == 'amd64'
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+          TAG: ${{ github.ref_name }}
+        run: |
+          chmod +x dist/*.AppImage
+          node scripts/smoke/drive.mjs --bin "$(echo "$PWD"/dist/*.AppImage)" --layout local-share --expect-keys unsupported --expect-version "$TAG"
+  smoke-windows:
+    needs: build
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      # The smoke fixture uses node:sqlite, which needs Node 22.13 or newer.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: dist-windows-amd64
+          path: dist
+      - name: Run the release zip
+        shell: pwsh
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          Expand-Archive -Path (Get-ChildItem dist -Filter 'qsc_*_windows_amd64.zip').FullName -DestinationPath extract
+          $bin = (Get-ChildItem extract -Recurse -Filter qsc.exe).FullName
+          Write-Host "binary: $bin"
+          node scripts/smoke/drive.mjs --bin $bin --quaver-dir "$env:RUNNER_TEMP\Quaver" --expect-keys supported --expect-version $env:TAG
+  release:
+    needs: [build, appimage, smoke-linux, smoke-windows]
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: write
     steps:

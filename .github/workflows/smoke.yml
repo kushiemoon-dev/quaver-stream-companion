@@ -1,0 +1,135 @@
+name: smoke
+on:
+  pull_request:
+    paths:
+      - 'cmd/**'
+      - 'internal/**'
+      - 'web/**'
+      - 'packaging/**'
+      - 'scripts/**'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/**'
+  push:
+    branches: [main]
+    paths:
+      - 'cmd/**'
+      - 'internal/**'
+      - 'web/**'
+      - 'packaging/**'
+      - 'scripts/**'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: smoke-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  SMOKE_VERSION: v0.0.0-smoke
+jobs:
+  linux:
+    name: linux (${{ matrix.os }}, ${{ matrix.layout }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm]
+        layout: [dot-steam, local-share, flatpak, snap, symlink, library]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.26.9'
+          check-latest: false
+      # The fixture uses node:sqlite, which needs Node 22.13 or newer.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+      - name: Show the machine
+        run: |
+          uname -a
+          go version
+          node --version
+      - name: Build qsc
+        run: |
+          CGO_ENABLED=0 go build -trimpath -buildvcs=false \
+            -ldflags "-s -w -X github.com/kushiemoon-dev/quaver-stream-companion/internal/version.Version=$SMOKE_VERSION" \
+            -o "$RUNNER_TEMP/qsc" ./cmd/qsc
+          file "$RUNNER_TEMP/qsc"
+          "$RUNNER_TEMP/qsc" version
+      - name: Session in the ${{ matrix.layout }} layout
+        env:
+          LAYOUT: ${{ matrix.layout }}
+        run: node scripts/smoke/drive.mjs --bin "$RUNNER_TEMP/qsc" --layout "$LAYOUT" --expect-keys unsupported --expect-version "$SMOKE_VERSION"
+      - name: Native Quaver executable only
+        if: matrix.layout == 'local-share'
+        run: node scripts/smoke/drive.mjs --bin "$RUNNER_TEMP/qsc" --layout local-share --exe native --quick --expect-version "$SMOKE_VERSION"
+      - name: Quaver.exe only
+        if: matrix.layout == 'local-share'
+        run: node scripts/smoke/drive.mjs --bin "$RUNNER_TEMP/qsc" --layout local-share --exe exe --quick
+      - name: Session with the --quaver-dir override
+        if: matrix.layout == 'local-share'
+        run: node scripts/smoke/drive.mjs --bin "$RUNNER_TEMP/qsc" --quaver-dir "$RUNNER_TEMP/custom/Quaver" --expect-keys unsupported
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.26.9'
+          check-latest: false
+      # The fixture uses node:sqlite, which needs Node 22.13 or newer.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+      - name: Show the machine
+        run: |
+          go version
+          node --version
+      - name: Build qsc
+        run: |
+          CGO_ENABLED=0 go build -trimpath -buildvcs=false \
+            -ldflags "-s -w -X github.com/kushiemoon-dev/quaver-stream-companion/internal/version.Version=$SMOKE_VERSION" \
+            -o "$RUNNER_TEMP/qsc.exe" ./cmd/qsc
+          "$RUNNER_TEMP/qsc.exe" version
+      - name: Session with a forced Quaver folder
+        run: node scripts/smoke/drive.mjs --bin "$RUNNER_TEMP/qsc.exe" --quaver-dir "$RUNNER_TEMP/Quaver" --expect-keys supported --expect-version "$SMOKE_VERSION"
+      - name: Session with the default Steam folder and no override
+        run: node scripts/smoke/drive.mjs --bin "$RUNNER_TEMP/qsc.exe" --windows-default-steam --expect-keys supported --expect-version "$SMOKE_VERSION"
+  appimage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.26.9'
+          check-latest: false
+      # The fixture uses node:sqlite, which needs Node 22.13 or newer.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+      - name: Build the AppImage
+        run: |
+          bash packaging/build-appimage.sh "$SMOKE_VERSION" dist
+          ls -l dist
+      - name: Doctor and session through the AppImage
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+        run: |
+          chmod +x dist/*.AppImage
+          node scripts/smoke/drive.mjs --bin "$(echo "$PWD"/dist/*.AppImage)" --layout local-share --expect-keys unsupported --expect-version "$SMOKE_VERSION"
