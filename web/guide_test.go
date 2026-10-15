@@ -49,10 +49,10 @@ func TestOverlayGuideCoversTheContract(t *testing.T) {
 		}
 	}
 	for _, want := range []string{
-		bus.TypeSnapshot, bus.TypeGameState, bus.TypeMapStarted, bus.TypeScoreSaved,
+		bus.TypeSnapshot, bus.TypeGameState, bus.TypeMapStarted, bus.TypeScoreSaved, bus.TypePlayEnded,
 		"GET /state", "GET /events", "/api/history", "/api/status", "/api/overlays",
 		"`theme`", "`accent`", "`lang`", "`autohide`", "`scale`", "`demo`", "`n`", "`hide`",
-		"initialization", "menu", "select", "loading", "gameplay", "results", "closed", "unknown",
+		"initialization", "menu", "select", "loading", "gameplay", "results", "editor", "importing", "download", "lobby", "multiplayer", "music", "theatre", "closed", "unknown",
 		"overlay.json", "Access-Control-Allow-Origin", "never put secrets", "sandbox", "THEMES.md",
 		"qscConnect", "textContent", "Troubleshooting", "curl", "Stream Deck", "Twitch", "WebSocket",
 		"2 MiB", "200 files", "100 overlays", "8 KiB",

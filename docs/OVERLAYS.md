@@ -105,9 +105,10 @@ A comment line `: ping` is sent every 15 seconds to keep the connection open. Th
 | Type | `data` |
 |------|--------|
 | `snapshot` | The same object as `GET /state`: `game`, `map`, `last_score`, `keys`. Always the first event. |
-| `game.state` | `{ "state": "<value>" }` |
+| `game.state` | `{ "state": "<value>", "screen": "<value>" }`. `screen` is the raw lower case Quaver screen name and is left out when the state does not come from a screen (`closed`). |
 | `map.started` | The map object, sent when gameplay begins |
 | `score.saved` | The result object, sent when a play is saved |
+| `play.ended` | `{ "map": <map object>, "saved": false }`, sent when a play left the `gameplay` screen and no score was saved for it. See Plays without a saved score below. |
 | `keys.frame` | Lane keys, only when the optional key sampling is on: `{ "layout": "4k", "lanes": 4, "scratch": false, "down": [bool], "presses": [int], "kps": n, "peak": n }`. See Lane keys below. |
 
 #### Game states
@@ -122,10 +123,25 @@ A comment line `: ping` is sent every 15 seconds to keep the connection open. Th
 | `loading` | A map is loading |
 | `gameplay` | A map is being played |
 | `results` | Results screen |
+| `editor` | The map editor |
+| `importing` | Maps are being imported |
+| `download` | The map download screen |
+| `lobby` | A multiplayer lobby list |
+| `multiplayer` | Inside a multiplayer room |
+| `music` | The music player |
+| `theatre` | Watching a replay |
 | `closed` | The game has closed |
 | `unknown` | Nothing seen yet (only in a snapshot) |
 
 The game can report other screen names. They are passed through in lower case, so treat any value you do not know as "something else" instead of failing. The built-in overlays show it as `unknown`.
+
+#### Plays without a saved score
+
+Quaver counts a map as played as soon as the `gameplay` screen opens, but saves no score for an autoplay, a replay, spectating, the theatre, a test play in the editor, a quit, or a play with no hit. The `game.state` of such a play is still `gameplay` and `map.started` is still sent: qsc does not guess. When the screen leaves `gameplay` and no score was saved for that play, `play.ended` is sent with the map of the play and `"saved": false`. A retry (a new `gameplay` screen straight after another one) counts as leaving. `play.ended` always follows the `game.state` of the screen that was entered, and it is never sent for a saved play: `score.saved` already says so. When the score row is slow to appear, `play.ended` can arrive up to about 15 seconds after the screen change, after later events (even after the `map.started` of the next play), so match it to a play by `map.md5` rather than by position. The `snapshot` does not carry it, and the built-in overlays ignore it; the dashboard Status page shows "Last play was not saved" under the last play card until the next play starts.
+
+```json
+{ "v": 1, "type": "play.ended", "time": "2026-10-15T13:06:06Z", "data": { "map": { "title": "Song" }, "saved": false } }
+```
 
 #### Lane keys
 
@@ -191,7 +207,7 @@ The score object:
 | `total_score` | number | The score points |
 | `played_at` | string | The time of the play as saved by the game, `YYYY-MM-DD HH:MM:SS` |
 | `mods` | array of strings | Names of the active mods. The rate is not in this list |
-| `mods_raw` | number | The raw mod bit field of the game |
+| `mods_raw` | number | The raw mod bit field of the game. A negative value (Quaver "None") is reported as `0`. Bits this version does not know stay in the value but are not listed in `mods` |
 | `rate` | number | Playback rate, `1` for normal speed |
 | `rating` | number | Performance rating of the play |
 

@@ -12,7 +12,7 @@ const maxRecent = 200
 
 const scoreColumnsBase = `SELECT s.Id, COALESCE(s.MapMd5,''), COALESCE(s.Grade,0), COALESCE(s.Accuracy,0), COALESCE(s.MaxCombo,0),
 		        COALESCE(s.CountMarv,0), COALESCE(s.CountPerf,0), COALESCE(s.CountGreat,0), COALESCE(s.CountGood,0), COALESCE(s.CountOkay,0), COALESCE(s.CountMiss,0),
-		        COALESCE(s.TotalScore,0), COALESCE(s.DateTime,''), COALESCE(s.Mods,0), COALESCE(s.PerformanceRating,0), `
+		        COALESCE(s.TotalScore,0), COALESCE(s.DateTime,''), MAX(COALESCE(s.Mods,0),0), COALESCE(s.PerformanceRating,0), `
 
 func (s *Store) scoreColumns() string { return scoreColumnsBase + s.mapCols() }
 
@@ -173,7 +173,7 @@ func (s *Store) applyPreviousPlays(ctx context.Context, window []scoreRow, out [
 	}
 	args = append(args, disqualifyMask)
 	rows, err := s.api.QueryContext(ctx,
-		`SELECT MapMd5, Id, COALESCE(TotalScore,0), COALESCE(Mods,0) FROM Score WHERE MapMd5 IN (`+placeholders(len(md5s))+`) AND Grade <> `+strconv.Itoa(failedGrade)+` AND COALESCE(Mods,0) & ? = 0`, args...)
+		`SELECT MapMd5, Id, COALESCE(TotalScore,0), MAX(COALESCE(Mods,0),0) FROM Score WHERE MapMd5 IN (`+placeholders(len(md5s))+`) AND Grade <> `+strconv.Itoa(failedGrade)+` AND MAX(COALESCE(Mods,0),0) & ? = 0`, args...)
 	if err != nil {
 		return fmt.Errorf("read previous scores: %w", err)
 	}

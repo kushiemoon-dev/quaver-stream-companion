@@ -302,7 +302,7 @@ func (s *Store) scoreByID(ctx context.Context, id int64) (Result, error) {
 	var prevCount int
 	var prevMax int64
 	if err := s.db.QueryRowContext(ctx,
-		`SELECT COUNT(*), COALESCE(MAX(TotalScore),0) FROM Score WHERE MapMd5 = ? AND Id < ? AND Grade <> `+strconv.Itoa(failedGrade)+` AND COALESCE(Mods,0) & ? = 0 AND COALESCE(Mods,0) & ? = ?`,
+		`SELECT COUNT(*), COALESCE(MAX(TotalScore),0) FROM Score WHERE MapMd5 = ? AND Id < ? AND Grade <> `+strconv.Itoa(failedGrade)+` AND MAX(COALESCE(Mods,0),0) & ? = 0 AND MAX(COALESCE(Mods,0),0) & ? = ?`,
 		rw.mapMD5, id, disqualifyMask, keyMask, r.Score.ModsRaw&keyMask,
 	).Scan(&prevCount, &prevMax); err != nil {
 		return Result{}, fmt.Errorf("read previous scores of %q: %w", rw.mapMD5, err)

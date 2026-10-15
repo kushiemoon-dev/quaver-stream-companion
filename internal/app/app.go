@@ -53,6 +53,9 @@ type App struct {
 	// nextState is closed and replaced each time a state is published.
 	nextState chan struct{}
 
+	// cur is the play in progress, guarded by pubMu.
+	cur *playRec
+
 	lastMap   scores.Map
 	hasMap    bool
 	announced idSet
@@ -74,10 +77,24 @@ func sleep(ctx context.Context, d time.Duration) bool {
 	}
 }
 
+// playRec follows one gameplay screen until its score is announced or the play is reported unsaved.
+// Every field is guarded by pubMu.
+type playRec struct {
+	m        scores.Map
+	hasMap   bool
+	lineSeen bool
+	saved    bool
+	failed   bool
+	left     bool
+	ended    bool
+}
+
 // job is a database lookup. done, when set, is closed once the lookup has ended or was dropped.
 type job struct {
 	run  func()
 	done chan struct{}
+	// dropped, when set, runs if the job is discarded from a full queue.
+	dropped func()
 }
 
 // Run turns runtime.log lines into bus events until ctx is done or lines closes. State changes
@@ -133,6 +150,9 @@ func enqueue(q chan job, what string, j job) {
 			if old.done != nil {
 				close(old.done)
 			}
+			if old.dropped != nil {
+				old.dropped()
+			}
 			slog.Warn("too many pending database lookups; dropped the oldest", "what", what)
 		default:
 		}
@@ -147,16 +167,17 @@ func (a *App) handle(ctx context.Context, raw string) {
 	}
 	switch ln.Kind {
 	case gamestate.KindState:
-		seq := a.publishState(ln.State)
+		seq := a.publishState(ln.State, ln.State)
 		if ln.State == "gameplay" {
 			done := make(chan struct{})
 			a.lastMapDone = done
 			enqueue(a.mapJobs, "map", job{run: func() { a.publishMap(ctx, minPlayed, a.budget, seq) }, done: done})
 		}
 	case gamestate.KindExit:
-		a.publishState("closed")
+		a.publishState("closed", "")
 	case gamestate.KindScoreSaved:
 		gate := a.lastMapDone
+		rec := a.markScoreLine()
 		enqueue(a.scoreJobs, "score", job{run: func() {
 			if gate != nil {
 				select {
@@ -165,8 +186,8 @@ func (a *App) handle(ctx context.Context, raw string) {
 					return
 				}
 			}
-			a.publishScore(ctx, ln.ScoreID)
-		}})
+			a.scoreOutcome(ctx, rec, a.publishScore(ctx, ln.ScoreID))
+		}, dropped: func() { a.scoreOutcome(ctx, rec, false) }})
 	}
 }
 
@@ -179,12 +200,12 @@ func (a *App) Seed(ctx context.Context, raw string) {
 	}
 	switch ln.Kind {
 	case gamestate.KindState:
-		a.publishState(ln.State)
+		a.publishState(ln.State, ln.State)
 		if ln.State == "gameplay" {
 			a.publishMap(ctx, 0, min(a.budget, seedBudget), noSeq)
 		}
 	case gamestate.KindExit:
-		a.publishState("closed")
+		a.publishState("closed", "")
 	case gamestate.KindScoreSaved:
 		a.publishScore(ctx, ln.ScoreID)
 	}
@@ -221,7 +242,7 @@ func (a *App) ForgetScores() { a.announced.reset() }
 const noSeq = -1
 
 // publishState publishes a state and returns its sequence number.
-func (a *App) publishState(state string) int {
+func (a *App) publishState(state, screen string) int {
 	a.pubMu.Lock()
 	defer a.pubMu.Unlock()
 	a.stateSeq++
@@ -229,9 +250,67 @@ func (a *App) publishState(state string) int {
 		close(a.nextState)
 		a.nextState = nil
 	}
+	prev := a.cur
+	a.cur = nil
+	if state == "gameplay" {
+		a.cur = &playRec{}
+	}
 	slog.Info("game state", "state", state)
-	a.bus.Publish(bus.TypeGameState, bus.GameState{State: state})
+	a.bus.Publish(bus.TypeGameState, bus.GameState{State: state, Screen: screen})
+	if prev != nil {
+		a.endPlay(prev)
+	}
 	return a.stateSeq
+}
+
+// endPlay runs with pubMu held when the screen of rec was left. It reports the play as unsaved
+// unless a score line was seen whose lookup has not failed (then scoreOutcome decides).
+func (a *App) endPlay(rec *playRec) {
+	rec.left = true
+	if rec.saved || !rec.hasMap || (rec.lineSeen && !rec.failed) {
+		return
+	}
+	a.publishEnded(rec)
+}
+
+func (a *App) publishEnded(rec *playRec) {
+	if rec.ended {
+		return
+	}
+	rec.ended = true
+	slog.Info("play ended without a saved score", "md5", rec.m.MD5)
+	a.bus.Publish(bus.TypePlayEnded, bus.PlayEnded{Map: rec.m, Saved: false})
+}
+
+// markScoreLine notes that Quaver logged a saved score during the current play.
+func (a *App) markScoreLine() *playRec {
+	a.pubMu.Lock()
+	defer a.pubMu.Unlock()
+	if a.cur != nil {
+		a.cur.lineSeen = true
+	}
+	return a.cur
+}
+
+// scoreOutcome records whether the score of rec was announced; a lookup that gave up after the
+// screen was left is the moment the play is reported unsaved.
+func (a *App) scoreOutcome(ctx context.Context, rec *playRec, ok bool) {
+	if rec == nil {
+		return
+	}
+	a.pubMu.Lock()
+	defer a.pubMu.Unlock()
+	if ok {
+		rec.saved = true
+		return
+	}
+	if ctx.Err() != nil {
+		return
+	}
+	rec.failed = true
+	if rec.left && rec.hasMap {
+		a.publishEnded(rec)
+	}
 }
 
 // retryLoop calls try until it reports done, waiting with a growing delay for at most budget.
@@ -271,6 +350,9 @@ func (a *App) publishMap(ctx context.Context, minPlayedMS int64, budget time.Dur
 			return true
 		}
 		a.lastMap, a.hasMap = m, true
+		if a.cur != nil {
+			a.cur.m, a.cur.hasMap = m, true
+		}
 		slog.Info("map started", "md5", m.MD5, "keys", m.Keys)
 		a.bus.Publish(bus.TypeMapStarted, m)
 		return true
@@ -347,11 +429,12 @@ func (a *App) CheckRestore(ctx context.Context) {
 	}
 }
 
-func (a *App) publishScore(ctx context.Context, id int64) {
+// publishScore reports whether the score was announced now or before.
+func (a *App) publishScore(ctx context.Context, id int64) bool {
 	a.CheckRestore(ctx)
 	if a.announced.has(id) && !a.rowChanged(ctx, id) {
 		slog.Debug("score already announced", "id", id)
-		return
+		return true
 	}
 	var lastErr error
 	ok := a.retryLoop(ctx, a.budget, func() bool {
@@ -368,4 +451,5 @@ func (a *App) publishScore(ctx context.Context, id int64) {
 	if !ok && ctx.Err() == nil {
 		slog.Warn("score announced in the log could not be read", "id", id, "err", lastErr)
 	}
+	return ok
 }

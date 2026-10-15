@@ -2,7 +2,7 @@
   const qsc = window.qsc;
   const t = qsc.t;
   const h = qsc.h;
-  const GAME_STATES = ['initialization', 'menu', 'select', 'loading', 'gameplay', 'results', 'closed', 'unknown'];
+  const GAME_STATES = ['initialization', 'menu', 'select', 'loading', 'gameplay', 'results', 'editor', 'importing', 'download', 'lobby', 'multiplayer', 'music', 'theatre', 'closed', 'unknown'];
   const CHECKS = ['quaver_dir', 'log', 'database', 'port'];
   const JUDGMENTS = ['marv', 'perf', 'great', 'good', 'okay', 'miss'];
   const DETAIL_KEYS = {
@@ -24,7 +24,7 @@
   let inflight = false;
   let copying = false;
   let ui = null;
-  let state = { game: 'unknown', map: null, last_score: null };
+  let state = window.qscStatusModel.initial();
   let diag = { checks: null, error: false, version: '', configPath: '' };
   let connection = 'connecting';
   let shownDegraded = '';
@@ -74,15 +74,21 @@
 
   function renderLast() {
     const r = state.last_score;
-    ui.last.replaceChildren(cardLabel('status.last_play'));
+    ui.lastBody.replaceChildren(cardLabel('status.last_play'));
     if (!r) {
-      ui.last.appendChild(h('p', { class: 'empty-title' }, t('status.no_score')));
-      ui.last.appendChild(h('p', { class: 'muted' }, t('status.no_score_hint')));
-      return;
+      ui.lastBody.appendChild(h('p', { class: 'empty-title' }, t('status.no_score')));
+      ui.lastBody.appendChild(h('p', { class: 'muted' }, t('status.no_score_hint')));
+    } else {
+      fillLast(r);
     }
+    const note = window.qscStatusModel.showUnsaved(state) ? t('status.unsaved') : '';
+    if (ui.unsaved.textContent !== note) ui.unsaved.textContent = note;
+  }
+
+  function fillLast(r) {
     const s = r.score;
     const rate = fmtRate(s.rate);
-    ui.last.appendChild(h('div', { class: 'last-top' },
+    ui.lastBody.appendChild(h('div', { class: 'last-top' },
       h('div', { class: 'grade', 'data-grade': String(s.grade || '').toLowerCase() },
         h('span', { class: 'sr-only' }, t('status.grade') + ' '), s.grade || '?'),
       h('div', { class: 'last-meta' },
@@ -90,12 +96,12 @@
         h('p', { class: 'num acc' }, window.qscHistoryModel.formatAccuracy(s.accuracy, window.qscI18n.lang())),
         h('p', { class: 'muted' }, t('status.max_combo', { n: s.max_combo }))),
     ));
-    ui.last.appendChild(h('div', { class: 'judgments' }, JUDGMENTS.map(function (j) {
+    ui.lastBody.appendChild(h('div', { class: 'judgments' }, JUDGMENTS.map(function (j) {
       return h('div', { class: 'judgment j-' + j },
         h('span', { class: 'j-label' }, t('judgment.' + j)),
         h('span', { class: 'num j-count' }, String((s.judgments || {})[j] || 0)));
     })));
-    ui.last.appendChild(h('div', { class: 'chips' },
+    ui.lastBody.appendChild(h('div', { class: 'chips' },
       rate ? h('span', { class: 'chip chip-accent' }, rate) : null,
       window.qscHistoryModel.modsWithoutBadges(s.mods, r).map(function (m) { return h('span', { class: 'chip' }, m); }),
       badge(r.is_pb, 'status.pb', 'pill-ok'),
@@ -240,34 +246,12 @@
     requestAnimationFrame(function () { if (ui) ui.copyStatus.textContent = message; });
   }
 
-  function isObject(v) {
-    return v !== null && typeof v === 'object' && !Array.isArray(v);
-  }
-
-  function isScore(r) {
-    return isObject(r) && isObject(r.score) && isObject(r.map);
-  }
-
-  function reduce(name, d) {
-    if (!isObject(d)) throw new Error('bad payload');
-    if (name === 'snapshot') {
-      return { game: typeof d.game === 'string' ? d.game : 'unknown', map: isObject(d.map) ? d.map : null, last_score: isScore(d.last_score) ? d.last_score : null };
-    }
-    if (name === 'game.state') {
-      if (typeof d.state !== 'string') throw new Error('bad payload');
-      return Object.assign({}, state, { game: d.state });
-    }
-    if (name === 'map.started') return Object.assign({}, state, { map: d });
-    if (!isScore(d)) throw new Error('bad payload');
-    return Object.assign({}, state, { last_score: d });
-  }
-
   function listen(source, name) {
     source.addEventListener(name, function (ev) {
       if (source !== es) return;
       let next;
       try {
-        next = reduce(name, JSON.parse(ev.data).data);
+        next = window.qscStatusModel.reduce(state, name, JSON.parse(ev.data).data);
       } catch (e) {
         return;
       }
@@ -305,7 +289,7 @@
         retryTimer = setTimeout(connect, RETRY_MS);
       }
     };
-    ['snapshot', 'game.state', 'map.started', 'score.saved'].forEach(function (name) { listen(source, name); });
+    ['snapshot', 'game.state', 'map.started', 'score.saved', 'play.ended'].forEach(function (name) { listen(source, name); });
   }
 
   function onVisibility() {
@@ -319,6 +303,8 @@
       conn: h('span', { class: 'pill pill-warn', role: 'status' }),
       now: h('section', { class: 'card card-now' }),
       last: h('section', { class: 'card card-last' }),
+      lastBody: h('div'),
+      unsaved: h('p', { class: 'unsaved-note', role: 'status', 'aria-live': 'polite' }),
       degraded: h('section', { class: 'banner banner-degraded', role: 'status', hidden: '' }),
       diag: h('div', { class: 'grid grid-4' }),
       copyDiag: h('button', { type: 'button', class: 'btn', onclick: onCopyDiag }, t('status.copy_diag')),
@@ -329,6 +315,7 @@
     root.appendChild(h('header', { class: 'page-head' },
       h('div', null, h('h1', null, t('nav.status')), h('p', { class: 'subtitle' }, t('status.subtitle'))),
       h('div', { class: 'head-pills' }, ui.conn, h('span', { 'aria-live': 'polite' }, ui.game))));
+    ui.last.append(ui.lastBody, ui.unsaved);
     root.appendChild(ui.degraded);
     root.appendChild(h('div', { class: 'grid grid-2' }, ui.now, ui.last));
     root.appendChild(h('h2', { class: 'section-label' }, t('status.diagnostics')));
@@ -342,7 +329,7 @@
     inflight = false;
     copying = false;
     connection = 'connecting';
-    state = { game: 'unknown', map: null, last_score: null };
+    state = window.qscStatusModel.initial();
     diag = { checks: null, error: false, version: '', configPath: '' };
     shownDegraded = '';
     renderConnection();

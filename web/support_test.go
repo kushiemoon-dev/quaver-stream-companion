@@ -33,7 +33,7 @@ func TestSupportUIWiring(t *testing.T) {
 func TestCopyDiagnosticsKeepsFocusAndFallsBackToATextarea(t *testing.T) {
 	src := readWeb(t, "dashboard/pages/status.js")
 	a := strings.Index(src, "async function onCopyDiag")
-	b := strings.Index(src[a:], "function isObject")
+	b := strings.Index(src[a:], "function listen(")
 	body := src[a : a+b]
 	for _, want := range []string{"aria-disabled", "if (copying) return", "textarea", "settings.copy_manual", "select()"} {
 		if !strings.Contains(src, want) {

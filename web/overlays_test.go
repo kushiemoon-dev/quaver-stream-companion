@@ -224,7 +224,7 @@ func TestOverlayKeysUsedExist(t *testing.T) {
 			}
 		}
 	}
-	for _, key := range []string{"result.marv", "result.perf", "result.great", "result.good", "result.okay", "result.miss", "badge.pb", "badge.fc", "badge.failed", "badge.paused", "badge.autoplay", "state.initialization", "state.menu", "state.select", "state.loading", "state.gameplay", "state.results", "state.closed", "state.unknown"} {
+	for _, key := range []string{"result.marv", "result.perf", "result.great", "result.good", "result.okay", "result.miss", "badge.pb", "badge.fc", "badge.failed", "badge.paused", "badge.autoplay", "state.initialization", "state.menu", "state.select", "state.loading", "state.gameplay", "state.results", "state.editor", "state.importing", "state.download", "state.lobby", "state.multiplayer", "state.music", "state.theatre", "state.closed", "state.unknown"} {
 		if _, ok := en[key]; !ok {
 			t.Errorf("missing %q", key)
 		}
@@ -327,8 +327,12 @@ assert.strictEqual(m.isHiddenState('menu', ['menu']), true);
 assert.strictEqual(m.isHiddenState('gameplay', ['menu']), false);
 assert.strictEqual(m.isHiddenState('weird', ['unknown']), true);
 assert.strictEqual(m.isHiddenState('weird', []), false);
+assert.deepStrictEqual(m.parseHide('editor,download,theatre,lobby'), ['editor', 'download', 'theatre', 'lobby']);
+assert.strictEqual(m.isHiddenState('multiplayer', ['multiplayer']), true);
+assert.strictEqual(m.stateTone('importing'), 'amber');
+assert.strictEqual(m.stateTone('editor'), 'blue');
 
-for (const s of ['initialization', 'menu', 'select', 'loading', 'gameplay', 'results', 'closed', 'unknown']) assert.strictEqual(m.stateKey(s), 'state.' + s);
+for (const s of ['initialization', 'menu', 'select', 'loading', 'gameplay', 'results', 'editor', 'importing', 'download', 'lobby', 'multiplayer', 'music', 'theatre', 'closed', 'unknown']) assert.strictEqual(m.stateKey(s), 'state.' + s);
 for (const bad of ['', null, undefined, 'x', '__proto__', 5]) assert.strictEqual(m.stateKey(bad), 'state.unknown');
 assert.strictEqual(m.stateTone('gameplay'), 'green');
 assert.strictEqual(m.stateTone('closed'), 'muted');

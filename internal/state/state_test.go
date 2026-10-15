@@ -31,6 +31,16 @@ func TestApplyUpdatesSnapshot(t *testing.T) {
 	}
 }
 
+func TestPlayEndedDoesNotChangeTheSnapshot(t *testing.T) {
+	st := New()
+	st.Apply(bus.Event{Type: bus.TypeMapStarted, Data: scores.Map{Title: "T"}})
+	before := st.Snapshot()
+	st.Apply(bus.Event{Type: bus.TypePlayEnded, Data: bus.PlayEnded{Map: scores.Map{Title: "U"}}})
+	if after := st.Snapshot(); after.Map.Title != "T" || after.Game != before.Game || after.LastScore != nil {
+		t.Fatalf("snapshot = %+v", after)
+	}
+}
+
 func TestSnapshotIsNotAffectedByLaterEvents(t *testing.T) {
 	st := New()
 	st.Apply(bus.Event{Type: bus.TypeMapStarted, Data: scores.Map{Title: "A"}})

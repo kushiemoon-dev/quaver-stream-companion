@@ -4,6 +4,8 @@ import (
 	"log/slog"
 	"sync"
 	"time"
+
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/scores"
 )
 
 const (
@@ -13,6 +15,7 @@ const (
 	TypeGameState   = "game.state"
 	TypeMapStarted  = "map.started"
 	TypeScoreSaved  = "score.saved"
+	TypePlayEnded   = "play.ended"
 	TypeKeysFrame   = "keys.frame"
 	subscriberQueue = 256
 )
@@ -24,8 +27,17 @@ type Event struct {
 	Data any       `json:"data"`
 }
 
+// GameState is the data of a game.state event. Screen is the raw lower case Quaver screen name,
+// empty when the state does not come from a screen (closed).
 type GameState struct {
-	State string `json:"state"`
+	State  string `json:"state"`
+	Screen string `json:"screen,omitempty"`
+}
+
+// PlayEnded is the data of a play.ended event: a play that left gameplay without a saved score.
+type PlayEnded struct {
+	Map   scores.Map `json:"map"`
+	Saved bool       `json:"saved"`
 }
 
 type subscriber struct {

@@ -219,7 +219,8 @@ Every event is wrapped in the same versioned envelope so your overlay keeps work
 | Type | When |
 |------|------|
 | `snapshot` | Sent once when you connect, with the full current state |
-| `game.state` | The game moved to `menu`, `select`, `loading`, `gameplay` or `results` (also `initialization` while the game starts, and `closed` when Quaver is closed). The `/state` snapshot reports `unknown` before the first log line |
+| `game.state` | The game moved to `menu`, `select`, `loading`, `gameplay` or `results` (also `initialization` while the game starts, `editor`, `importing`, `download`, `lobby`, `multiplayer`, `music` or `theatre` for the other Quaver screens, and `closed` when Quaver is closed). The `/state` snapshot reports `unknown` before the first log line |
+| `play.ended` | A play left `gameplay` without a saved score (autoplay, replay, quit, editor test play): `{ "map": <map object>, "saved": false }`. `game.state` also carries the raw `screen` name |
 | `map.started` | A map started: title, artist, difficulty, stars, key count |
 | `score.saved` | A play finished: judgments, accuracy, grade, max combo, performance `rating`, `is_pb`, `first_play`, `full_combo`, `failed`, play `rate`, `mods`, `mods_raw`, `paused` and `autoplay` |
 | `keys.frame` | Lane key state, only on `GET /events?keys=1` and only when lane keys are on (see [Lane keys](#lane-keys)) |
@@ -227,7 +228,7 @@ Every event is wrapped in the same versioned envelope so your overlay keeps work
 Score details:
 
 - `rate` is the speed of the play (`1.0` without a speed mod).
-- `mods` lists the other mods by name (`[]` when none), and `mods_raw` is the raw value stored in `quaver.db`.
+- `mods` lists the other mods by name (`[]` when none), and `mods_raw` is the raw value stored in `quaver.db`. A negative value (Quaver "None") counts as no mods, and bits qsc does not know stay in `mods_raw` without a name in `mods`.
 - `paused` is `true` when you paused during the play, and `autoplay` is `true` for an autoplay run.
 - `is_pb` and `first_play` follow the rules in [Personal bests](#personal-bests).
 - The map `difficulty` of a score is the difficulty at the played rate, not at 1.0x. `map.started` reports the 1.0x difficulty, since the rate is not known yet.

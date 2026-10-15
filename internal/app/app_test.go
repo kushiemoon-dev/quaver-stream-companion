@@ -238,6 +238,7 @@ func TestSameMapRowIsNotPublishedAgain(t *testing.T) {
 	next(t, events, bus.TypeMapStarted)
 	lines <- lineGameplay
 	next(t, events, bus.TypeGameState)
+	next(t, events, bus.TypePlayEnded)
 	select {
 	case e := <-events:
 		t.Fatalf("a row that was already published is not a new play, got %q", e.Type)
@@ -257,6 +258,7 @@ func TestReplayedMapWithNewerTimestampIsPublished(t *testing.T) {
 	next(t, events, bus.TypeMapStarted)
 	lines <- lineGameplay
 	next(t, events, bus.TypeGameState)
+	next(t, events, bus.TypePlayEnded)
 	next(t, events, bus.TypeMapStarted)
 }
 

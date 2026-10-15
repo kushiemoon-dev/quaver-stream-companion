@@ -1,7 +1,7 @@
 (function () {
   const LANGS = ['en', 'fr', 'de'];
   const GRADE_CLASS = { X: 'gold', SS: 'gold', S: 'gold', A: 'green', B: 'blue', C: 'amber', D: 'amber', F: 'red' };
-  const STATE_TONE = { initialization: 'amber', menu: 'blue', select: 'blue', loading: 'amber', gameplay: 'green', results: 'gold', closed: 'muted', unknown: 'muted' };
+  const STATE_TONE = { initialization: 'amber', menu: 'blue', select: 'blue', loading: 'amber', gameplay: 'green', results: 'gold', editor: 'blue', importing: 'amber', download: 'amber', lobby: 'blue', multiplayer: 'blue', music: 'blue', theatre: 'blue', closed: 'muted', unknown: 'muted' };
   const JUDGMENTS = ['marv', 'perf', 'great', 'good', 'okay', 'miss'];
   const BADGES = [['is_pb', 'pb'], ['full_combo', 'fc'], ['failed', 'failed'], ['paused', 'paused'], ['autoplay', 'autoplay']];
   const MAX_SHOWN_MODS = 6;

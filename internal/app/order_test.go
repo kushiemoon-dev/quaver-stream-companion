@@ -26,6 +26,8 @@ func label(e bus.Event) string {
 		return fmt.Sprintf("score.saved:%d", d.Score.ID)
 	case scores.Map:
 		return "map.started"
+	case bus.PlayEnded:
+		return fmt.Sprintf("play.ended:%s:%v", d.Map.Title, d.Saved)
 	}
 	return e.Type
 }
