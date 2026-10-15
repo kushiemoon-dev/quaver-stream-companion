@@ -4,6 +4,9 @@ import (
 	"context"
 	"log/slog"
 	"reflect"
+	"slices"
+	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -41,14 +44,16 @@ type Service struct {
 	// ticks replaces the ticker in tests.
 	ticks <-chan time.Time
 
-	name  string
-	lanes int
+	name    string
+	lanes   int
+	scratch bool
 
-	eng     *Engine
-	mapKeys int
-	playing bool
-	last    Frame
-	lastPub time.Time
+	eng        *Engine
+	mapKeys    int
+	mapScratch bool
+	playing    bool
+	last       Frame
+	lastPub    time.Time
 
 	activity atomic.Int64
 }
@@ -71,8 +76,8 @@ func NewService(b *bus.Bus, c Config, newSampler func() (Sampler, error)) *Servi
 	s.status.Supported = true
 	s.sampler = sm
 	s.events, s.unsub = b.Subscribe()
-	s.name, s.lanes = s.layout()
-	s.eng = NewEngine(s.name, s.lanes)
+	s.name, s.lanes, s.scratch = s.layout()
+	s.eng = NewEngine(s.name, s.lanes, s.scratch)
 	return s
 }
 
@@ -129,8 +134,8 @@ func (s *Service) Run(ctx context.Context) {
 					s.publish(s.eng.Release(s.now()))
 				}
 			case scores.Map:
-				s.mapKeys = d.Keys
-				s.name, s.lanes = s.layout()
+				s.mapKeys, s.mapScratch = d.Keys, d.Scratch
+				s.name, s.lanes, s.scratch = s.layout()
 				s.restart()
 			}
 		case <-tickC:
@@ -152,7 +157,7 @@ func (s *Service) Run(ctx context.Context) {
 // restart clears the counters for a new run. While playing it also seeds the key states, so a
 // key already held is not a fresh press, and publishes the starting frame.
 func (s *Service) restart() {
-	s.eng.Reset(s.name, s.lanes)
+	s.eng.Reset(s.name, s.lanes, s.scratch)
 	if !s.playing {
 		return
 	}
@@ -166,23 +171,37 @@ func (s *Service) publish(f Frame) {
 	s.bus.Publish(bus.TypeKeysFrame, f)
 }
 
-func (s *Service) layout() (string, int) {
-	l := s.cfg.Layout
-	if l == "auto" {
-		l = "4k"
-		if s.mapKeys == 7 {
-			l = "7k"
+// layout returns the layout name, the lane count and whether the first lane is the scratch lane.
+// With the auto layout an unknown map mode gives no lane at all: nothing is sampled.
+// A fixed layout always has exactly its own keys, whatever the map has.
+func (s *Service) layout() (string, int, bool) {
+	if l := s.cfg.Layout; l != "auto" {
+		n, _ := strconv.Atoi(strings.TrimSuffix(l, "k"))
+		if !validLayout(l) {
+			return "unknown", 0, false
 		}
+		return l, n, false
 	}
-	if l == "7k" {
-		return l, 7
+	if s.mapKeys < 1 || s.mapKeys > MaxKeys {
+		return "unknown", 0, false
 	}
-	return l, 4
+	// A scratch key that is also a lane key of the layout cannot be a lane of its own: the lane list wins.
+	scratch := s.mapScratch && !slices.Contains(s.cfg.Lanes(s.mapKeys), s.cfg.ScratchKey())
+	lanes := s.mapKeys
+	if scratch {
+		lanes++
+	}
+	return LayoutName(s.mapKeys), lanes, scratch
 }
 
 func (s *Service) laneKeys() []Key {
-	if s.lanes == 7 {
-		return s.cfg.K7
+	n := s.lanes
+	if s.scratch {
+		n--
 	}
-	return s.cfg.K4
+	l := s.cfg.Lanes(n)
+	if s.scratch {
+		return append([]Key{s.cfg.ScratchKey()}, l...)
+	}
+	return l
 }

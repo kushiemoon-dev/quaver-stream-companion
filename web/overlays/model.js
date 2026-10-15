@@ -13,6 +13,8 @@
   const MIN_COUNT = 5;
   const MAX_JUDGMENT = 999999;
   const MAX_KPS = 999;
+  const MAX_KEYS = 10;
+  const MAX_LANES = MAX_KEYS + 1;
   const NBSP = String.fromCharCode(160);
   const STAR = String.fromCharCode(9733);
   const SEP = ' ' + String.fromCharCode(183) + ' ';
@@ -307,17 +309,39 @@
   // Lane state from a keys.frame; null when the frame cannot be drawn.
   function keysView(frame) {
     const f = obj(frame);
-    if (f.lanes !== 4 && f.lanes !== 7) return null;
+    if (!Number.isInteger(f.lanes) || f.lanes < 1 || f.lanes > MAX_LANES) return null;
     const lane = function (list, make) {
       const src = Array.isArray(list) ? list : [];
       return Array.from({ length: f.lanes }, function (_, i) { return make(src[i]); });
     };
     return {
       lanes: f.lanes,
+      scratch: f.scratch === true && f.lanes > 1,
       down: lane(f.down, function (v) { return v === true; }),
       presses: lane(f.presses, function (v) { return keysCounter(v, MAX_JUDGMENT); }),
       kps: keysCounter(f.kps, MAX_KPS),
       peak: keysCounter(f.peak, MAX_KPS),
+    };
+  }
+
+  // True for a frame of a map whose key mode is not supported: it has no lane at all.
+  function keysUnknown(frame) {
+    const f = obj(frame);
+    return f.lanes === 0 && f.layout === 'unknown';
+  }
+
+  // A frame for demo=1: layout=NK or lanes=N (1 to 10) picks the key lanes, scratch=1 adds a scratch lane first.
+  function demoKeys(get) {
+    const count = function (v, re) { const n = re.test(v || '') ? parseInt(v, 10) : 0; return n >= 1 && n <= MAX_KEYS ? n : 0; };
+    const keys = count(get('layout'), /^[0-9]{1,2}[kK]$/) || count(get('lanes'), /^[0-9]{1,2}$/) || 4;
+    const scratch = get('scratch') === '1';
+    const lanes = keys + (scratch ? 1 : 0);
+    const at = function (make) { return Array.from({ length: lanes }, function (_, i) { return make(i); }); };
+    return {
+      layout: keys + 'k', lanes: lanes, scratch: scratch,
+      down: at(function (i) { return i % 2 === 0; }),
+      presses: at(function (i) { return 128 - ((i * 17) % 60); }),
+      kps: 9, peak: 14,
     };
   }
 
@@ -397,7 +421,7 @@
     parseScale: parseScale, parseAutohide: parseAutohide, parseLang: parseLang, parseHide: parseHide,
     isHiddenState: isHiddenState, stateKey: stateKey, stateTone: stateTone, resultView: resultView,
     curve: curve, createAutohide: createAutohide, alertView: alertView, bestLine: bestLine,
-    lastLabel: lastLabel, keysView: keysView, keysHint: keysHint, timelineView: timelineView,
+    lastLabel: lastLabel, keysView: keysView, demoKeys: demoKeys, keysUnknown: keysUnknown, keysHint: keysHint, timelineView: timelineView,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else window.qscModel = api;

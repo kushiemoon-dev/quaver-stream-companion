@@ -158,7 +158,7 @@ var (
 		"history.col":          {"map", "difficulty", "result", "accuracy", "combo", "judgments"},
 		"history.filter":       {"all", "pb", "fc", "failed"},
 		"settings.lang":        {"auto", "en", "fr", "de"},
-		"settings.keys.layout": {"auto", "4k", "7k"},
+		"settings.keys.layout": {"auto"},
 	}
 	eventNames = map[string]bool{"game.state": true, "map.started": true, "score.saved": true}
 	keyLiteral = regexp.MustCompile(`['"]([a-z_]+(?:\.[a-z_]+)+)['"]`)

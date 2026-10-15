@@ -9,6 +9,8 @@
     'Quaver is writing the database, try again': 'error.busy',
     'no judgment timeline for this score': 'error.no_timeline',
     'request body too large': 'error.too_large',
+    'must not list the same key twice': 'error.keys_dup',
+    'must differ from the lane keys of the layout in use': 'error.keys_scratch_clash',
   };
   const MESSAGE_PATTERNS = [
     [/^must list exactly (\d+) keys$/, 'error.keys_count'],

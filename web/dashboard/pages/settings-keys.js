@@ -1,7 +1,6 @@
 (function () {
   const qsc = window.qsc;
   const m = window.qscSettingsModel;
-  const LIST_LAYOUT = { k4: '4K', k7: '7K' };
 
   // ctx.call(fn) runs a request with a timeout and the page lifetime, ctx.alive() tells whether the page is still mounted.
   function build(ctx, keysConfig) {
@@ -12,7 +11,7 @@
 
     const enabled = h('input', { id: 'set-keys-enabled', type: 'checkbox', checked: values.enabled, 'aria-describedby': 'set-keys-enabled-hint' });
     const layoutSelect = h('select', { id: 'set-keys-layout', 'aria-describedby': 'set-keys-layout-help set-keys-layout-error' },
-      m.LAYOUTS.map(function (l) { return h('option', { value: l }, t('settings.keys.layout.' + l)); }));
+      m.LAYOUTS.map(function (l) { return h('option', { value: l }, l === 'auto' ? t('settings.keys.layout.auto') : l.toUpperCase()); }));
     layoutSelect.value = values.layout;
 
     const support = h('p', { class: 'muted hint', role: 'status', 'aria-live': 'polite' });
@@ -25,7 +24,7 @@
     fields.layout = { controls: [layoutSelect], error: h('p', { id: 'set-keys-layout-error', class: 'field-error', role: 'alert' }) };
 
     function list(name) {
-      const label = LIST_LAYOUT[name];
+      const label = name.slice(1) + 'K';
       const selects = values[name].map(function (key, i) {
         const select = h('select', { 'aria-label': t('settings.keys.lane', { layout: label, n: i + 1 }), 'aria-describedby': 'set-keys-' + name + '-error' },
           m.KEY_NAMES.map(function (k) { return h('option', { value: k }, k); }));
@@ -33,9 +32,15 @@
         return select;
       });
       fields[name] = { controls: selects, error: h('p', { id: 'set-keys-' + name + '-error', class: 'field-error', role: 'alert' }) };
-      return h('fieldset', { class: 'seg-group field' }, h('legend', null, t('settings.keys.' + name)),
+      return h('fieldset', { class: 'seg-group field' }, h('legend', null, t('settings.keys.list', { layout: label })),
         h('div', { class: 'key-grid' }, selects), fields[name].error);
     }
+
+    const scratchSelect = h('select', { id: 'set-keys-scratch', 'aria-describedby': 'set-keys-scratch-help set-keys-scratch-error' },
+      m.KEY_NAMES.map(function (k) { return h('option', { value: k }, k); }));
+    scratchSelect.value = values.scratch;
+    fields.scratch = { controls: [scratchSelect], error: h('p', { id: 'set-keys-scratch-error', class: 'field-error', role: 'alert' }) };
+    const lists = h('details', { class: 'key-lists' }, h('summary', null, t('settings.keys.lists')), m.LISTS.map(list));
 
     function setError(name, text) {
       const f = fields[name];
@@ -57,18 +62,16 @@
     }
 
     function readForm() {
-      return {
-        enabled: enabled.checked,
-        layout: layoutSelect.value,
-        k4: fields.k4.controls.map(function (s) { return s.value; }),
-        k7: fields.k7.controls.map(function (s) { return s.value; }),
-      };
+      const form = { enabled: enabled.checked, layout: layoutSelect.value, scratch: scratchSelect.value };
+      m.LISTS.forEach(function (name) { form[name] = fields[name].controls.map(function (s) { return s.value; }); });
+      return form;
     }
 
     function showError(e) {
       const name = m.keysFieldFor(e.field);
       if (name) {
         setError(name, e.message);
+        if (m.LISTS.indexOf(name) >= 0) lists.open = true;
         fields[name].controls[0].focus();
       } else {
         general.textContent = e.field ? e.field + ': ' + e.message : e.message;
@@ -117,8 +120,9 @@
         h('p', { id: 'set-keys-enabled-hint', class: 'muted hint' }, t('settings.keys.enabled_hint'))),
       h('div', { class: 'field' }, h('label', { for: 'set-keys-layout' }, t('settings.keys.layout')), layoutSelect,
         h('p', { id: 'set-keys-layout-help', class: 'muted hint' }, t('settings.keys.layout_help')), fields.layout.error),
-      list('k4'),
-      list('k7'),
+      lists,
+      h('div', { class: 'field' }, h('label', { for: 'set-keys-scratch' }, t('settings.keys.scratch')), scratchSelect,
+        h('p', { id: 'set-keys-scratch-help', class: 'muted hint' }, t('settings.keys.scratch_help')), fields.scratch.error),
       general,
       h('div', { class: 'save-row' }, save, status));
   }

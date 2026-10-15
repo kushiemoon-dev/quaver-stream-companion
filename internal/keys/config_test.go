@@ -30,7 +30,8 @@ func TestDefaultsReturnFreshSlices(t *testing.T) {
 
 func TestNormalizedFillsEmptyFieldsOnly(t *testing.T) {
 	got := Config{Enabled: true, K4: []Key{"Q", "W", "E", "R"}}.Normalized()
-	want := Config{Enabled: true, Layout: "auto", K4: []Key{"Q", "W", "E", "R"}, K7: Defaults().K7}
+	want := Defaults()
+	want.Enabled, want.K4 = true, []Key{"Q", "W", "E", "R"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %+v", got)
 	}
@@ -42,7 +43,7 @@ func TestCheckFieldErrors(t *testing.T) {
 		edit  func(*Config)
 		field string
 	}{
-		{"layout", func(c *Config) { c.Layout = "5k" }, "keys.layout"},
+		{"layout", func(c *Config) { c.Layout = "11k" }, "keys.layout"},
 		{"k4 too short", func(c *Config) { c.K4 = []Key{"A", "S", "K"} }, "keys.k4"},
 		{"k4 too long", func(c *Config) { c.K4 = []Key{"A", "S", "K", "L", "M"} }, "keys.k4"},
 		{"k4 unknown name", func(c *Config) { c.K4[1] = "ENTER" }, "keys.k4"},
@@ -82,7 +83,7 @@ func TestSameLaneKeyMayAppearInBothLayouts(t *testing.T) {
 }
 
 func TestJSONRoundTrip(t *testing.T) {
-	c := Config{Enabled: true, Layout: "7k", K4: []Key{"F1", "F2", "F3", "F4"}, K7: []Key{"A", "S", "D", "SPACE", "J", "K", "L"}}
+	c := Config{Enabled: true, Layout: "7k", Scratch: "CTRL_L", K4: []Key{"F1", "F2", "F3", "F4"}, K7: []Key{"A", "S", "D", "SPACE", "J", "K", "L"}}
 	raw, err := json.Marshal(c)
 	if err != nil {
 		t.Fatal(err)

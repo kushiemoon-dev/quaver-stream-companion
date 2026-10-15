@@ -14,17 +14,21 @@ import (
 )
 
 const (
-	mapTable   = `CREATE TABLE Map (Id integer primary key autoincrement not null, Md5Checksum varchar, Artist varchar, Title varchar, DifficultyName varchar, LastTimePlayed integer, Mode integer, Difficulty10X float, Difficulty09X float, Difficulty115X float)`
+	mapTable   = `CREATE TABLE Map (Id integer primary key autoincrement not null, Md5Checksum varchar, Artist varchar, Title varchar, DifficultyName varchar, LastTimePlayed integer, Mode integer, Difficulty10X float, Difficulty09X float, Difficulty115X float, HasScratchKey integer)`
 	scoreTable = `CREATE TABLE Score (Id integer primary key autoincrement not null, MapMd5 varchar, TotalScore integer, Grade integer, Accuracy float, MaxCombo integer, CountMarv integer, CountPerf integer, CountGreat integer, CountGood integer, CountOkay integer, CountMiss integer, Mods integer, DateTime varchar, PerformanceRating float, JudgementBreakdown varchar)`
 )
 
 // FakeDir is a temporary Quaver folder with a synthetic quaver.db.
-type FakeDir struct{ Path string }
+type FakeDir struct {
+	Path      string
+	noScratch bool
+}
 
 // MapRow is a row of the fake Map table.
 type MapRow struct {
 	MD5, Artist, Title, DiffName string
 	Mode                         int
+	Scratch                      bool
 	LastPlayedMS                 int64
 	Difficulty                   float64
 }
@@ -41,14 +45,21 @@ type ScoreRow struct {
 }
 
 // NewQuaverDir creates Quaver.exe, an empty Logs/runtime.log and quaver.db.
-func NewQuaverDir(t testing.TB) *FakeDir { return newDir(t, scoreTable) }
+func NewQuaverDir(t testing.TB) *FakeDir { return newDir(t, mapTable, scoreTable) }
+
+// NewNoScratchQuaverDir is like NewQuaverDir but its Map table has no HasScratchKey column.
+func NewNoScratchQuaverDir(t testing.TB) *FakeDir {
+	d := newDir(t, strings.Replace(mapTable, ", HasScratchKey integer", "", 1), scoreTable)
+	d.noScratch = true
+	return d
+}
 
 // NewLegacyQuaverDir is like NewQuaverDir but its Score table has no JudgementBreakdown column.
 func NewLegacyQuaverDir(t testing.TB) *FakeDir {
-	return newDir(t, strings.Replace(scoreTable, ", JudgementBreakdown varchar", "", 1))
+	return newDir(t, mapTable, strings.Replace(scoreTable, ", JudgementBreakdown varchar", "", 1))
 }
 
-func newDir(t testing.TB, scoreSchema string) *FakeDir {
+func newDir(t testing.TB, mapSchema, scoreSchema string) *FakeDir {
 	t.Helper()
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "Quaver.exe"), nil, 0o644); err != nil {
@@ -61,7 +72,7 @@ func newDir(t testing.TB, scoreSchema string) *FakeDir {
 	if err := os.WriteFile(d.LogPath(), nil, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	d.Exec(t, mapTable)
+	d.Exec(t, mapSchema)
 	d.Exec(t, scoreSchema)
 	return d
 }
@@ -125,8 +136,11 @@ func (d *FakeDir) Exec(t testing.TB, query string, args ...any) { d.exec(t, quer
 // AddMap inserts a map row.
 func (d *FakeDir) AddMap(t testing.TB, m MapRow) {
 	t.Helper()
-	d.exec(t, `INSERT INTO Map (Md5Checksum, Artist, Title, DifficultyName, LastTimePlayed, Mode, Difficulty10X) VALUES (?,?,?,?,?,?,?)`,
-		m.MD5, m.Artist, m.Title, m.DiffName, m.LastPlayedMS, m.Mode, m.Difficulty)
+	cols, vals, args := "", "", []any{m.MD5, m.Artist, m.Title, m.DiffName, m.LastPlayedMS, m.Mode, m.Difficulty}
+	if !d.noScratch {
+		cols, vals, args = ", HasScratchKey", ",?", append(args, m.Scratch)
+	}
+	d.exec(t, `INSERT INTO Map (Md5Checksum, Artist, Title, DifficultyName, LastTimePlayed, Mode, Difficulty10X`+cols+`) VALUES (?,?,?,?,?,?,?`+vals+`)`, args...)
 }
 
 // AddScore inserts a score row and returns its id.

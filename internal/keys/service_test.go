@@ -281,10 +281,10 @@ func TestMapStartedResetsAndAutoLayoutFollowsKeyCount(t *testing.T) {
 	}
 }
 
-func TestAutoLayoutFallsBackTo4kWhenUnknown(t *testing.T) {
+func TestAutoLayoutHasNoLaneWhenUnknown(t *testing.T) {
 	h := start(t, enabled("auto"))
 	h.b.Publish(bus.TypeMapStarted, scores.Map{Keys: 0})
-	if f := h.begin(t); f.Layout != "4k" || f.Lanes != 4 {
+	if f := h.begin(t); f.Layout != "unknown" || f.Lanes != 0 || len(f.Down) != 0 {
 		t.Fatalf("frame = %+v", f)
 	}
 }
@@ -467,8 +467,8 @@ func TestNoKeyIdentityInEventsOrLogs(t *testing.T) {
 	for _, e := range all {
 		var m map[string]any
 		_ = json.Unmarshal([]byte(e), &m)
-		if d, _ := m["data"].(map[string]any); m["type"] == bus.TypeKeysFrame && len(d) != 6 {
-			t.Fatalf("keys.frame data must be exactly layout, lanes, down, presses, kps, peak: %v", d)
+		if d, _ := m["data"].(map[string]any); m["type"] == bus.TypeKeysFrame && len(d) != 7 {
+			t.Fatalf("keys.frame data must be exactly layout, lanes, scratch, down, presses, kps, peak: %v", d)
 		}
 	}
 }

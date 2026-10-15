@@ -133,7 +133,7 @@ func TestPutWithoutKeysSectionSavesDefaults(t *testing.T) {
 
 func TestPutRejectsInvalidKeysWithFieldAndWritesNothing(t *testing.T) {
 	cases := []struct{ name, keys, field string }{
-		{"layout", `{"layout":"5k"}`, "keys.layout"},
+		{"layout", `{"layout":"11k"}`, "keys.layout"},
 		{"unknown name", `{"k4":["A","S","K","ENTER"]}`, "keys.k4"},
 		{"wrong count", `{"k4":["A","S","K"]}`, "keys.k4"},
 		{"duplicate", `{"k7":["A","S","D","D","J","K","L"]}`, "keys.k7"},

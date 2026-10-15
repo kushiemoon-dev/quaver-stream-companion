@@ -77,7 +77,7 @@ func TestSnapshotKeysIsNullUntilAFrameArrives(t *testing.T) {
 	var back struct {
 		Keys map[string]any `json:"keys"`
 	}
-	if err := json.Unmarshal(raw, &back); err != nil || len(back.Keys) != 6 {
+	if err := json.Unmarshal(raw, &back); err != nil || len(back.Keys) != 7 {
 		t.Fatalf("keys shape = %v err = %v", back.Keys, err)
 	}
 }
