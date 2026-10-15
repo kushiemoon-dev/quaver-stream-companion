@@ -26,7 +26,7 @@ It runs next to the game, keeps everything on your machine, and gives OBS a read
 
 > **Unofficial project.** Quaver is a trademark of its respective owners. QuaverStreamCompanion is an unofficial tool and is not affiliated with Quaver. It is not related to the osu! StreamCompanion tool despite the similar name.
 
-> **Status: first stable release.** [`v0.1.0`](https://github.com/kushiemoon-dev/quaver-stream-companion/releases/tag/v0.1.0) is out. The features below are built and tested on Windows; Linux is tested in CI with simulated Steam folders, and feedback from real setups is welcome. What is planned is listed under [Roadmap](#roadmap).
+> **Status: first stable release.** [`v0.1.1`](https://github.com/kushiemoon-dev/quaver-stream-companion/releases/tag/v0.1.1) is out. The features below are built and tested on Windows; Linux is tested in CI with simulated Steam folders, and feedback from real setups is welcome. What is planned is listed under [Roadmap](#roadmap).
 
 ---
 
@@ -348,7 +348,7 @@ The server only answers requests whose Host is `127.0.0.1:<port>` or `localhost:
 - [ ] Optional Twitch module: chat commands (`!map`, `!last`, `!pb`) and personal best / full combo alerts
 - [x] Custom overlays folder, lane keys and KPS overlay (Windows), degraded mode without Quaver
 - [x] 11 ready-made themes (Catppuccin, Tokyo Night, Dracula, Nord, Gruvbox, Rose Pine, Pixel, Neon Cosy...) and a guide to make your own
-- [x] Windows `.exe`, Linux binaries and AppImage releases (first stable release: `v0.1.0`)
+- [x] Windows `.exe`, Linux binaries and AppImage releases (latest release: `v0.1.1`)
 - [ ] Linux and Proton fixes after feedback from real setups
 
 ---

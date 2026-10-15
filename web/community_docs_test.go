@@ -17,6 +17,7 @@ var communityFiles = []string{
 	"docs/releases/v0.1.0-rc1.md",
 	"docs/releases/v0.1.0-rc2.md",
 	"docs/releases/v0.1.0.md",
+	"docs/releases/v0.1.1.md",
 }
 
 func TestCommunityFilesExist(t *testing.T) {
