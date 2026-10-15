@@ -15,7 +15,7 @@ trap 'rm -rf "$work"' EXIT
 appdir=$work/AppDir
 mkdir -p "$appdir/usr/bin" "$out"
 
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath \
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -buildvcs=false \
   -ldflags "-s -w -X github.com/kushiemoon-dev/quaver-stream-companion/internal/version.Version=$tag" \
   -o "$appdir/usr/bin/qsc" ./cmd/qsc
 install -m 755 packaging/appimage/AppRun "$appdir/AppRun"

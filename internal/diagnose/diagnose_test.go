@@ -49,7 +49,7 @@ func TestAllOK(t *testing.T) {
 func TestInvalidDir(t *testing.T) {
 	checks := Run(context.Background(), Options{QuaverDir: t.TempDir(), Port: freePort(t)})
 	wantIDs(t, checks)
-	if checks[0].OK || !strings.Contains(checks[0].Detail, "Quaver.exe") {
+	if checks[0].OK || !strings.Contains(checks[0].Detail, "Quaver or Quaver.exe") {
 		t.Fatalf("quaver_dir = %+v", checks[0])
 	}
 	for _, c := range checks[1:3] {
@@ -190,5 +190,12 @@ func TestBusyDatabaseIsReportedAsBusyNotFailed(t *testing.T) {
 	}
 	if !db.OK || !strings.Contains(db.Detail, "busy") {
 		t.Fatalf("database check = %+v, want ok with a busy detail", db)
+	}
+}
+
+func TestAdviceMentionsNativeLinuxBuild(t *testing.T) {
+	text := strings.Join(Advice(), "\n")
+	if !strings.Contains(text, "native") || strings.Contains(text, "where Quaver runs through Proton") {
+		t.Errorf("advice must name the native Linux build:\n%s", text)
 	}
 }

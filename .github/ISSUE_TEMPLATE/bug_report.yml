@@ -27,6 +27,7 @@ body:
       label: Quaver install type
       options:
         - Steam on Windows
+        - Steam on Linux (native)
         - Steam on Linux with Proton
         - Steam on Linux (Flatpak or Snap)
         - Standalone folder

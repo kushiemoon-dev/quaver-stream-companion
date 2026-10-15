@@ -2,7 +2,7 @@
   const MESSAGE_KEYS = {
     'must be between 1 and 65535': 'error.port_range',
     'must be a folder on a local drive, not a network path': 'error.dir_unc',
-    'must be a folder containing Quaver.exe': 'error.dir_not_quaver',
+    'must be a folder containing Quaver or Quaver.exe': 'error.dir_not_quaver',
     'must be one of en, fr, de': 'error.language',
     'unknown theme': 'error.theme',
     'must be 3, 4, 6 or 8 hexadecimal digits without #': 'error.accent',

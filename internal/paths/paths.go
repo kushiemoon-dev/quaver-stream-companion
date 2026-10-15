@@ -34,8 +34,11 @@ func IsQuaverDir(dir string) bool {
 	if ResolvesToUNC(dir) {
 		return false
 	}
-	_, err := os.Stat(filepath.Join(dir, "Quaver.exe"))
-	return err == nil
+	if _, err := os.Stat(filepath.Join(dir, "Quaver.exe")); err == nil {
+		return true
+	}
+	info, err := os.Stat(filepath.Join(dir, "Quaver"))
+	return err == nil && !info.IsDir()
 }
 
 // DefaultSteamRoots lists the usual Steam install folders for this OS.
@@ -182,7 +185,7 @@ func Find(override string, steamRoots []string) (string, error) {
 		if IsQuaverDir(override) {
 			return override, nil
 		}
-		return "", fmt.Errorf("%q is not a Quaver folder (Quaver.exe not found)", override)
+		return "", fmt.Errorf("%q is not a Quaver folder (Quaver or Quaver.exe not found)", override)
 	}
 	var tried []string
 	var roots []string

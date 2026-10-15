@@ -139,7 +139,7 @@ func (c Config) Validate(themes []string) error {
 		return &FieldError{"quaver_dir", "must be a folder on a local drive, not a network path"}
 	}
 	if c.QuaverDir != "" && !paths.IsQuaverDir(c.QuaverDir) {
-		return &FieldError{"quaver_dir", "must be a folder containing Quaver.exe"}
+		return &FieldError{"quaver_dir", "must be a folder containing Quaver or Quaver.exe"}
 	}
 	switch c.Language {
 	case "", "en", "fr", "de":
