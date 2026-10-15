@@ -19,6 +19,7 @@
   document.title = qscT('keys.title');
   let lanesEl = null;
   let built = 0;
+  let builtScratch = false;
   let countEls = [];
   let kpsEl = null;
   let peakEl = null;
@@ -30,14 +31,17 @@
     return { el: el, num: num };
   }
 
-  function build(lanes) {
+  function build(lanes, scratch) {
     const bars = qscEl('div', 'keys-lanes');
+    bars.dataset.dense = lanes >= 9 ? '1' : '0';
     lanesEl = [];
     countEls = [];
     for (let i = 0; i < lanes; i++) {
       const lane = qscEl('div', 'keys-lane');
       lane.setAttribute('role', 'img');
-      lane.setAttribute('aria-label', qscT('keys.lane') + ' ' + (i + 1));
+      const isScratch = scratch && i === 0;
+      if (isScratch) lane.classList.add('scratch');
+      lane.setAttribute('aria-label', isScratch ? qscT('keys.scratch') : qscT('keys.lane') + ' ' + (scratch ? i : i + 1));
       const count = qscEl('div', 'keys-count', '0');
       if (!params.counts) count.hidden = true;
       lane.appendChild(qscEl('div', 'keys-bar'));
@@ -60,12 +64,17 @@
     root.append(bars, stats);
     card.replaceChildren(root);
     built = lanes;
+    builtScratch = scratch;
   }
 
   function draw(frame) {
+    if (qscModel.keysUnknown(frame)) {
+      showHint('unknown_mode');
+      return;
+    }
     const v = qscModel.keysView(frame);
     if (!v) return;
-    if (built !== v.lanes) build(v.lanes);
+    if (built !== v.lanes || builtScratch !== v.scratch) build(v.lanes, v.scratch);
     v.down.forEach(function (d, i) { lanesEl[i].classList.toggle('down', d); });
     v.presses.forEach(function (n, i) { countEls[i].textContent = String(n); });
     kpsEl.textContent = String(v.kps);
@@ -97,7 +106,7 @@
   }
 
   if (params.demo) {
-    draw({ layout: '4k', lanes: 4, down: [true, false, true, false], presses: [128, 97, 110, 85], kps: 9, peak: 14 });
+    draw(qscModel.demoKeys(function (k) { return new URLSearchParams(location.search).get(k); }));
   } else {
     const es = qscConnect({
       snapshot: function (snap) { if (snap && snap.keys) draw(snap.keys); },

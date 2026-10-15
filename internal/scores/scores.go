@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -35,8 +36,11 @@ type Map struct {
 	Title          string  `json:"title"`
 	DifficultyName string  `json:"difficulty_name"`
 	Difficulty     float64 `json:"difficulty"`
-	Keys           int     `json:"keys"`
-	LastPlayedMS   int64   `json:"last_played_ms"`
+	// Keys is the lane count of the mode without the scratch lane, 0 for an unknown mode.
+	Keys int `json:"keys"`
+	// Scratch tells that the map has an extra scratch lane next to its Keys lanes.
+	Scratch      bool  `json:"scratch"`
+	LastPlayedMS int64 `json:"last_played_ms"`
 }
 
 // Judgments counts hits per judgment.
@@ -86,6 +90,7 @@ type Store struct {
 	failures atomic.Int32
 	// warnedFuture is the newest future map date already reported.
 	warnedFuture atomic.Int64
+	scratch      scratchFlag
 }
 
 // Open opens quaverDir/quaver.db read-only.
@@ -115,7 +120,9 @@ func Open(quaverDir string) (*Store, error) {
 	db.SetConnMaxIdleTime(idleTime)
 	api.SetConnMaxIdleTime(idleTime)
 	ident, _ := fileIdentity(path)
-	return &Store{db: db, api: api, now: time.Now, path: path, ident: ident}, nil
+	st := &Store{db: db, api: api, now: time.Now, path: path, ident: ident, scratch: scratchFlag{probe: scratchColumn}}
+	st.mapCols()
+	return st, nil
 }
 
 // readOnlyDSN builds a file: URL so characters such as #, %, ? and spaces in the folder name stay part of the path.
@@ -134,16 +141,67 @@ func readOnlyDSN(path string, busy time.Duration) (string, error) {
 // Close closes the database.
 func (s *Store) Close() error { return errors.Join(s.db.Close(), s.api.Close()) }
 
-const mapCols = `COALESCE(m.Md5Checksum,''), COALESCE(m.Artist,''), COALESCE(m.Title,''), COALESCE(m.DifficultyName,''), COALESCE(m.Difficulty10X,0), COALESCE(m.Mode,0), COALESCE(m.LastTimePlayed,0)`
+const mapColsBase = `COALESCE(m.Md5Checksum,''), COALESCE(m.Artist,''), COALESCE(m.Title,''), COALESCE(m.DifficultyName,''), COALESCE(m.Difficulty10X,0), COALESCE(m.Mode,0), COALESCE(m.LastTimePlayed,0)`
 
-func keysFor(mode int) int {
-	switch mode {
-	case 1:
-		return 4
-	case 2:
-		return 7
+// mapCols lists the map columns that are read for a score or a map; the scratch flag comes last.
+func (s *Store) mapCols() string { return mapColsBase + ", " + s.scratch.expr(s.api, s.now()) }
+
+// scratchRecheck is how long to wait before asking again when the column check failed.
+const scratchRecheck = time.Minute
+
+// scratchFlag finds out once whether Map has a HasScratchKey column. A failed check (the
+// database was busy) is retried at most once per scratchRecheck instead of disabling the flag for good.
+type scratchFlag struct {
+	mu      sync.Mutex
+	probe   func(*sql.DB) (expr string, err error)
+	value   string
+	known   bool
+	checked time.Time
+}
+
+// expr returns the SQL that reads the flag: 0 while the column is missing or unknown.
+func (f *scratchFlag) expr(db *sql.DB, now time.Time) string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if !f.known && (f.checked.IsZero() || now.Sub(f.checked) >= scratchRecheck) {
+		f.checked = now
+		if e, err := f.probe(db); err == nil {
+			f.value, f.known = e, true
+		}
 	}
-	return 0
+	if f.value == "" {
+		return "0"
+	}
+	return f.value
+}
+
+// scratchColumn returns the expression that reads Map.HasScratchKey, or 0 when the column is missing.
+func scratchColumn(db *sql.DB) (string, error) {
+	rows, err := db.Query(`SELECT name FROM pragma_table_info('Map') WHERE name = 'HasScratchKey'`)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+	found := rows.Next()
+	if err := rows.Err(); err != nil {
+		return "", err
+	}
+	if found {
+		return "COALESCE(m.HasScratchKey,0)", nil
+	}
+	return "0", nil
+}
+
+// modeKeys maps a Quaver GameMode to its lane count: 1 and 2 are 4K and 7K, 3 to 10 are the
+// later 1K, 2K, 3K, 5K, 6K, 8K, 9K and 10K modes.
+var modeKeys = [...]int{0, 4, 7, 1, 2, 3, 5, 6, 8, 9, 10}
+
+// keysFor returns the lane count of a mode, or 0 when the mode is unknown.
+func keysFor(mode int) int {
+	if mode < 0 || mode >= len(modeKeys) {
+		return 0
+	}
+	return modeKeys[mode]
 }
 
 // lookupBusy and apiBusy are how long a read waits for Quaver's write lock: score lookups wait
@@ -165,12 +223,12 @@ func (s *Store) LastPlayedMap(ctx context.Context) (Map, error) {
 
 func (s *Store) lastPlayedMap(ctx context.Context) (Map, error) {
 	var m Map
-	var mode int
+	var mode, scratch int
 	limit := s.now().Add(maxClockSkew).UnixMilli()
 	s.warnFutureMap(ctx, limit)
 	err := s.db.QueryRowContext(ctx,
-		`SELECT `+mapCols+` FROM Map m WHERE COALESCE(m.LastTimePlayed,0) <= ? ORDER BY m.LastTimePlayed DESC LIMIT 1`, limit,
-	).Scan(&m.MD5, &m.Artist, &m.Title, &m.DifficultyName, &m.Difficulty, &mode, &m.LastPlayedMS)
+		`SELECT `+s.mapCols()+` FROM Map m WHERE COALESCE(m.LastTimePlayed,0) <= ? ORDER BY m.LastTimePlayed DESC LIMIT 1`, limit,
+	).Scan(&m.MD5, &m.Artist, &m.Title, &m.DifficultyName, &m.Difficulty, &mode, &m.LastPlayedMS, &scratch)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Map{}, ErrNotFound
 	}
@@ -178,6 +236,7 @@ func (s *Store) lastPlayedMap(ctx context.Context) (Map, error) {
 		return Map{}, fmt.Errorf("read last played map: %w", err)
 	}
 	m.Keys = keysFor(mode)
+	m.Scratch = m.Keys > 0 && scratch != 0
 	return m, nil
 }
 
@@ -230,7 +289,7 @@ func (s *Store) ScoreByID(ctx context.Context, id int64) (Result, error) {
 }
 
 func (s *Store) scoreByID(ctx context.Context, id int64) (Result, error) {
-	rw, err := scanScore(s.db.QueryRowContext(ctx, scoreSelect+` WHERE s.Id = ?`, id))
+	rw, err := scanScore(s.db.QueryRowContext(ctx, s.scoreSelect()+` WHERE s.Id = ?`, id))
 	if errors.Is(err, sql.ErrNoRows) {
 		return Result{}, ErrNotFound
 	}

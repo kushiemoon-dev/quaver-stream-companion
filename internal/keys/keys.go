@@ -8,6 +8,7 @@
 package keys
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -25,13 +26,49 @@ type Sampler interface {
 	Down(keys []Key) []bool
 }
 
-// Config is the keys section of the settings file.
+// MaxKeys is the largest number of keys of a layout, 10K.
+const MaxKeys = 10
+
+// DefaultScratch is the key of the scratch lane when none is configured.
+const DefaultScratch Key = "SHIFT_L"
+
+// Config is the keys section of the settings file: one key list per layout, K1 to K10, with
+// exactly that many keys, and the key of the scratch lane.
 type Config struct {
 	Enabled bool   `json:"enabled"`
 	Layout  string `json:"layout"`
+	K1      []Key  `json:"k1"`
+	K2      []Key  `json:"k2"`
+	K3      []Key  `json:"k3"`
 	K4      []Key  `json:"k4"`
+	K5      []Key  `json:"k5"`
+	K6      []Key  `json:"k6"`
 	K7      []Key  `json:"k7"`
+	K8      []Key  `json:"k8"`
+	K9      []Key  `json:"k9"`
+	K10     []Key  `json:"k10"`
+	// Scratch is the key of the scratch lane. Empty, and absent from the file, means DefaultScratch.
+	Scratch Key `json:"scratch,omitempty"`
 }
+
+// list returns the key list of the n-key layout, or nil when n is out of range.
+func (c *Config) list(n int) *[]Key {
+	if n < 1 || n > MaxKeys {
+		return nil
+	}
+	return []*[]Key{&c.K1, &c.K2, &c.K3, &c.K4, &c.K5, &c.K6, &c.K7, &c.K8, &c.K9, &c.K10}[n-1]
+}
+
+// Lanes returns a copy of the keys of the n-key layout, or nil when n is out of range.
+func (c Config) Lanes(n int) []Key {
+	if l := c.list(n); l != nil {
+		return slices.Clone(*l)
+	}
+	return nil
+}
+
+// LayoutName returns the name of the n-key layout, such as "7k".
+func LayoutName(n int) string { return strconv.Itoa(n) + "k" }
 
 // vkCodes maps every accepted key name to its Windows virtual-key code.
 var vkCodes = buildCodes()
@@ -60,46 +97,117 @@ func Valid(name Key) bool {
 	return ok
 }
 
-// Defaults returns the settings used when none are saved: sampling off.
-func Defaults() Config {
-	return Config{
-		Layout: "auto",
-		K4:     []Key{"A", "S", "K", "L"},
-		K7:     []Key{"A", "S", "D", "SPACE", "J", "K", "L"},
-	}
+// defaultKeys holds the default bindings of Quaver itself for each mode, indexed by key count.
+var defaultKeys = [MaxKeys + 1][]Key{
+	1:  {"SPACE"},
+	2:  {"A", "L"},
+	3:  {"A", "SPACE", "L"},
+	4:  {"A", "S", "K", "L"},
+	5:  {"A", "S", "SPACE", "K", "L"},
+	6:  {"A", "S", "D", "J", "K", "L"},
+	7:  {"A", "S", "D", "SPACE", "J", "K", "L"},
+	8:  {"A", "S", "D", "F", "H", "J", "K", "L"},
+	9:  {"A", "S", "D", "F", "SPACE", "H", "J", "K", "L"},
+	10: {"A", "S", "D", "F", "V", "B", "H", "J", "K", "L"},
 }
 
-// Normalized returns a copy where an empty layout or an absent (nil) key list takes its default.
-// An explicit empty list is kept so that Check rejects it.
+// Defaults returns the settings used when none are saved: sampling off.
+func Defaults() Config {
+	c := Config{Layout: "auto"}
+	return c.Normalized()
+}
+
+// Normalized returns a copy where an empty layout or an absent (nil) key
+// list takes its default. An explicit empty list is kept so that Check rejects it.
 func (c Config) Normalized() Config {
-	d := Defaults()
 	if c.Layout == "" {
-		c.Layout = d.Layout
+		c.Layout = "auto"
 	}
-	if c.K4 == nil {
-		c.K4 = d.K4
+	for n := 1; n <= MaxKeys; n++ {
+		l := c.list(n)
+		if *l == nil {
+			*l = defaultKeys[n]
+		}
+		*l = slices.Clone(*l)
 	}
-	if c.K7 == nil {
-		c.K7 = d.K7
-	}
-	c.K4, c.K7 = slices.Clone(c.K4), slices.Clone(c.K7)
 	return c
 }
 
 // Check validates the settings and returns the first invalid field with a message, or "" "".
 func (c Config) Check() (field, msg string) {
-	switch c.Layout {
-	case "auto", "4k", "7k":
-	default:
-		return "keys.layout", "must be one of auto, 4k, 7k"
+	if !validLayout(c.Layout) {
+		return "keys.layout", "must be auto or a key count from 1k to 10k"
 	}
-	if m := checkList(c.K4, 4); m != "" {
-		return "keys.k4", m
+	for n := 1; n <= MaxKeys; n++ {
+		if m := checkList(*c.list(n), n); m != "" {
+			return "keys.k" + strconv.Itoa(n), m
+		}
 	}
-	if m := checkList(c.K7, 7); m != "" {
-		return "keys.k7", m
+	if c.Scratch == "" {
+		return "", ""
+	}
+	if !Valid(c.Scratch) {
+		return "keys.scratch", "is not a supported key name"
+	}
+	if c.scratchClashes() {
+		return "keys.scratch", ScratchClashMsg
 	}
 	return "", ""
+}
+
+// ScratchKey returns the key of the scratch lane, DefaultScratch when none is set.
+func (c Config) ScratchKey() Key {
+	if c.Scratch == "" {
+		return DefaultScratch
+	}
+	return c.Scratch
+}
+
+// ScratchClashMsg is the error of a scratch key that is also a lane key of the layout in use.
+const ScratchClashMsg = "must differ from the lane keys of the layout in use"
+
+// scratchClashes tells whether the scratch key is one of the lane keys that can be active:
+// those of the fixed layout, or of every layout with auto.
+func (c Config) scratchClashes() bool {
+	for n := 1; n <= MaxKeys; n++ {
+		if (c.Layout == "auto" || c.Layout == LayoutName(n)) && slices.Contains(*c.list(n), c.Scratch) {
+			return true
+		}
+	}
+	return false
+}
+
+// emptyScratch marks an explicit empty "scratch" in a settings document: it is no key name, so
+// Check rejects it, while an absent scratch keeps its default.
+const emptyScratch Key = " "
+
+// UnmarshalJSON reads the settings, keeping the current values of absent fields.
+func (c *Config) UnmarshalJSON(data []byte) error {
+	type plain Config
+	p := plain(*c)
+	if err := json.Unmarshal(data, &p); err != nil {
+		return err
+	}
+	var probe struct {
+		Scratch *Key `json:"scratch"`
+	}
+	if json.Unmarshal(data, &probe) == nil && probe.Scratch != nil && *probe.Scratch == "" {
+		p.Scratch = emptyScratch
+	}
+	*c = Config(p)
+	return nil
+}
+
+func validLayout(l string) bool {
+	if l == "auto" {
+		return true
+	}
+	for n := 1; n <= MaxKeys; n++ {
+		if l == LayoutName(n) {
+			return true
+		}
+	}
+	return false
 }
 
 func checkList(list []Key, want int) string {

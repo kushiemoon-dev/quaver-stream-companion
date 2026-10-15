@@ -10,19 +10,24 @@ import (
 
 const maxRecent = 200
 
-const scoreColumns = `SELECT s.Id, COALESCE(s.MapMd5,''), COALESCE(s.Grade,0), COALESCE(s.Accuracy,0), COALESCE(s.MaxCombo,0),
+const scoreColumnsBase = `SELECT s.Id, COALESCE(s.MapMd5,''), COALESCE(s.Grade,0), COALESCE(s.Accuracy,0), COALESCE(s.MaxCombo,0),
 		        COALESCE(s.CountMarv,0), COALESCE(s.CountPerf,0), COALESCE(s.CountGreat,0), COALESCE(s.CountGood,0), COALESCE(s.CountOkay,0), COALESCE(s.CountMiss,0),
-		        COALESCE(s.TotalScore,0), COALESCE(s.DateTime,''), COALESCE(s.Mods,0), COALESCE(s.PerformanceRating,0), ` + mapCols
+		        COALESCE(s.TotalScore,0), COALESCE(s.DateTime,''), COALESCE(s.Mods,0), COALESCE(s.PerformanceRating,0), `
+
+func (s *Store) scoreColumns() string { return scoreColumnsBase + s.mapCols() }
 
 // scoreSelect reads a score with its map; callers add the WHERE clause.
-const scoreSelect = scoreColumns + `
+func (s *Store) scoreSelect() string {
+	return s.scoreColumns() + `
 		 FROM Score s LEFT JOIN Map m ON m.Md5Checksum = s.MapMd5`
+}
 
 type scoreRow struct {
 	r       Result
 	mapMD5  string
 	grade   int
 	mapMode int
+	scratch int
 }
 
 type scanner interface{ Scan(dest ...any) error }
@@ -33,7 +38,7 @@ func scanScore(sc scanner) (scoreRow, error) {
 	err := sc.Scan(&rw.r.Score.ID, &rw.mapMD5, &rw.grade, &rw.r.Score.Accuracy, &rw.r.Score.MaxCombo,
 		&j.Marv, &j.Perf, &j.Great, &j.Good, &j.Okay, &j.Miss,
 		&rw.r.Score.TotalScore, &rw.r.Score.PlayedAt, &rw.r.Score.ModsRaw, &rw.r.Score.Rating,
-		&rw.r.Map.MD5, &rw.r.Map.Artist, &rw.r.Map.Title, &rw.r.Map.DifficultyName, &rw.r.Map.Difficulty, &rw.mapMode, &rw.r.Map.LastPlayedMS)
+		&rw.r.Map.MD5, &rw.r.Map.Artist, &rw.r.Map.Title, &rw.r.Map.DifficultyName, &rw.r.Map.Difficulty, &rw.mapMode, &rw.r.Map.LastPlayedMS, &rw.scratch)
 	return rw, err
 }
 
@@ -45,6 +50,7 @@ func (rw scoreRow) result() Result {
 	}
 	r.Score.Rate, r.Score.Mods = decodeMods(r.Score.ModsRaw)
 	r.Map.Keys = keysFor(rw.mapMode)
+	r.Map.Scratch = r.Map.Keys > 0 && rw.scratch != 0
 	if r.Map.MD5 == "" {
 		r.Map.MD5 = rw.mapMD5
 	}
@@ -70,7 +76,7 @@ func (s *Store) Recent(ctx context.Context, limit int) ([]Result, error) {
 
 func (s *Store) recent(ctx context.Context, limit int) ([]Result, error) {
 	limit = min(max(limit, 1), maxRecent)
-	rows, err := s.api.QueryContext(ctx, scoreColumns+`
+	rows, err := s.api.QueryContext(ctx, s.scoreColumns()+`
 		 FROM (SELECT * FROM Score ORDER BY Id DESC LIMIT ?) s LEFT JOIN Map m ON m.Md5Checksum = s.MapMd5 ORDER BY s.Id DESC`, limit)
 	if err != nil {
 		return nil, fmt.Errorf("list recent scores: %w", err)

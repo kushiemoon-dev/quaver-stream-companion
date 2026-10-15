@@ -197,7 +197,7 @@ func TestLoadKeysSection(t *testing.T) {
 func TestKeysSaveRoundTrip(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "config.json")
 	c := Defaults()
-	c.Keys = keys.Config{Enabled: true, Layout: "7k", K4: []keys.Key{"F1", "F2", "F3", "F4"}, K7: []keys.Key{"Q", "W", "E", "SPACE", "I", "O", "P"}}
+	c.Keys = keys.Config{Enabled: true, Layout: "7k", K4: []keys.Key{"F1", "F2", "F3", "F4"}, K7: []keys.Key{"Q", "W", "E", "SPACE", "I", "O", "P"}}.Normalized()
 	if err := Save(p, c); err != nil {
 		t.Fatal(err)
 	}
@@ -213,7 +213,7 @@ func TestValidateKeysFields(t *testing.T) {
 		edit  func(*Config)
 		field string
 	}{
-		{"layout", func(c *Config) { c.Keys.Layout = "9k" }, "keys.layout"},
+		{"layout", func(c *Config) { c.Keys.Layout = "11k" }, "keys.layout"},
 		{"bad name", func(c *Config) { c.Keys.K4[0] = "ENTER" }, "keys.k4"},
 		{"wrong count", func(c *Config) { c.Keys.K7 = c.Keys.K7[:5] }, "keys.k7"},
 		{"duplicate", func(c *Config) { c.Keys.K4[1] = "A" }, "keys.k4"},

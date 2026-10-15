@@ -13,7 +13,7 @@ Everything below uses the default port. Replace `7878` if you changed it in the 
 | History | `http://127.0.0.1:7878/overlays/history/` | 520 x 180 |
 | State | `http://127.0.0.1:7878/overlays/state/` | 280 x 64 |
 | Alert | `http://127.0.0.1:7878/overlays/alert/` | 520 x 120 |
-| Lane keys | `http://127.0.0.1:7878/overlays/keys/` | 480 x 200 (560 x 200 for 7K) |
+| Lane keys | `http://127.0.0.1:7878/overlays/keys/` | 480 x 200 (560 x 200 for 7K, 640 x 200 for 10K) |
 | Judgment curve | `http://127.0.0.1:7878/overlays/curve/` | 520 x 180 |
 
 Options go in the query string, for example `/overlays/result/?theme=nord&autohide=20&scale=1.2`. A value that cannot be read is ignored and the default is used (`theme`, `accent`, `lang`, `autohide`, `hide`, `demo`). A number outside its range is clamped to the nearest limit (`scale`, `n`), and a `scale` or `n` that is not a number uses the default.
@@ -31,9 +31,10 @@ Options go in the query string, for example `/overlays/result/?theme=nord&autohi
 | `sound` | alert | `1` plays a short synthesized chime when an alert appears | off |
 | `counts` | keys | `0` hides the press counter under each lane | on |
 | `peak` | keys | `0` hides the peak keys per second of the map | on |
+| `layout`, `lanes`, `scratch` | keys | Only with `demo=1`, to preview a layout: `layout=7k` or `lanes=7` (1 to 10 key lanes), and `scratch=1` to add a scratch lane | 4 lanes |
 | `hide` | state | Comma separated state names (see section 4) for which the badge is hidden, for example `menu,closed` | none |
 
-The lane keys overlay draws 4 or 7 lane bars (one per lane, lit while the key is down, with a smooth release), a press counter per lane, the KPS and the peak. It is hidden until lane data arrives (except with `demo=1`). When the feature is off or unsupported it shows a short hint line instead. Use 480 x 200 for 4K and 560 x 200 for 7K. It needs lane keys turned on in the settings, see Lane keys below.
+The lane keys overlay draws one lane bar per lane, from 1K to 10K plus the scratch lane of maps that have one (each lit while the key is down, with a smooth release), a press counter per lane, the KPS and the peak. It is hidden until lane data arrives (except with `demo=1`). When the feature is off or unsupported it shows a short hint line instead. Use 480 x 200 for 4K, 560 x 200 for 7K and 640 x 200 for 10K: the lanes share the width, so a narrower source still works but gets thinner bars. It needs lane keys turned on in the settings, see Lane keys below.
 
 The alert overlay stays hidden until a saved play is a personal best or a full combo (and was not failed, paused or played with autoplay). It then shows "New personal best", "Full combo" or both, with the map title and accuracy. It never replays an old play when it connects.
 
@@ -107,7 +108,7 @@ A comment line `: ping` is sent every 15 seconds to keep the connection open. Th
 | `game.state` | `{ "state": "<value>" }` |
 | `map.started` | The map object, sent when gameplay begins |
 | `score.saved` | The result object, sent when a play is saved |
-| `keys.frame` | Lane keys, only when the optional key sampling is on: `{ "layout": "4k", "lanes": 4, "down": [bool], "presses": [int], "kps": n, "peak": n }`. See Lane keys below. |
+| `keys.frame` | Lane keys, only when the optional key sampling is on: `{ "layout": "4k", "lanes": 4, "scratch": false, "down": [bool], "presses": [int], "kps": n, "peak": n }`. See Lane keys below. |
 
 #### Game states
 
@@ -140,7 +141,7 @@ A custom overlay therefore cannot read the keys stream. This is on purpose: it k
 
 | Field | Meaning |
 |-------|---------|
-| `layout`, `lanes` | `4k` with 4 lanes or `7k` with 7 |
+| `layout`, `lanes`, `scratch` | `1k` to `10k`, or `unknown` when the layout is `auto` and the mode of the map is unknown (then there is no lane). `lanes` is the key count, plus one when `scratch` is `true`: the scratch lane is then the first lane. At most 11 lanes. Quaver has two scratch bindings per mode, both unset by default, while qsc reads a single scratch key (`keys.scratch`, default `SHIFT_L`). A scratch key you set must not be one of the lane keys of the layout in use; the default is simply ignored for a layout that already uses it as a lane key |
 | `down` | One boolean per lane, true while the key is held |
 | `presses` | Presses per lane since the map started |
 | `kps` | Presses over the last second, all lanes together |
@@ -159,7 +160,8 @@ Used by `map.started`, `map` in the snapshot, and `map` in a result.
 | `title` | string | Title |
 | `difficulty_name` | string | Name of the difficulty |
 | `difficulty` | number | Star rating. In `map.started` it is the rating at 1.0x. In a result it is the rating at the rate that was played, when the game has it |
-| `keys` | number | `4` or `7`, or `0` when unknown |
+| `keys` | number | Lane count of the mode, from 1 to 10 (1K to 10K), without the scratch lane. `0` when the mode is unknown |
+| `scratch` | boolean | `true` when the map has an extra scratch lane next to its `keys` lanes |
 | `last_played_ms` | number | When the map was last played, in milliseconds since the Unix epoch |
 
 #### The result object

@@ -104,7 +104,7 @@ The full walkthrough, with troubleshooting, is in the [OBS setup guide](docs/OBS
 | History | 520 x 180 | `/overlays/history/` |
 | State | 280 x 64 | `/overlays/state/` |
 | Alert | 520 x 120 | `/overlays/alert/` |
-| Lane keys | 480 x 200 (560 x 200 for 7K) | `/overlays/keys/` |
+| Lane keys | 480 x 200 (560 x 200 for 7K, 640 x 200 for 10K) | `/overlays/keys/` |
 | Judgment curve | 520 x 180 | `/overlays/curve/` |
 
 Each link starts with `http://127.0.0.1:7878`. Use the size as the width and height of the OBS Browser source.
@@ -289,7 +289,7 @@ The lane keys overlay shows a bar per lane that lights up while its key is held,
 
 **Privacy.** Lane keys are off by default. Only the lane keys you choose are read, and only while a map is being played. Nothing is stored or logged: no key names, no key history. The key state is read system wide, regardless of the focused window, so lane key timing may be sampled while you type elsewhere during gameplay. It works on Windows only for now, and a tap shorter than the polling interval may be missed. Overlays only receive per lane on/off states, counters and KPS. The lane key data is served to pages loaded from `qsc` itself and to tools that send no `Origin` header, such as OBS and curl; a page from another origin, including a sandboxed custom overlay, gets no `keys` field and a `403` on `GET /events?keys=1`, so a web page open in your browser cannot read it.
 
-To turn it on, use the Keys card on the dashboard Settings page, or edit the file: set `"keys": { "enabled": true, "layout": "auto", "k4": ["A","S","K","L"], "k7": ["A","S","D","SPACE","J","K","L"] }`. `layout` is `auto` (from the map's key count), `4k` or `7k`; each list holds exactly that many different key names (`A` to `Z`, `0` to `9`, `SPACE`, the arrows, `SHIFT_L`, `CTRL_L`, `ALT_L` and their `_R` twins, `;` `,` `.` `/` `'`, `F1` to `F12`). A change takes effect the next time `qsc` starts. The overlay stays blank until data arrives; if the feature is off or unsupported it shows a short hint instead.
+To turn it on, use the Keys card on the dashboard Settings page, or edit the file: set `"keys": { "enabled": true, "layout": "auto", "k4": ["A","S","K","L"], "k7": ["A","S","D","SPACE","J","K","L"] }`. `layout` is `auto` (from the map's key count), or `1k` to `10k`. There is one list per layout, `k1` to `k10`, and the defaults are Quaver's own default bindings, so you only write the lists you changed. `scratch` (default `SHIFT_L`) is the key of the extra scratch lane of maps that have one; with `auto`, such a map adds that lane as the first lane. Each list holds exactly that many different key names (`A` to `Z`, `0` to `9`, `SPACE`, the arrows, `SHIFT_L`, `CTRL_L`, `ALT_L` and their `_R` twins, `;` `,` `.` `/` `'`, `F1` to `F12`). A change takes effect the next time `qsc` starts. The overlay stays blank until data arrives; if the feature is off or unsupported it shows a short hint instead.
 
 Precedence: command-line flag, then config file, then defaults. Use `--config <path>` to read another file.
 
