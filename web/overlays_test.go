@@ -366,6 +366,27 @@ assert.deepStrictEqual(empty.badges, []);
 assert.ok(m.resultView({ map: { title: 'x'.repeat(100000) } }).title.length <= 200);
 assert.deepStrictEqual(m.resultView({ failed: true, full_combo: true, autoplay: true, is_pb: true, paused: true }).badges, ['pb', 'fc', 'failed', 'paused', 'autoplay']);
 
+const ranked = m.resultView({ is_pb: true, is_local_best: true, local_rank: 1, local_total: 4 });
+assert.strictEqual(ranked.rank, '#1');
+assert.deepStrictEqual(ranked.badges, ['pb', 'best']);
+assert.strictEqual(m.resultView({ local_rank: 12 }).rank, '#12');
+for (const bad of [0, -1, 1.5, 'x', '3', ' 3 ', null, nan, undefined, {}, [3], true]) assert.strictEqual(m.resultView({ local_rank: bad }).rank, '', String(bad));
+assert.strictEqual(m.resultView({ local_rank: 1e9 }).rank, '#999');
+assert.deepStrictEqual(m.resultView({ is_local_best: 'true' }).badges, []);
+
+const worst = m.resultView({
+  score: { rate: 0.5, mods: ['A', 'B', 'C', 'D', 'E', 'F'] }, local_rank: 12,
+  is_pb: true, is_local_best: true, full_combo: true, failed: true, paused: true, autoplay: true,
+});
+assert.strictEqual(worst.badges.length, 6);
+assert.deepStrictEqual(worst.mods, { shown: [], extra: 0 });
+assert.ok(worst.badges.length + 1 + 1 + worst.mods.shown.length + (worst.mods.extra > 0 ? 1 : 0) <= 8);
+const few = m.resultView({ score: { rate: 1.2, mods: ['A', 'B', 'C', 'D'] }, local_rank: 2, is_pb: true, is_local_best: true, full_combo: true });
+assert.deepStrictEqual(few.mods, { shown: ['A', 'B'], extra: 2 });
+assert.deepStrictEqual(m.resultView({ score: { mods: ['A', 'B', 'C', 'D', 'E', 'F', 'G'] } }).mods, { shown: ['A', 'B', 'C', 'D', 'E', 'F'], extra: 1 });
+assert.deepStrictEqual(m.modList(['A', 'B', 'C'], 3).shown, ['A', 'B', 'C']);
+assert.deepStrictEqual(m.modList(['A', 'B', 'C'], 2), { shown: ['A'], extra: 2 });
+
 const plays = [
   { id: 3, accuracy: 99.1, grade: 'S' },
   { id: 2, accuracy: 88.2, grade: 'A' },
@@ -412,6 +433,11 @@ assert.strictEqual(av.title, 'Song <b>');
 assert.strictEqual(av.accuracy, '98.77%');
 assert.deepStrictEqual(m.alertView({ is_pb: true, map: {}, score: {} }).kinds, ['pb']);
 assert.deepStrictEqual(m.alertView({ full_combo: true, map: {}, score: {} }).kinds, ['fc']);
+assert.deepStrictEqual(m.alertView({ is_local_best: true, map: {}, score: {} }).kinds, ['best']);
+assert.deepStrictEqual(m.alertView({ is_pb: true, is_local_best: true, map: {}, score: {} }).kinds, ['best']);
+assert.deepStrictEqual(m.alertView({ is_local_best: true, full_combo: true, map: {}, score: {} }).kinds, ['best', 'fc']);
+for (const flag of ['failed', 'paused', 'autoplay']) assert.strictEqual(m.alertView({ is_local_best: true, [flag]: true }), null, flag);
+assert.strictEqual(m.alertView({ is_local_best: 'true' }), null);
 for (const flag of ['failed', 'paused', 'autoplay']) assert.strictEqual(m.alertView({ is_pb: true, full_combo: true, [flag]: true }), null, flag);
 assert.strictEqual(m.alertView({ is_pb: false, full_combo: false }), null);
 assert.strictEqual(m.alertView({ is_pb: 'true' }), null);

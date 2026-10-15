@@ -306,6 +306,9 @@ type historyItem struct {
 	IsPB           bool             `json:"is_pb"`
 	FullCombo      bool             `json:"full_combo"`
 	Autoplay       bool             `json:"autoplay"`
+	LocalRank      int              `json:"local_rank"`
+	LocalTotal     int              `json:"local_total"`
+	IsLocalBest    bool             `json:"is_local_best"`
 }
 
 func (a api) history(w http.ResponseWriter, r *http.Request) {
@@ -348,6 +351,7 @@ func (a api) history(w http.ResponseWriter, r *http.Request) {
 			Rate: res.Score.Rate, Mods: mods, Grade: res.Score.Grade, Accuracy: res.Score.Accuracy,
 			MaxCombo: res.Score.MaxCombo, Judgments: res.Score.Judgments,
 			Failed: res.Failed, Paused: res.Paused, IsPB: res.IsPB, FullCombo: res.FullCombo, Autoplay: res.Autoplay,
+			LocalRank: res.LocalRank, LocalTotal: res.LocalTotal, IsLocalBest: res.IsLocalBest,
 		})
 	}
 	writeJSON(w, http.StatusOK, items)

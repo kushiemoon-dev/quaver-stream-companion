@@ -107,6 +107,9 @@ func (s *Store) recent(ctx context.Context, limit int) ([]Result, error) {
 	if err := s.applyPreviousPlays(ctx, window, out); err != nil {
 		return nil, err
 	}
+	if err := s.applyLocalRanks(ctx, window, out); err != nil {
+		return nil, err
+	}
 	return out, nil
 }
 

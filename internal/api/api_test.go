@@ -366,6 +366,7 @@ func TestHistory(t *testing.T) {
 				Map:       scores.Map{Title: "T", Artist: "A", DifficultyName: "Hard", Difficulty: 12.3, Keys: 4},
 				IsPB:      true,
 				FullCombo: true,
+				LocalRank: 2, LocalTotal: 9, IsLocalBest: true,
 			}}, nil
 		}
 	})
@@ -380,6 +381,9 @@ func TestHistory(t *testing.T) {
 		if _, ok := row[k]; !ok {
 			t.Errorf("missing key %q", k)
 		}
+	}
+	if row["local_rank"] != 2.0 || row["local_total"] != 9.0 || row["is_local_best"] != true {
+		t.Errorf("local ranking fields = %v %v %v", row["local_rank"], row["local_total"], row["is_local_best"])
 	}
 	if row["mods"] == nil || row["title"] != "T" || row["is_pb"] != true {
 		t.Errorf("row = %v", row)

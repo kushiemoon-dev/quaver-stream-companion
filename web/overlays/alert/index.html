@@ -63,7 +63,7 @@
   }
 
   if (params.demo) {
-    render(qscModel.alertView({ is_pb: true, full_combo: true, score: { accuracy: 98.4 }, map: { title: 'Example Song' } }, params.lang));
+    render(qscModel.alertView({ is_pb: true, is_local_best: true, full_combo: true, score: { accuracy: 98.4 }, map: { title: 'Example Song' } }, params.lang));
   } else {
     qscConnect({ 'score.saved': onScore });
   }

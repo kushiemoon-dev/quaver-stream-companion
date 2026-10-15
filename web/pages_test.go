@@ -133,6 +133,14 @@ assert.deepStrictEqual(ids('bogus'), [1, 2, 3, 4]);
 assert.deepStrictEqual(m.filterPlays(null, 'pb'), []);
 assert.strictEqual(plays.length, 4);
 
+assert.strictEqual(m.rankLabel({ local_rank: 3 }), '#3');
+assert.strictEqual(m.rankLabel({ local_rank: 0 }), '');
+assert.strictEqual(m.rankLabel({}), '');
+assert.strictEqual(m.rankLabel(null), '');
+assert.strictEqual(m.rankLabel({ local_rank: 2.5 }), '');
+assert.strictEqual(m.rankLabel({ local_rank: '4' }), '');
+assert.strictEqual(m.rankLabel({ local_rank: 1e9 }), '#999');
+
 assert.deepStrictEqual(m.LIMITS, [25, 50, 100, 200]);
 assert.strictEqual(m.DEFAULT_LIMIT, 50);
 assert.strictEqual(m.parseLimit('100'), 100);
