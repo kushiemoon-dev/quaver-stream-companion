@@ -290,6 +290,7 @@ func (a api) putConfig(w http.ResponseWriter, r *http.Request) {
 type historyItem struct {
 	ID             int64            `json:"id"`
 	PlayedAt       string           `json:"played_at"`
+	PlayedAtRaw    string           `json:"played_at_raw"`
 	Title          string           `json:"title"`
 	Artist         string           `json:"artist"`
 	DifficultyName string           `json:"difficulty_name"`
@@ -345,7 +346,7 @@ func (a api) history(w http.ResponseWriter, r *http.Request) {
 			mods = []string{}
 		}
 		items = append(items, historyItem{
-			ID: res.Score.ID, PlayedAt: res.Score.PlayedAt,
+			ID: res.Score.ID, PlayedAt: res.Score.PlayedAt, PlayedAtRaw: res.Score.PlayedAtRaw,
 			Title: res.Map.Title, Artist: res.Map.Artist,
 			DifficultyName: res.Map.DifficultyName, Difficulty: res.Map.Difficulty, Keys: res.Map.Keys,
 			Rate: res.Score.Rate, Mods: mods, Grade: res.Score.Grade, Accuracy: res.Score.Accuracy,

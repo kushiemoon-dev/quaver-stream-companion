@@ -5,6 +5,7 @@
   const MAX_RANK = 999;
   const GRADE_CLASS = { X: 'gold', SS: 'gold', S: 'gold', A: 'green', B: 'blue', C: 'amber', D: 'amber', F: 'red' };
   const DATE_LANGS = ['en', 'fr', 'de'];
+  const RFC3339 = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/;
   const FILTERS = { pb: 'is_pb', fc: 'full_combo', failed: 'failed' };
 
   const COMMA_LANGS = ['fr', 'de'];
@@ -64,7 +65,8 @@
 
   function formatPlayedAt(raw, lang) {
     if (typeof raw !== 'string' || raw === '') return '';
-    const date = new Date(/^\d{4}-\d{2}-\d{2} /.test(raw) ? raw.replace(' ', 'T') : raw);
+    if (!RFC3339.test(raw)) return raw;
+    const date = new Date(raw);
     if (isNaN(date.getTime())) return raw;
     try {
       return new Intl.DateTimeFormat(DATE_LANGS.indexOf(lang) >= 0 ? lang : 'en', { dateStyle: 'medium', timeStyle: 'short' }).format(date);

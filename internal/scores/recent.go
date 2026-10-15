@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const maxRecent = 200
@@ -45,6 +46,8 @@ func scanScore(sc scanner) (scoreRow, error) {
 // result derives the flags that need nothing but the row itself.
 func (rw scoreRow) result() Result {
 	r := rw.r
+	r.Score.PlayedAtRaw = r.Score.PlayedAt
+	r.Score.PlayedAt = parsePlayedAt(r.Score.PlayedAtRaw, time.Local)
 	if rw.grade >= 0 && rw.grade < len(gradeNames) {
 		r.Score.Grade = gradeNames[rw.grade]
 	}

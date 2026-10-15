@@ -55,17 +55,18 @@ type Judgments struct {
 
 // Score is one play.
 type Score struct {
-	ID         int64     `json:"id"`
-	Grade      string    `json:"grade"`
-	Accuracy   float64   `json:"accuracy"`
-	MaxCombo   int       `json:"max_combo"`
-	Judgments  Judgments `json:"judgments"`
-	TotalScore int64     `json:"total_score"`
-	PlayedAt   string    `json:"played_at"`
-	Mods       []string  `json:"mods"`
-	ModsRaw    int64     `json:"mods_raw"`
-	Rate       float64   `json:"rate"`
-	Rating     float64   `json:"rating"`
+	ID          int64     `json:"id"`
+	Grade       string    `json:"grade"`
+	Accuracy    float64   `json:"accuracy"`
+	MaxCombo    int       `json:"max_combo"`
+	Judgments   Judgments `json:"judgments"`
+	TotalScore  int64     `json:"total_score"`
+	PlayedAt    string    `json:"played_at"`
+	PlayedAtRaw string    `json:"played_at_raw"`
+	Mods        []string  `json:"mods"`
+	ModsRaw     int64     `json:"mods_raw"`
+	Rate        float64   `json:"rate"`
+	Rating      float64   `json:"rating"`
 }
 
 // Result is a score with its map and derived flags.
