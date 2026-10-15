@@ -1,5 +1,5 @@
 (function () {
-  const STATES = ['initialization', 'menu', 'select', 'loading', 'gameplay', 'results', 'closed', 'unknown'];
+  const STATES = ['initialization', 'menu', 'select', 'loading', 'gameplay', 'results', 'editor', 'importing', 'download', 'lobby', 'multiplayer', 'music', 'theatre', 'closed', 'unknown'];
   const LANGS = ['auto', 'en', 'fr', 'de'];
   const DEFAULTS = { autohide: 0, scale: 1, lang: 'auto', n: 20 };
   const LIMITS = { autohide: { min: 1, max: 3600 }, scale: { min: 0.5, max: 3 }, n: { min: 5, max: 50 } };

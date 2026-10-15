@@ -83,7 +83,9 @@ func speedOf(mods int64) speedFlag {
 	return speedFlag{rate: 1.0, col: "Difficulty10X"}
 }
 
+// decodeMods treats a negative value (Quaver None is -1) as no mods.
 func decodeMods(mods int64) (rate float64, names []string) {
+	mods = max(mods, 0)
 	names = []string{}
 	for _, f := range modFlags {
 		if mods&(1<<f.bit) != 0 {

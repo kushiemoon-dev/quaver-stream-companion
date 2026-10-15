@@ -66,6 +66,7 @@ func TestDashboardFilesExist(t *testing.T) {
 		"dashboard/app.js",
 		"dashboard/api.js",
 		"dashboard/i18n.js",
+		"dashboard/pages/status-model.js",
 		"dashboard/pages/status.js",
 		"dashboard/pages/overlay-catalog.js",
 		"dashboard/pages/overlay-url.js",
@@ -149,7 +150,7 @@ func TestEnglishCatalogHasNoEmptyValue(t *testing.T) {
 
 var (
 	dynamicKeySets = map[string][]string{
-		"game":     {"initialization", "menu", "select", "loading", "gameplay", "results", "closed", "unknown"},
+		"game":     {"initialization", "menu", "select", "loading", "gameplay", "results", "editor", "importing", "download", "lobby", "multiplayer", "music", "theatre", "closed", "unknown"},
 		"check":    {"quaver_dir", "log", "database", "port"},
 		"judgment": {"marv", "perf", "great", "good", "okay", "miss"},
 		"nav":      {"status", "overlays", "obs", "history", "settings", "twitch"},
@@ -371,7 +372,7 @@ func sharedTerm(key string) bool {
 	switch key {
 	case "nav.twitch", "nav.overlays", "nav.obs", "status.version", "settings.version", "history.filter.fc",
 		"nav.status", "status.problem", "status.keys", "status.pb", "status.fc", "status.ok",
-		"status.live", "status.autoplay", "game.menu", "history.filter.pb", "history.col.map",
+		"status.live", "status.autoplay", "game.menu", "game.lobby", "game.editor", "history.filter.pb", "history.col.map",
 		"settings.port", "settings.lang.en", "settings.lang.fr", "settings.lang.de",
 		"settings.keys.layout.auto", "settings.keys.layout.4k", "settings.keys.layout.7k":
 		return true

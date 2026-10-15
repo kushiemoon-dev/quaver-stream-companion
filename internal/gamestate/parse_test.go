@@ -1,6 +1,9 @@
 package gamestate
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestParseLine(t *testing.T) {
 	tests := []struct {
@@ -44,5 +47,15 @@ func TestParseLine(t *testing.T) {
 				t.Fatalf("ParseLine(%q) = %+v, %v; want %+v, %v", tc.in, got, ok, tc.want, tc.ok)
 			}
 		})
+	}
+}
+
+func TestParseLineKeepsEveryScreenName(t *testing.T) {
+	names := []string{"Editor", "Gameplay", "Loading", "Menu", "Results", "Select", "Importing", "Download", "Lobby", "Multiplayer", "Music", "Theatre", "Initialization"}
+	for _, n := range names {
+		got, ok := ParseLine("[1:05:29] - RUNTIME - IMPORTANT: Screen has been switched to type: `" + n + "`")
+		if !ok || got.Kind != KindState || got.State != strings.ToLower(n) {
+			t.Errorf("%s: got %+v ok=%v", n, got, ok)
+		}
 	}
 }
