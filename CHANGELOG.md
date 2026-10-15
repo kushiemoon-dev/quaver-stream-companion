@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Every Quaver screen is its own state: `editor`, `importing`, `download`, `lobby`, `multiplayer`, `music` and `theatre` join `menu`, `select`, `loading`, `gameplay`, `results`, `initialization` and `closed`. The dashboard Status page and the state overlay show them with translated labels, and the state overlay `hide` list accepts them.
+- The `game.state` event carries a `screen` field with the raw lower case Quaver screen name when it is known.
+- A new `play.ended` event (`{ "map": <map object>, "saved": false }`) tells when a play left `gameplay` without a saved score, such as an autoplay, a replay, the theatre, an editor test play or a quit. The Status page shows "Last play was not saved" under the last play card until the next play.
+- Score results carry `local_rank`, `local_total` and `is_local_best`, which rank each play on the local leaderboard of its map the way Quaver does: across every play speed, mod set and local profile, the 50 plays with the highest score, failed plays last, then performance rating, then accuracy. The result overlay shows a `#k` chip and a `Best` badge, the alert overlay announces a new best, and the History page shows the rank and both badges.
+- Score results and `/api/history` carry `played_at_raw`, the date text exactly as Quaver saved it, and the History page formats the play time by language.
+- The `watch_quaver_process` setting (on by default, one checkbox in Settings) lets qsc look at the names of running programs to notice when Quaver has crashed or was killed: after 30 seconds without a Quaver process the state becomes `closed`. Nothing is stored or sent, and the check stays off on systems where qsc cannot list processes.
+
+### Changed
+
+- The format of `played_at` changed, its type is still a string: it was the date text Quaver saved, such as `10/14/2026 20:30`, and it is now an RFC 3339 timestamp with the local offset of the computer running qsc, such as `2026-10-14T20:30:00+02:00`. Text qsc cannot read is kept unchanged. Consumers of the old text should read `played_at_raw`.
+- `is_pb` keeps its meaning, the best play at the same speed and mod set, and is now documented as the same speed personal best next to the local leaderboard fields.
+- A mods value of `-1` (Quaver "None") counts as no mods, and mod bits qsc does not know stay in `mods_raw` without being listed in `mods`.
+
 ## [0.1.0] - 2026-10-14
 
 First stable release. The program is the same as `0.1.0-rc2`: this release updates the documentation and the release notes. See the entries below for everything it contains.

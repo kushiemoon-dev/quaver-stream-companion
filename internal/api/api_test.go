@@ -362,7 +362,7 @@ func TestHistory(t *testing.T) {
 		d.History = func(ctx context.Context, limit int) ([]scores.Result, error) {
 			gotLimit = limit
 			return []scores.Result{{
-				Score:     scores.Score{ID: 7, Grade: "S", Accuracy: 97.5, MaxCombo: 100, PlayedAt: "2026-01-01 10:00:00", Rate: 1.2},
+				Score:     scores.Score{ID: 7, Grade: "S", Accuracy: 97.5, MaxCombo: 100, PlayedAt: "2026-01-01T10:00:00+01:00", PlayedAtRaw: "01/01/2026 10:00", Rate: 1.2},
 				Map:       scores.Map{Title: "T", Artist: "A", DifficultyName: "Hard", Difficulty: 12.3, Keys: 4},
 				IsPB:      true,
 				FullCombo: true,
@@ -377,13 +377,16 @@ func TestHistory(t *testing.T) {
 		t.Fatalf("code %d limit %d body %s", w.Code, gotLimit, w.Body.String())
 	}
 	row := got[0]
-	for _, k := range []string{"id", "played_at", "title", "artist", "difficulty_name", "difficulty", "keys", "rate", "mods", "grade", "accuracy", "max_combo", "judgments", "failed", "paused", "is_pb", "full_combo"} {
+	for _, k := range []string{"id", "played_at", "played_at_raw", "title", "artist", "difficulty_name", "difficulty", "keys", "rate", "mods", "grade", "accuracy", "max_combo", "judgments", "failed", "paused", "is_pb", "full_combo"} {
 		if _, ok := row[k]; !ok {
 			t.Errorf("missing key %q", k)
 		}
 	}
 	if row["local_rank"] != 2.0 || row["local_total"] != 9.0 || row["is_local_best"] != true {
 		t.Errorf("local ranking fields = %v %v %v", row["local_rank"], row["local_total"], row["is_local_best"])
+	}
+	if row["played_at"] != "2026-01-01T10:00:00+01:00" || row["played_at_raw"] != "01/01/2026 10:00" {
+		t.Errorf("times = %v %v", row["played_at"], row["played_at_raw"])
 	}
 	if row["mods"] == nil || row["title"] != "T" || row["is_pb"] != true {
 		t.Errorf("row = %v", row)

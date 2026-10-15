@@ -212,7 +212,8 @@ The score object:
 | `max_combo` | number | Highest combo |
 | `judgments` | object | Counts: `marv`, `perf`, `great`, `good`, `okay`, `miss` |
 | `total_score` | number | The score points |
-| `played_at` | string | The time of the play as saved by the game, `YYYY-MM-DD HH:MM:SS` |
+| `played_at` | string | The time of the play as an RFC 3339 timestamp with the local offset of the computer running qsc, for example `2026-10-14T20:30:00+02:00`. If the game wrote a date qsc cannot read, this holds the original text |
+| `played_at_raw` | string | The date text exactly as the game saved it, for example `10/14/2026 20:30` (local time, no zone) |
 | `mods` | array of strings | Names of the active mods. The rate is not in this list |
 | `mods_raw` | number | The raw mod bit field of the game. A negative value (Quaver "None") is reported as `0`. Bits this version does not know stay in the value but are not listed in `mods` |
 | `rate` | number | Playback rate, `1` for normal speed |
@@ -229,7 +230,8 @@ For pages served by the companion itself (the built-in History overlay uses it).
 ```json
 {
   "id": 1,
-  "played_at": "2026-10-12 13:06:06",
+  "played_at": "2026-10-12T13:06:06+02:00",
+  "played_at_raw": "2026-10-12 13:06:06",
   "title": "Some Title",
   "artist": "Some Artist",
   "difficulty_name": "Hard",
