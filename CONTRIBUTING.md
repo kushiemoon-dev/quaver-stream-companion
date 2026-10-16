@@ -37,6 +37,10 @@ node scripts/js-coverage.mjs
 
 The script runs `go test ./web` with V8 coverage, then prints a per-file table and a total. It needs Go, Node 20 or later and network access for `npx` on the first run. It writes `coverage-js/`, which is ignored by git. Add `--lines N`, `--branches N` or `--functions N` (or set `QSC_JS_COV_LINES`, `QSC_JS_COV_BRANCHES`, `QSC_JS_COV_FUNCTIONS`) to fail below a threshold.
 
+## Testing the pages
+
+The page scripts run unchanged in `node:vm` against a small browser stand-in, `web/testsupport/dom.js`: `openPage` loads a page and its scripts, `createWindow` gives bare globals. Tests drive a page through its `fetch` route table (`opts.routes`, answers built with `json`, `text` or `deferred`), its event streams (`win.eventSources`, with `open`, `emit` and `fail`), the fake clock (`await win.advance(ms)` also moves `Date`), `win.clipboard`, storage and `win.logs`, then assert the rendered text, attributes and requests (`win.fetchCalls`). Selectors support tag, id, class, attribute (spaces allowed in quoted values), descendant, child, lists and `:not()`, `:first-child`, `:last-child`, `:disabled`, `:checked`, `:empty`; anything else throws. Test scripts live in `web/testdata/` (the dashboard ones share `dashboard/helpers.js`) and run through the Go tests in `web/`, which skip when `node` is missing.
+
 ## Code rules
 
 - Keep comments rare: a short doc comment on exported names, and the occasional comment for a non-obvious reason.
