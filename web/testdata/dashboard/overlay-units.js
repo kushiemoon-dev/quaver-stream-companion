@@ -248,4 +248,11 @@ test('controls: options reports changes and shows only the controls an overlay h
   assert.deepEqual(changes.slice(5).map((c) => Object.keys(c)[0] + '=' + Object.values(c)[0]), ['best=true', 'counts=false', 'peak=true', 'meta=false', 'sound=true']);
 });
 
+test('link: demo data is only in previews, and only when the switch is not off', () => {
+  assert.equal(link({}, true, ORIGIN), '/overlays/now-playing/?theme=neutral-light&demo=1');
+  assert.equal(link({ demo: true }, true, ORIGIN), '/overlays/now-playing/?theme=neutral-light&demo=1');
+  assert.equal(link({ demo: false }, true, ORIGIN), '/overlays/now-playing/?theme=neutral-light');
+  assert.equal(link({ demo: true }, false, ORIGIN), ORIGIN + '/overlays/now-playing/');
+});
+
 run();

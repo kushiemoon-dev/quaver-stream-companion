@@ -63,6 +63,7 @@
   "overlays.save_failed": "Speichern nicht möglich: {message}",
   "overlays.preview": "Vorschau",
   "overlays.preview_title": "Vorschau des Overlays {name} mit Beispieldaten",
+  "overlays.preview_title_live": "Vorschau des Overlays {name}",
   "overlays.loading": "Laden...",
   "overlays.load_failed": "Die Overlay-Einstellungen konnten nicht geladen werden: {message}",
   "overlays.retry": "Erneut versuchen",
@@ -314,5 +315,11 @@
   "status.stale": "Nicht aktualisiert",
   "skip.link": "Zum Inhalt springen",
   "check.detail.busy": "Quaver schreibt in die Datenbank",
-  "check.detail.other": "Die Prüfung meldet:"
+  "check.detail.other": "Die Prüfung meldet:",
+  "overlays.demo": "Vorschau mit Demodaten",
+  "overlays.demo_hint": "Zeigt Beispielwerte in den Vorschauen unten. Die für OBS kopierten Links enthalten sie nie.",
+  "overlays.demo_on": "Die Vorschau zeigt Demodaten.",
+  "overlays.demo_off": "Die Vorschau zeigt Live-Daten.",
+  "status.degraded.demo_hint": "Du kannst die Overlays trotzdem ausprobieren: Die Seite Overlays zeigt sie mit Demodaten.",
+  "status.degraded.open_overlays": "Vorschauen ansehen"
 }

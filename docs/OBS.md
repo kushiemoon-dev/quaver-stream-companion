@@ -28,7 +28,7 @@ The overlays are web pages served by `qsc`. In OBS each one is a Browser source.
 | Judgment curve | 520 x 180 | `http://127.0.0.1:7878/overlays/curve/` |
 | Session | 480 x 170 | `http://127.0.0.1:7878/overlays/session/` |
 
-Replace the port if you changed it. Options such as `scale`, `autohide` or `lang` are added by the Overlays page.
+Replace the port if you changed it. Options such as `scale`, `autohide` or `lang` are added by the Overlays page. The "Preview with demo data" switch only changes the preview in the dashboard: the link you copy never contains `demo=1`.
 
 ### Lane keys overlay
 

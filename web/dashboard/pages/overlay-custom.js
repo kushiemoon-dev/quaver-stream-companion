@@ -22,9 +22,13 @@
     frame.style.height = o.custom ? Math.min(o.height + FRAME_EXTRA, FRAME_MAX) + 'px' : '';
   }
 
+  function frameTitle(frame, o, demo) {
+    frame.setAttribute('title', t(demo !== false && !o.custom ? 'overlays.preview_title' : 'overlays.preview_title_live', { name: name(o) }));
+  }
+
   function dirHelp(dir) {
     return dir ? h('p', { class: 'muted hint' }, t('overlays.custom_dir_help'), ' ', h('code', null, qsc.pathNodes(dir))) : null;
   }
 
-  window.qscOverlayCustom = { name: name, desc: desc, frameClass: frameClass, frameHeight: frameHeight, dirHelp: dirHelp };
+  window.qscOverlayCustom = { name: name, desc: desc, frameClass: frameClass, frameHeight: frameHeight, frameTitle: frameTitle, dirHelp: dirHelp };
 })();

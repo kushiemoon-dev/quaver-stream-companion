@@ -302,6 +302,10 @@ test('Quaver folder missing shows the degraded banner with the steps and a link 
   const link = banner.querySelector('a');
   assert.equal(link.getAttribute('href'), '#/settings');
   assert.equal(text(link), 'Open Settings');
+  const demo = banner.querySelectorAll('a')[1];
+  assert.equal(demo.getAttribute('href'), '#/overlays');
+  assert.equal(text(demo), 'Preview the overlays');
+  assert.match(text(banner), /previews them with demo data/);
   assert.match(text(banner), /Quaver folder not found/);
 });
 

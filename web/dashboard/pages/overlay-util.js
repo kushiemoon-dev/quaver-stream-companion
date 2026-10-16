@@ -41,5 +41,38 @@
     return e.field ? e.field + ': ' + e.message : e.message;
   }
 
-  window.qscOverlayUtil = { pickerValue: pickerValue, makeCall: makeCall, describe: describe };
+  const DEMO_KEY = 'qsc.overlays.demo';
+
+  // The remembered choice, or null when nothing is stored or the storage is blocked.
+  function storedDemo() {
+    try {
+      const v = window.localStorage.getItem(DEMO_KEY);
+      return v === '1' ? true : v === '0' ? false : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function storeDemo(on) {
+    try { window.localStorage.setItem(DEMO_KEY, on ? '1' : '0'); } catch (e) { /* the choice just is not remembered */ }
+  }
+
+  // Without a remembered choice the preview shows demo data unless Quaver is found and a map is known.
+  function demoDefault(checks, live) {
+    const folder = (Array.isArray(checks) ? checks : []).filter(function (c) { return c && c.id === 'quaver_dir'; })[0];
+    return !(folder && folder.ok === true && live && live.map);
+  }
+
+  // The remembered choice, else the default from the Quaver check and the live state (a failed request counts as nothing known).
+  async function initialDemo(call) {
+    const stored = storedDemo();
+    if (stored !== null) return stored;
+    const got = await Promise.all([
+      call(function (s) { return qsc.api.get('/api/status', s); }).catch(function () { return {}; }),
+      call(function (s) { return qsc.api.get('/state', s); }).catch(function () { return null; }),
+    ]);
+    return demoDefault(got[0].checks, got[1]);
+  }
+
+  window.qscOverlayUtil = { pickerValue: pickerValue, makeCall: makeCall, describe: describe, storeDemo: storeDemo, initialDemo: initialDemo };
 })();

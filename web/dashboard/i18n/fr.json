@@ -63,6 +63,7 @@
   "overlays.save_failed": "Enregistrement impossible : {message}",
   "overlays.preview": "Aperçu",
   "overlays.preview_title": "Aperçu de l'overlay {name} avec des données d'exemple",
+  "overlays.preview_title_live": "Aperçu de l'overlay {name}",
   "overlays.loading": "Chargement...",
   "overlays.load_failed": "Impossible de charger les réglages des overlays : {message}",
   "overlays.retry": "Réessayer",
@@ -314,5 +315,11 @@
   "status.stale": "Non actualisé",
   "skip.link": "Aller au contenu",
   "check.detail.busy": "Quaver écrit dans la base de données",
-  "check.detail.other": "La vérification indique :"
+  "check.detail.other": "La vérification indique :",
+  "overlays.demo": "Aperçu avec des données de démo",
+  "overlays.demo_hint": "Affiche des valeurs d'exemple dans les aperçus ci-dessous. Les liens copiés pour OBS n'en contiennent jamais.",
+  "overlays.demo_on": "L'aperçu affiche des données de démo.",
+  "overlays.demo_off": "L'aperçu affiche les données en direct.",
+  "status.degraded.demo_hint": "Vous pouvez quand même essayer les overlays : la page Overlays les affiche avec des données de démo.",
+  "status.degraded.open_overlays": "Voir les aperçus"
 }

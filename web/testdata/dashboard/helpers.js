@@ -31,7 +31,7 @@ function routes(extra = {}) {
 // open loads the dashboard and lets its start-up requests finish. Options: hash, language (browser), routes (merged over the defaults).
 async function open(opts = {}) {
   const win = dom.openPage(WEB, 'dashboard/index.html', {
-    language: opts.language, url: 'http://127.0.0.1:7878/' + (opts.hash || ''), routes: routes(opts.routes),
+    language: opts.language, storageThrows: opts.storageThrows, url: 'http://127.0.0.1:7878/' + (opts.hash || ''), routes: routes(opts.routes),
   });
   win.dispatchEvent(new dom.Event('DOMContentLoaded', { bubbles: false }));
   await win.flush();

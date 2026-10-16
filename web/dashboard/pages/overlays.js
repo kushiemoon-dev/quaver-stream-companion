@@ -28,6 +28,7 @@
 
   function refreshPreview() {
     clearTimeout(previewTimer);
+    if (ui) custom.frameTitle(ui.frame, cat.byId(model.overlay), model.demo);
     previewTimer = setTimeout(function () {
       if (ui) ui.frame.setAttribute('src', url.buildOverlayUrl(model, true, location.origin));
     }, PREVIEW_DELAY_MS);
@@ -58,7 +59,6 @@
     ui.sizeStatus.textContent = '';
     ui.frame.className = custom.frameClass(overlay);
     custom.frameHeight(ui.frame, overlay);
-    ui.frame.setAttribute('title', t('overlays.preview_title', { name: name }));
     ui.copy.setAttribute('aria-label', t('overlays.copy_aria', { name: name }));
     ui.options.sync(overlay);
     refreshUrl();
@@ -233,6 +233,7 @@
       copySize: h('button', { type: 'button', class: 'btn', 'aria-label': t('overlays.copy_size_aria'), 'aria-describedby': 'ov-size', onclick: onCopySize }, t('overlays.copy')),
       sizeStatus: h('p', { class: 'muted status-line', role: 'status', 'aria-live': 'polite' }),
       options: controls.options(model, update),
+      demo: controls.demoSwitch(model.demo, function (on) { update({ demo: on }); }),
       frame: h('iframe', { class: 'preview-frame', title: '', loading: 'lazy',
         sandbox: 'allow-scripts' }),
     };
@@ -264,6 +265,7 @@
         h('div', { class: 'preview' },
           h('div', { class: 'size-row' }, h('span', null, t('overlays.size')), ui.size, ui.copySize), ui.sizeStatus,
           h('h3', { class: 'card-label' }, t('overlays.preview')),
+          ui.demo,
           h('div', { class: 'checker' }, ui.frame))));
   }
 
@@ -281,13 +283,14 @@
         call(function (s) { return qsc.api.get('/api/themes', s); }),
         call(function (s) { return qsc.api.get('/api/config', s); }),
         call(function (s) { return qsc.api.get('/api/overlays', s); }).catch(function () { return {}; }),
+        util.initialDemo(call),
       ]);
       if (id !== mountId) return;
       cat.setCustom((res[2] || {}).custom);
       const overlay = (res[1].config && res[1].config.overlay) || {};
       const theme = overlay.theme || FALLBACK_THEME;
       const accent = url.normalizeAccent(overlay.accent || '');
-      model = { overlay: cat.OVERLAYS[0].id, autohide: '', scale: '', lang: 'auto', n: '', best: false, sound: false, meta: false, counts: true, peak: true, hide: [], themes: Array.isArray(res[0]) ? res[0] : [], themesDir: res[1].themes_dir || '', overlaysDir: typeof (res[2] || {}).dir === 'string' ? res[2].dir : '', theme: theme, accent: accent, defaultTheme: theme, defaultAccent: accent };
+      model = { overlay: cat.OVERLAYS[0].id, autohide: '', scale: '', lang: 'auto', n: '', best: false, sound: false, meta: false, demo: res[3], counts: true, peak: true, hide: [], themes: Array.isArray(res[0]) ? res[0] : [], themesDir: res[1].themes_dir || '', overlaysDir: typeof (res[2] || {}).dir === 'string' ? res[2].dir : '', theme: theme, accent: accent, defaultTheme: theme, defaultAccent: accent };
       root.replaceChildren(buildCard());
       const target = ui.grid.querySelector('.theme-input:checked') || ui.grid.querySelector('.theme-input');
       if (refocus && target) target.focus();

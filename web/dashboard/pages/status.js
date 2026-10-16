@@ -151,7 +151,11 @@
     }
     ui.degraded.appendChild(h('p', { class: 'muted' }, detailNodes(bad.detail, false)));
     ui.degraded.appendChild(h('p', null, t('status.degraded.auto')));
-    if (kind === 'folder') ui.degraded.appendChild(h('a', { class: 'btn', href: '#/settings' }, t('status.degraded.open_settings')));
+    if (kind === 'folder') {
+      ui.degraded.appendChild(h('p', { class: 'hint' }, t('status.degraded.demo_hint')));
+      ui.degraded.appendChild(h('a', { class: 'btn', href: '#/settings' }, t('status.degraded.open_settings')));
+      ui.degraded.appendChild(h('a', { class: 'btn', href: '#/overlays' }, t('status.degraded.open_overlays')));
+    }
   }
 
   function renderDiag() {
