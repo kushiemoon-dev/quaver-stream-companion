@@ -3,10 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="light dark">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0e1322">
 <title>QuaverStreamCompanion</title>
 <meta name="description" content="Live Quaver data for your stream overlays, read from the files the game already writes. Local, no account, no telemetry.">
 <link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&amp;family=Chakra+Petch:wght@500;600;700&amp;display=swap">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -14,10 +18,10 @@
 
 <header class="top">
   <div class="wrap bar">
-    <a class="brand" href="#top">QuaverStreamCompanion</a>
+    <a class="brand" href="#top" aria-label="QuaverStreamCompanion, back to the top"><span class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>qsc</a>
     <nav aria-label="Page sections">
+      <a href="#demo">Demo</a>
       <a href="#install">Install</a>
-      <a href="#overlays">Overlays</a>
       <a href="#privacy">Privacy</a>
       <a href="#docs">Docs</a>
     </nav>
@@ -25,14 +29,98 @@
 </header>
 
 <main id="main">
-  <section class="hero wrap" id="top">
-    <h1>Live Quaver data for your stream overlays</h1>
-    <p class="lead">QuaverStreamCompanion (<code>qsc</code>) is a small local app that follows your Quaver games and serves the game state, the map you are playing and the result of every play to ready-made OBS overlays.</p>
-    <p class="actions">
-      <a class="button" href="https://github.com/kushiemoon-dev/quaver-stream-companion/releases/latest">Download the latest release</a>
-      <a href="https://github.com/kushiemoon-dev/quaver-stream-companion">View the source</a>
-    </p>
-    <p class="note">Free and open source (MIT). Windows 10 and later is tested. Linux is tested in CI with simulated Steam folders, but not yet with a real Quaver install.</p>
+  <section class="hero wrap" id="top" aria-labelledby="hero-title">
+    <div class="hero-text">
+      <p class="name">QuaverStreamCompanion</p>
+      <h1 id="hero-title">Your Quaver plays, live on stream.</h1>
+      <p class="lead">A small app that follows your Quaver games from the files the game already writes, and feeds eight ready-made OBS overlays from your own machine: the map you play, your result, your session, your keys.</p>
+      <p class="actions">
+        <a class="button" href="https://github.com/kushiemoon-dev/quaver-stream-companion/releases/latest">Download v0.1.1</a>
+        <a class="button ghost" href="#demo">Try the overlays</a>
+      </p>
+      <div class="board" role="group" aria-labelledby="board-title">
+        <h2 id="board-title">Where it stands</h2>
+        <ul>
+          <li><span class="dot ok" aria-hidden="true"></span><b>Windows 10 and later</b> tested, latest release v0.1.1</li>
+          <li><span class="dot warn" aria-hidden="true"></span><b>Linux</b> tested in CI with simulated Steam folders, not yet with a real Quaver install</li>
+          <li><span class="dot off" aria-hidden="true"></span><b>macOS</b> not supported yet</li>
+          <li><span class="dot ok" aria-hidden="true"></span><b>Network</b> none: the server listens on 127.0.0.1 only</li>
+        </ul>
+      </div>
+    </div>
+    <figure class="field">
+      <canvas id="lanes" width="360" height="520" tabindex="0" role="img" aria-label="Four Quaver style lanes with notes falling to a receptor line. Hover or tap a lane, or focus here and press D, F, J or K, to hit a note."></canvas>
+      <figcaption>Hover a lane, or focus it and press <kbd>D</kbd> <kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd>.</figcaption>
+    </figure>
+  </section>
+
+  <section class="wrap demo" id="demo" aria-labelledby="demo-title">
+    <h2 id="demo-title">The real overlays, running here</h2>
+    <p class="intro">These are the overlay pages that ship with qsc, in frames. Instead of your game, a simulator on this page sends them made-up plays with the same events qsc sends: watch the rank chip, the Best badge and the session numbers change. The demo runs the overlays from the current source, which can be slightly ahead of v0.1.1.</p>
+    <div class="controls" role="group" aria-label="Demo controls">
+      <label>Theme
+        <select id="theme">
+          <option value="neutral-light">Neutral Light</option>
+          <option value="neutral-dark">Neutral Dark</option>
+          <option value="catppuccin-mocha">Catppuccin Mocha</option>
+          <option value="catppuccin-latte">Catppuccin Latte</option>
+          <option value="tokyo-night">Tokyo Night</option>
+          <option value="dracula">Dracula</option>
+          <option value="nord">Nord</option>
+          <option value="gruvbox">Gruvbox</option>
+          <option value="rose-pine">Rose Pine</option>
+          <option value="pixel">Pixel</option>
+          <option value="neon-cosy" selected>Neon Cosy</option>
+        </select>
+      </label>
+      <label>Language
+        <select id="lang">
+          <option value="en" selected>English</option>
+          <option value="fr">Fran&#231;ais</option>
+          <option value="de">Deutsch</option>
+        </select>
+      </label>
+      <button type="button" id="play">Play a map</button>
+      <button type="button" id="auto" class="quiet" aria-pressed="false">Keep playing</button>
+      <button type="button" id="reset" class="quiet">Reset session</button>
+    </div>
+    <p id="sim-status" class="sim-status" role="status" aria-live="polite">Press Play a map, or scroll here and one play starts by itself.</p>
+
+    <div class="frames" id="demo-frames">
+      <figure class="ov wide" data-overlay="now-playing" data-live data-params="meta=1">
+        <div class="ov-box"><iframe title="Now playing overlay" src="/overlays/now-playing/?demo=1&amp;theme=neon-cosy&amp;meta=1" width="560" height="140" loading="lazy"></iframe></div>
+        <figcaption>Now playing <span class="tag live">live</span></figcaption>
+      </figure>
+      <figure class="ov" data-overlay="result" data-live>
+        <div class="ov-box"><iframe title="Result overlay" src="/overlays/result/?demo=1&amp;theme=neon-cosy" width="540" height="236" loading="lazy"></iframe></div>
+        <figcaption>Result <span class="tag live">live</span></figcaption>
+      </figure>
+      <figure class="ov" data-overlay="session" data-live>
+        <div class="ov-box"><iframe title="Session overlay" src="/overlays/session/?demo=1&amp;theme=neon-cosy" width="500" height="176" loading="lazy"></iframe></div>
+        <figcaption>Session <span class="tag live">live</span></figcaption>
+      </figure>
+      <figure class="ov" data-overlay="alert" data-live>
+        <div class="ov-box"><iframe title="Alert overlay" src="/overlays/alert/?demo=1&amp;theme=neon-cosy" width="540" height="100" loading="lazy"></iframe></div>
+        <figcaption>Alert, shown on a new best or a full combo <span class="tag live">live</span></figcaption>
+      </figure>
+      <figure class="ov" data-overlay="keys" data-live>
+        <div class="ov-box"><iframe title="Lane keys overlay" src="/overlays/keys/?demo=1&amp;theme=neon-cosy" width="500" height="220" loading="lazy"></iframe></div>
+        <figcaption>Lane keys, opt-in and Windows only <span class="tag live">live</span></figcaption>
+      </figure>
+      <figure class="ov" data-overlay="state" data-live>
+        <div class="ov-box"><iframe title="Game state overlay" src="/overlays/state/?demo=1&amp;theme=neon-cosy" width="300" height="84" loading="lazy"></iframe></div>
+        <figcaption>Game state <span class="tag live">live</span></figcaption>
+      </figure>
+      <figure class="ov" data-overlay="curve">
+        <div class="ov-box"><iframe title="Judgment curve overlay with demo data" src="/overlays/curve/?demo=1&amp;theme=neon-cosy" width="540" height="200" loading="lazy"></iframe></div>
+        <figcaption>Judgment curve <span class="tag">demo data</span></figcaption>
+      </figure>
+      <figure class="ov" data-overlay="history" data-params="best=1">
+        <div class="ov-box"><iframe title="History overlay with demo data" src="/overlays/history/?demo=1&amp;theme=neon-cosy&amp;best=1" width="540" height="200" loading="lazy"></iframe></div>
+        <figcaption>History <span class="tag">demo data</span></figcaption>
+      </figure>
+    </div>
+    <p class="aside">The curve and history overlays read your saved plays from qsc, which this page cannot do, so they show their built-in demo data. In OBS each overlay is a Browser source; sizes and options are in the <a href="https://github.com/kushiemoon-dev/quaver-stream-companion/blob/main/docs/OVERLAYS.md">overlay guide</a>, and the <a href="https://github.com/kushiemoon-dev/quaver-stream-companion/blob/main/docs/THEMES.md">theme guide</a> shows how to make your own look.</p>
   </section>
 
   <section class="wrap" id="install" aria-labelledby="install-title">
@@ -40,7 +128,7 @@
     <ol class="steps">
       <li>
         <h3>Download</h3>
-        <p>Get the archive for your system from the releases page, check it against <code>checksums.txt</code> and unzip it. There is no installer.</p>
+        <p>Get the archive for your system from the <a href="https://github.com/kushiemoon-dev/quaver-stream-companion/releases/latest">releases page</a>, check it against <code>checksums.txt</code> and unzip it. There is no installer.</p>
       </li>
       <li>
         <h3>Run it</h3>
@@ -53,39 +141,12 @@
     </ol>
   </section>
 
-  <section class="wrap" id="overlays" aria-labelledby="overlays-title">
-    <h2 id="overlays-title">Eight overlays, eleven themes</h2>
-    <p>Now playing, result, history, state, alert, lane keys, judgment curve and session statistics, each in 11 built-in themes or in a theme of your own. These are the real overlays in demo mode, with made-up data.</p>
-    <div class="gallery">
-      <figure>
-        <img src="img/now-playing-neutral-light.png" width="552" height="222" loading="lazy" alt="The now playing overlay in the neutral light theme: a white card with the song title Example Song, the artist Example Artist, and the line Hard, 18.50 stars, 4K.">
-        <figcaption>Now playing, theme <code>neutral-light</code></figcaption>
-      </figure>
-      <figure>
-        <img src="img/result-pixel.png" width="618" height="422" loading="lazy" alt="The result overlay in the pixel theme: grade S, accuracy 97.42 percent, max combo 812x, the count of each judgment and chips for rate, mod, rank, personal best and best.">
-        <figcaption>Result, theme <code>pixel</code></figcaption>
-      </figure>
-      <figure>
-        <img src="img/session-neon-cosy.png" width="992" height="346" loading="lazy" alt="The session overlay in the neon cosy theme: a dark violet card with 12 plays, 9 passes and 3 fails, average accuracy 95.21 percent, best accuracy 98.70 percent, streaks, full combos and best rating.">
-        <figcaption>Session statistics, theme <code>neon-cosy</code></figcaption>
-      </figure>
-      <figure>
-        <img src="img/curve-neon-cosy.png" width="1072" height="392" loading="lazy" alt="The judgment curve overlay in the neon cosy theme: a line chart of accuracy over the map with a dashed line at the average and the final value highlighted.">
-        <figcaption>Judgment curve, theme <code>neon-cosy</code></figcaption>
-      </figure>
-      <figure>
-        <img src="img/keys-pixel.png" width="992" height="324" loading="lazy" alt="The lane keys overlay in the pixel theme: four lane bars, two lit, with a press counter under each lane and the keys per second and peak values.">
-        <figcaption>Lane keys (Windows, off by default), theme <code>pixel</code></figcaption>
-      </figure>
-    </div>
-  </section>
-
   <section class="wrap" id="privacy" aria-labelledby="privacy-title">
-    <h2 id="privacy-title">Local, and nothing leaves your machine</h2>
+    <h2 id="privacy-title">Files only, and nothing leaves your machine</h2>
     <ul class="facts">
       <li>It only reads files Quaver already writes: <code>Logs/runtime.log</code> and <code>quaver.db</code>, which is opened read-only.</li>
       <li>It never reads game memory, never modifies or injects into the game, and never writes to the Quaver folder.</li>
-      <li>No account, no telemetry and no online service. The server listens on <code>127.0.0.1</code> only.</li>
+      <li>No account, no telemetry and no online service. The app makes no network request, and its server listens on <code>127.0.0.1</code> only.</li>
       <li>Lane keys and KPS are opt-in, off by default, and work on Windows only.</li>
       <li>QuaverStreamCompanion is an unofficial tool and is not affiliated with Quaver. Quaver is a trademark of its respective owners.</li>
     </ul>
@@ -98,6 +159,7 @@
       <li><a href="https://github.com/kushiemoon-dev/quaver-stream-companion/blob/main/docs/OBS.md">OBS setup guide</a></li>
       <li><a href="https://github.com/kushiemoon-dev/quaver-stream-companion/blob/main/docs/OVERLAYS.md">Overlay options and API</a></li>
       <li><a href="https://github.com/kushiemoon-dev/quaver-stream-companion/blob/main/docs/THEMES.md">Make your own theme</a></li>
+      <li><a href="https://github.com/kushiemoon-dev/quaver-stream-companion">Source code</a></li>
       <li><a href="https://github.com/kushiemoon-dev/quaver-stream-companion/blob/main/LICENSE">MIT license</a></li>
     </ul>
   </section>
@@ -105,8 +167,12 @@
 
 <footer class="foot">
   <div class="wrap">
-    <p>QuaverStreamCompanion is MIT licensed and not affiliated with <a href="https://quavergame.com">Quaver</a>. This page loads nothing from other sites.</p>
+    <p>QuaverStreamCompanion is MIT licensed and not affiliated with <a href="https://quavergame.com">Quaver</a>.</p>
+    <p>This website loads its two fonts from Google Fonts and nothing else from other sites. It has no analytics and sets no cookies. The app itself makes no network request.</p>
   </div>
 </footer>
+<script src="sim.js"></script>
+<script src="demo.js"></script>
+<script src="lanes.js"></script>
 </body>
 </html>

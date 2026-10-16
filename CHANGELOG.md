@@ -8,7 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- A static landing page in `site/` with the install steps, screenshots of the overlays and the privacy statements, and a workflow that can publish it with GitHub Pages once Pages is enabled in the repository settings.
+- A static landing page in `site/` with the install steps, a live demo of the real overlays (theme and language picker, and a simulator that plays made-up maps) and the privacy statements, and a workflow that builds it with `scripts/build-site.mjs` and can publish it with GitHub Pages once Pages is enabled in the repository settings.
+- The overlay option `feed=parent`, which lets a framing page of the same origin send the events instead of qsc; the website demo uses it.
 - A **Preview with demo data** switch on the Overlays page of the dashboard. It adds `demo=1` to the previews only, never to the link you copy for OBS, and is remembered in the browser. It starts on when Quaver is not found or no map is known. The Status page points to it when Quaver is not found.
 - A session overlay (`/overlays/session/`, 480 x 170) shows the session statistics as a card, with `scale`, `lang`, theme and `demo` options, and a **Reset the session** button on the Status page of the dashboard. It is the eighth built-in overlay.
 - Session statistics in memory since qsc started or the last reset: plays, passes, fails, average and best accuracy, best rating, full combos and pass streaks. They are in `GET /state` as `session`, in a new `session.updated` event sent right after each `score.saved`, and `POST /api/session/reset` clears them.
