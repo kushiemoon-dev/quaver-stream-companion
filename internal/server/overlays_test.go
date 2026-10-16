@@ -242,7 +242,7 @@ func TestBuiltInOverlaysSendTheirCSPAndEveryReferencedFileLoads(t *testing.T) {
 	srv := httptest.NewServer(New(bus.New(), func() state.Snapshot { return state.Snapshot{} }, web.FS, WithOverlaysDir(t.TempDir())))
 	defer srv.Close()
 	ref := regexp.MustCompile(`(?:src|href)="(/[^"]+)"`)
-	for _, name := range []string{"now-playing", "result", "history", "state", "alert", "keys", "curve"} {
+	for _, name := range []string{"now-playing", "result", "history", "state", "alert", "keys", "curve", "session"} {
 		resp, err := http.Get(srv.URL + "/overlays/" + name + "/")
 		if err != nil {
 			t.Fatal(err)

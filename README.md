@@ -32,7 +32,7 @@ It runs next to the game, keeps everything on your machine, and gives OBS a read
 
 ## Features
 
-- **Seven overlays** for OBS browser sources: now playing, result, history, state, alert, lane keys and judgment curve (see [Overlays](#overlays))
+- **Eight overlays** for OBS browser sources: now playing, result, history, state, alert, lane keys, judgment curve and session statistics (see [Overlays](#overlays))
 - **11 built-in themes** and an accent color, plus [custom themes](docs/THEMES.md) and [custom overlays](docs/OVERLAYS.md) you drop in a folder
 - **A local dashboard**: live status, overlay links with a theme picker, an OBS setup guide, your play history and settings, in English, French and German
 - **A JSON and live-event API** for your own overlays and scripts
@@ -119,6 +119,7 @@ The full walkthrough, with troubleshooting, is in the [OBS setup guide](docs/OBS
 | Alert | 520 x 120 | `/overlays/alert/` |
 | Lane keys | 480 x 200 (560 x 200 for 7K, 640 x 200 for 10K) | `/overlays/keys/` |
 | Judgment curve | 520 x 180 | `/overlays/curve/` |
+| Session | 480 x 170 | `/overlays/session/` |
 
 Each link starts with `http://127.0.0.1:7878`. Use the size as the width and height of the OBS Browser source.
 
@@ -209,7 +210,7 @@ All screenshots use synthetic data.
 | Endpoint | What it gives you |
 |----------|-------------------|
 | `GET /` | The dashboard |
-| `GET /state` | JSON snapshot: `game`, `map`, `last_score` and, for same-origin pages and tools without an `Origin` header, `keys` |
+| `GET /state` | JSON snapshot: `game`, `map`, `last_score`, `session` and, for same-origin pages and tools without an `Origin` header, `keys` |
 | `GET /events` | Live event stream (Server-Sent Events), at most 64 at once |
 | `GET /events?keys=1` | The same stream plus lane key frames (`keys.frame`). Same-origin only: a cross-origin page gets `403` |
 | `GET /overlays/<id>/` | Ready-made and custom overlays, for example `/overlays/now-playing/`. Shared files such as `/overlays/overlay.css` are served from `/overlays/` too |
@@ -222,6 +223,7 @@ All screenshots use synthetic data.
 | `GET /api/text/{file}` | The text of one of the now playing text files, as `text/plain` (for example `/api/text/nowplaying.txt`) |
 | `GET /api/themes` | Available overlay themes |
 | `GET /api/overlays` | The custom overlays folder and the custom overlays found in it |
+| `POST /api/session/reset` | Clear the session statistics (same guards as saving the settings, body `{}`) |
 | `POST /api/quit` | Stop `qsc` cleanly (same guards as saving the settings: used by the dashboard Quit button and `qsc stop`) |
 
 ### Events
@@ -239,6 +241,7 @@ Every event is wrapped in the same versioned envelope so your overlay keeps work
 | `play.ended` | A play left `gameplay` without a saved score (autoplay, replay, quit, editor test play): `{ "map": <map object>, "saved": false }`. `game.state` also carries the raw `screen` name |
 | `map.started` | A map started: title, artist, difficulty, stars, key count, mapper, BPM, length, note counts, ranked status |
 | `score.saved` | A play finished: judgments, accuracy, grade, max combo, performance `rating`, `is_pb`, `local_rank`, `local_total`, `is_local_best`, `first_play`, `full_combo`, `failed`, play `rate`, `mods`, `mods_raw`, `paused` and `autoplay` |
+| `session.updated` | Session statistics (plays, passes, fails, average and best accuracy, best rating, full combos, streaks), sent right after each `score.saved` and after a reset |
 | `keys.frame` | Lane key state, only on `GET /events?keys=1` and only when lane keys are on (see [Lane keys](#lane-keys)) |
 
 Score details:

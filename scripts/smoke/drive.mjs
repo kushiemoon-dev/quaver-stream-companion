@@ -178,6 +178,7 @@ async function playSession(srv) {
   });
   check('state: results with the score read from the database', !!fin, (await get('/state')).text);
   check('map title resolved from the database', fin?.map?.title === 'Test', JSON.stringify(fin?.map));
+  check('/state carries the session statistics of the saved play', fin?.session?.plays === 1, JSON.stringify(fin?.session));
   await sleep(500);
   ac.abort();
 
@@ -187,10 +188,10 @@ async function playSession(srv) {
   }).filter(Boolean);
   const seen = events.map((e) => (e.type === 'game.state' ? `game.state:${e.data?.state}` : e.type));
   console.log(`events seen: ${seen.join(', ')}`);
-  const wanted = ['game.state:select', 'game.state:gameplay', 'map.started', 'game.state:results', 'score.saved'];
+  const wanted = ['game.state:select', 'game.state:gameplay', 'map.started', 'game.state:results', 'score.saved', 'session.updated'];
   let next = 0;
   for (const type of seen) if (type === wanted[next]) next++;
-  check('/events carried select, gameplay, map.started, results, score.saved in order', next === wanted.length, seen.join(', '));
+  check('/events carried select, gameplay, map.started, results, score.saved, session.updated in order', next === wanted.length, seen.join(', '));
   const saved = events.find((e) => e.type === 'score.saved');
   check('/events score.saved carries the score id', JSON.stringify(saved?.data ?? {}).includes(`"id":${id}`), JSON.stringify(saved));
 
@@ -209,6 +210,11 @@ async function playSession(srv) {
       }
     }
   }
+  const refused = await fetch(base + '/api/session/reset', { method: 'POST' });
+  check('POST /api/session/reset without the required headers is refused', refused.status >= 400, String(refused.status));
+  const reset = await fetch(base + '/api/session/reset', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'qsc' }, body: '{}' });
+  check('POST /api/session/reset answers 200', reset.status === 200, String(reset.status));
+  check('the reset cleared the session statistics', (await getJSON('/state')).session?.plays === 0);
   const quit = await fetch(base + '/api/quit', { method: 'POST' });
   check('POST /api/quit without the required headers is refused', quit.status >= 400, String(quit.status));
 }

@@ -3,10 +3,12 @@ package state
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/bus"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/keys"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/scores"
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/session"
 )
 
 type Snapshot struct {
@@ -14,21 +16,26 @@ type Snapshot struct {
 	Map       *scores.Map    `json:"map"`
 	LastScore *scores.Result `json:"last_score"`
 	Keys      *keys.Frame    `json:"keys"`
+	// Session holds the statistics since qsc started or the last reset.
+	Session session.Summary `json:"session"`
 }
 
 type Store struct {
-	mu   sync.RWMutex
-	snap Snapshot
+	mu    sync.RWMutex
+	snap  Snapshot
+	stats *session.Stats
 }
 
 func New() *Store {
-	return &Store{snap: Snapshot{Game: "unknown"}}
+	return &Store{snap: Snapshot{Game: "unknown"}, stats: session.New(time.Now().UTC())}
 }
 
 func (s *Store) Snapshot() Snapshot {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.snap
+	snap := s.snap
+	snap.Session = s.stats.Summary()
+	return snap
 }
 
 // Seed fills the map and last score of a fresh snapshot without an event. A value already
@@ -64,10 +71,28 @@ func (s *Store) Apply(e bus.Event) {
 	case scores.Result:
 		r := d
 		next.LastScore = &r
+		s.stats.Saved(r)
+	case bus.PlayEnded:
+		s.stats.Abandoned()
+		return
 	default:
 		return
 	}
 	s.snap = next
+}
+
+// Handle applies e and, after a saved score, announces the new session statistics.
+func (s *Store) Handle(b *bus.Bus, e bus.Event) {
+	s.Apply(e)
+	if e.Type == bus.TypeScoreSaved {
+		b.Publish(bus.TypeSessionUpdated, s.Snapshot().Session)
+	}
+}
+
+// ResetSession clears the session statistics and announces them.
+func (s *Store) ResetSession(b *bus.Bus) {
+	s.stats.Reset(time.Now().UTC())
+	b.Publish(bus.TypeSessionUpdated, s.Snapshot().Session)
 }
 
 func (s *Store) Run(ctx context.Context, b *bus.Bus) {
@@ -81,7 +106,7 @@ func (s *Store) Run(ctx context.Context, b *bus.Bus) {
 			if !ok {
 				return
 			}
-			s.Apply(e)
+			s.Handle(b, e)
 		}
 	}
 }

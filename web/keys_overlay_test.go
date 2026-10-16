@@ -215,7 +215,7 @@ func TestDocsStatePrivacyOfLaneKeys(t *testing.T) {
 		}
 	}
 	guide := readDoc(t, "docs/OVERLAYS.md")
-	for _, want := range []string{"/overlays/keys/", "?keys=1", "keys.frame", "480 x 200", "560 x 200", "`counts`", "`peak`", "serves seven"} {
+	for _, want := range []string{"/overlays/keys/", "?keys=1", "keys.frame", "480 x 200", "560 x 200", "`counts`", "`peak`", "serves eight"} {
 		if !strings.Contains(guide, want) {
 			t.Errorf("docs/OVERLAYS.md must mention %q", want)
 		}

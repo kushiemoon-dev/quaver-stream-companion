@@ -56,7 +56,7 @@ const never = () => new Promise(() => {});
 
 test('opens on the first overlay with its link, size, preview and the options it honors', async () => {
   const { win } = await openOverlays();
-  assert.equal(win.$$('input[name="ov-overlay"]').length, 7);
+  assert.equal(win.$$('input[name="ov-overlay"]').length, 8);
   assert.ok(overlayRadio(win, 'now-playing').hasAttribute('checked'));
   assert.equal(text(win.$('#ov-name')), 'Now playing');
   assert.equal(text(win.$('#ov-size')), '540 x 140');
@@ -393,10 +393,10 @@ test('a load failure shows the message and a retry button that reloads and puts 
 
 test('a broken list of custom overlays does not stop the page', async () => {
   const { win } = await openOverlays({ 'GET /api/overlays': () => H.json({}, 500) });
-  assert.equal(win.$$('input[name="ov-overlay"]').length, 7);
+  assert.equal(win.$$('input[name="ov-overlay"]').length, 8);
   assert.equal(win.$('.controls .hint code').textContent.includes('C:/themes'), true);
   const odd = await openOverlays({ 'GET /api/overlays': () => H.json({ dir: 5, custom: 'x' }) });
-  assert.equal(odd.win.$$('input[name="ov-overlay"]').length, 7);
+  assert.equal(odd.win.$$('input[name="ov-overlay"]').length, 8);
 });
 
 test('custom overlays are cards with the folder help, a preview sized from the manifest and no built-in options', async () => {
@@ -406,7 +406,7 @@ test('custom overlays are cards with the folder help, a preview sized from the m
     { id: 'now-playing', name: 'Clash' }, { id: 'mine', name: 'Twice' }, { id: 'Bad Id', name: 'x' }, null,
   ];
   const { win } = await openOverlays({ 'GET /api/overlays': () => H.json({ dir: 'C:/overlays', custom }) });
-  assert.equal(win.$$('input[name="ov-overlay"]').length, 9);
+  assert.equal(win.$$('input[name="ov-overlay"]').length, 10);
   assert.match(text(win.$('.overlay-card > .hint')), /Put a folder with an index.html file/);
   assert.match(text(win.$('.overlay-card > .hint code')), /C:\/overlays/);
   const card = overlayRadio(win, 'mine').closest('label');
@@ -515,7 +515,7 @@ test('a preview or copy timer firing after the page is closed does nothing, and 
   assert.equal(win.logs.filter((l) => l.level === 'error').length, 0);
   win.location.hash = '#/overlays';
   await win.flush();
-  assert.equal(win.$$('input[name="ov-overlay"]').length, 7);
+  assert.equal(win.$$('input[name="ov-overlay"]').length, 8);
 });
 
 run();

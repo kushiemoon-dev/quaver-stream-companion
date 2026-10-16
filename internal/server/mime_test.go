@@ -52,6 +52,7 @@ func TestStaticFilesHaveFixedContentTypes(t *testing.T) {
 		"/overlays/alert/page.js":         "text/javascript; charset=utf-8",
 		"/overlays/keys/page.js":          "text/javascript; charset=utf-8",
 		"/overlays/curve/page.js":         "text/javascript; charset=utf-8",
+		"/overlays/session/page.js":       "text/javascript; charset=utf-8",
 		"/":                               "text/html; charset=utf-8",
 		"/app.js":                         "text/javascript; charset=utf-8",
 		"/favicon.svg":                    "image/svg+xml",

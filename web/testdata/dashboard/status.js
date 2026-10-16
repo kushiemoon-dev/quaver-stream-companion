@@ -31,6 +31,68 @@ async function live(opts) {
   return { win, es };
 }
 
+const resetButton = (win) => win.$$('button').filter((b) => text(b) === H.en['status.session_reset'])[0];
+const resetCalls = (win) => win.fetchCalls.filter((c) => c.path === '/api/session/reset');
+const sessionLine = (win) => text(win.$('.session-status'));
+const OK = { 'POST /api/session/reset': () => H.json({ status: 'reset' }) };
+
+test('the session card posts the reset with the guard headers and says so', async () => {
+  const win = await H.open({ routes: OK });
+  assert.equal(text(win.$('#status-session-title')), H.en['status.session_title']);
+  assert.equal(win.$('.session-status').getAttribute('aria-live'), 'polite');
+  const btn = resetButton(win);
+  btn.click();
+  assert.equal(btn.getAttribute('aria-disabled'), 'true');
+  await win.flush();
+  assert.equal(resetCalls(win).length, 1);
+  assert.equal(resetCalls(win)[0].method, 'POST');
+  assert.equal(resetCalls(win)[0].init.headers['X-Requested-With'], 'qsc');
+  assert.equal(resetCalls(win)[0].body, '{}');
+  assert.equal(btn.hasAttribute('aria-disabled'), false);
+  assert.equal(sessionLine(win), H.en['status.session_done']);
+});
+
+test('a second click while the reset runs does nothing', async () => {
+  const gate = H.deferred();
+  const win = await H.open({ routes: { 'POST /api/session/reset': () => gate.promise } });
+  resetButton(win).click();
+  resetButton(win).click();
+  gate.resolve(H.json({ status: 'reset' }));
+  await win.flush();
+  assert.equal(resetCalls(win).length, 1);
+});
+
+test('reset failures name the cause: server error, timeout', async () => {
+  let mode = 'server';
+  const win = await H.open({
+    routes: {
+      'POST /api/session/reset': (c) => {
+        if (mode === 'server') return H.json({ error: 'the session statistics are not available' }, 503);
+        return new Promise((_, rej) => c.init.signal.addEventListener('abort', () => rej(Object.assign(new Error('x'), { name: 'AbortError' }))));
+      },
+    },
+  });
+  resetButton(win).click();
+  await win.flush();
+  assert.equal(sessionLine(win), H.t('status.session_failed', { message: H.t('error.server', { status: 503 }) }));
+  mode = 'hang';
+  resetButton(win).click();
+  await win.advance(8000);
+  await win.flush();
+  assert.equal(sessionLine(win), H.t('status.session_failed', { message: H.en['settings.timeout'] }));
+});
+
+test('a reset answered after the page was left does not touch the new page', async () => {
+  const gate = H.deferred();
+  const win = await H.open({ routes: { 'POST /api/session/reset': () => gate.promise } });
+  resetButton(win).click();
+  win.location.hash = '#/overlays';
+  await win.flush();
+  gate.resolve(H.json({ status: 'reset' }));
+  await win.flush();
+  assert.equal(win.$('.session-status'), null);
+});
+
 test('before any data: connecting, unknown game, empty cards and the checks asked for', async () => {
   const win = await H.open();
   assert.equal(conn(win), 'Connecting');

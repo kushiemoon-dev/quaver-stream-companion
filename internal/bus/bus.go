@@ -11,13 +11,14 @@ import (
 const (
 	SchemaVersion = 1
 
-	TypeSnapshot    = "snapshot"
-	TypeGameState   = "game.state"
-	TypeMapStarted  = "map.started"
-	TypeScoreSaved  = "score.saved"
-	TypePlayEnded   = "play.ended"
-	TypeKeysFrame   = "keys.frame"
-	subscriberQueue = 256
+	TypeSnapshot       = "snapshot"
+	TypeGameState      = "game.state"
+	TypeMapStarted     = "map.started"
+	TypeScoreSaved     = "score.saved"
+	TypePlayEnded      = "play.ended"
+	TypeSessionUpdated = "session.updated"
+	TypeKeysFrame      = "keys.frame"
+	subscriberQueue    = 256
 )
 
 type Event struct {

@@ -19,7 +19,7 @@ test('catalog: byId falls back to the first overlay, sizes read as width x heigh
   assert.equal(cat.byId('nope').id, 'now-playing');
   assert.equal(cat.byId(undefined).id, 'now-playing');
   assert.equal(cat.sizeText(cat.byId('state')), '280 x 64');
-  assert.deepEqual(cat.OVERLAYS.map((o) => o.id), ['now-playing', 'result', 'history', 'state', 'alert', 'keys', 'curve']);
+  assert.deepEqual(cat.OVERLAYS.map((o) => o.id), ['now-playing', 'result', 'history', 'state', 'alert', 'keys', 'curve', 'session']);
 });
 
 test('catalog: custom overlays are cleaned, limited and never shadow a built-in one', () => {
@@ -196,16 +196,16 @@ test('controls: the overlay picker lists built-in then custom cards and reports 
   const picked = [];
   const el = win.qscOverlayControls.picker('result', (id) => picked.push(id));
   const radios = el.querySelectorAll('input');
-  assert.deepEqual(radios.map((r) => r.getAttribute('value')), ['now-playing', 'result', 'history', 'state', 'alert', 'keys', 'curve', 'mine']);
+  assert.deepEqual(radios.map((r) => r.getAttribute('value')), ['now-playing', 'result', 'history', 'state', 'alert', 'keys', 'curve', 'session', 'mine']);
   assert.deepEqual(radios.filter((r) => r.hasAttribute('checked')).map((r) => r.getAttribute('value')), ['result']);
   assert.equal(el.querySelector('legend').textContent, 'Overlay');
   radios[2].checked = false;
   radios[2].dispatchEvent(new win.Event('change'));
   assert.deepEqual(picked, []);
-  radios[7].checked = true;
-  radios[7].dispatchEvent(new win.Event('change'));
+  radios[8].checked = true;
+  radios[8].dispatchEvent(new win.Event('change'));
   assert.deepEqual(picked, ['mine']);
-  assert.match(radios[7].closest('label').textContent, /Custom300 x 90/);
+  assert.match(radios[8].closest('label').textContent, /Custom300 x 90/);
 });
 
 test('controls: options reports changes and shows only the controls an overlay honors', async () => {

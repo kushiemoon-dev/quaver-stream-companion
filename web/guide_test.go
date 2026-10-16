@@ -11,6 +11,7 @@ import (
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/bus"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/overlays"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/scores"
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/session"
 )
 
 var guideExamples = []string{
@@ -37,7 +38,7 @@ func jsonTags(t reflect.Type, out map[string]bool) {
 func TestOverlayGuideCoversTheContract(t *testing.T) {
 	guide := readDoc(t, "docs/OVERLAYS.md")
 	tags := map[string]bool{}
-	for _, v := range []any{scores.Result{}, bus.Event{}, bus.GameState{}} {
+	for _, v := range []any{scores.Result{}, bus.Event{}, bus.GameState{}, session.Summary{}} {
 		jsonTags(reflect.TypeOf(v), tags)
 	}
 	for _, k := range []string{"game", "map", "last_score", "id", "played_at", "keys", "limit", "checks", "uptime_s"} {
@@ -49,7 +50,7 @@ func TestOverlayGuideCoversTheContract(t *testing.T) {
 		}
 	}
 	for _, want := range []string{
-		bus.TypeSnapshot, bus.TypeGameState, bus.TypeMapStarted, bus.TypeScoreSaved, bus.TypePlayEnded,
+		bus.TypeSnapshot, bus.TypeGameState, bus.TypeMapStarted, bus.TypeScoreSaved, bus.TypePlayEnded, bus.TypeSessionUpdated,
 		"GET /state", "GET /events", "/api/history", "/api/status", "/api/overlays",
 		"`theme`", "`accent`", "`lang`", "`autohide`", "`scale`", "`demo`", "`n`", "`hide`",
 		"initialization", "menu", "select", "loading", "gameplay", "results", "editor", "importing", "download", "lobby", "multiplayer", "music", "theatre", "closed", "unknown",
@@ -65,7 +66,7 @@ func TestOverlayGuideCoversTheContract(t *testing.T) {
 	if overlays.MaxFile != 2<<20 || overlays.MaxFiles != 200 || overlays.MaxListed != 100 || overlays.MaxDepth != 3 {
 		t.Error("the limits in docs/OVERLAYS.md must follow internal/overlays")
 	}
-	for _, id := range []string{"now-playing", "result", "history", "state", "alert", "keys", "curve"} {
+	for _, id := range []string{"now-playing", "result", "history", "state", "alert", "keys", "curve", "session"} {
 		if !strings.Contains(guide, "/overlays/"+id+"/") {
 			t.Errorf("docs/OVERLAYS.md does not mention the %s overlay link", id)
 		}

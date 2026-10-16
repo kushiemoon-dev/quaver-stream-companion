@@ -148,3 +148,9 @@ html, body { overflow: hidden; }
 .curve text.final { font-weight: 700; }
 .card.fit { height: 100vh; display: flex; flex-direction: column; }
 .card.fit .curve { flex: 1 1 0; min-height: 0; }
+.session-head { display: flex; justify-content: space-between; align-items: baseline; gap: calc(12px * var(--scale, 1)); }
+.session-time { font-size: calc(16px * var(--scale, 1)); font-variant-numeric: tabular-nums; color: var(--muted); }
+.session-grid { margin-top: calc(8px * var(--scale, 1)); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: calc(8px * var(--scale, 1)) calc(14px * var(--scale, 1)); }
+.session-cell { min-width: 0; display: flex; flex-direction: column; }
+.session-cell span { font-size: calc(12px * var(--scale, 1)); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.session-cell b { font-size: calc(20px * var(--scale, 1)); font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

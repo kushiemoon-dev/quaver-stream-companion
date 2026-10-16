@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-var overlayPages = []string{"now-playing", "result", "history", "state", "alert", "keys", "curve"}
+var overlayPages = []string{"now-playing", "result", "history", "state", "alert", "keys", "curve", "session"}
 
 func mustAbs(t *testing.T, p string) string {
 	t.Helper()
@@ -61,6 +61,7 @@ func TestOverlayPagesStartHiddenAndKeepInlineScriptsOut(t *testing.T) {
 		"alert":       `<div id="card" class="card hidden"></div>`,
 		"keys":        `<div id="card" class="card fill hidden"></div>`,
 		"curve":       `<div id="card" class="card fill fit hidden"></div>`,
+		"session":     `<div id="card" class="card fill hidden"></div>`,
 	}
 	for _, name := range overlayPages {
 		src := readWeb(t, "overlays/"+name+"/index.html")

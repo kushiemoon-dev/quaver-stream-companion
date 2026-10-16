@@ -1,6 +1,6 @@
 # Build your own overlay
 
-An overlay is a web page that OBS shows in a Browser source. QuaverStreamCompanion serves seven of them and lets you add your own: a folder with an `index.html` is enough. This guide lists the built-in overlays and their options, describes the data the companion publishes, and walks through two complete examples.
+An overlay is a web page that OBS shows in a Browser source. QuaverStreamCompanion serves eight of them and lets you add your own: a folder with an `index.html` is enough. This guide lists the built-in overlays and their options, describes the data the companion publishes, and walks through two complete examples.
 
 Everything below uses the default port. Replace `7878` if you changed it in the settings.
 
@@ -15,6 +15,7 @@ Everything below uses the default port. Replace `7878` if you changed it in the 
 | Alert | `http://127.0.0.1:7878/overlays/alert/` | 520 x 120 |
 | Lane keys | `http://127.0.0.1:7878/overlays/keys/` | 480 x 200 (560 x 200 for 7K, 640 x 200 for 10K) |
 | Judgment curve | `http://127.0.0.1:7878/overlays/curve/` | 520 x 180 |
+| Session | `http://127.0.0.1:7878/overlays/session/` | 480 x 170 |
 
 Options go in the query string, for example `/overlays/result/?theme=nord&autohide=20&scale=1.2`. A value that cannot be read is ignored and the default is used (`theme`, `accent`, `lang`, `autohide`, `hide`, `demo`). A number outside its range is clamped to the nearest limit (`scale`, `n`), and a `scale` or `n` that is not a number uses the default.
 
@@ -43,6 +44,8 @@ The alert overlay stays hidden until a saved play is a personal best, a new best
 
 The curve overlay stays hidden until a play is saved. It then reads the judgment timeline of that play (see `GET /api/scores/{id}/timeline`) and draws the accuracy after each judgment as a line, with a red tick at the bottom for every miss and the final accuracy at the top right. The horizontal axis is the judgment index, not time: the database stores no timestamps. It never replays an old play when it connects. Use 520 x 180.
 
+The session overlay is a card with the time since qsc started (or since the last reset), the plays, the passes and fails, the average and best accuracy of the passes, the pass streak and the best streak, the full combos and the best rating. It is built from the `session` object (see below), shows right away with zeros, and never hides: it has no `autohide`. Failed plays stay out of the accuracy and rating figures. Reset it from the Status page of the dashboard or with `POST /api/session/reset`. Use 480 x 170.
+
 ## 2. Combining overlays and sizes
 
 Add one Browser source per overlay and layer them in your scene. Each source has a transparent background, so you can place them anywhere over your game capture. Use the recommended size as the width and height of the source, and make it a little larger when the theme has a big shadow. Set a custom overlay to the size you declare in its `overlay.json` (see section 5). The [OBS setup guide](OBS.md) covers the OBS settings.
@@ -64,6 +67,7 @@ The companion publishes read-only data on `127.0.0.1`. All numbers are JSON numb
 | `GET /api/status` | no, same-origin pages only | Version and health checks |
 | `GET /api/overlays` | no, same-origin pages only | The custom overlays folder and its overlays |
 | `GET /api/diagnostics` | no, same-origin pages only | The support report behind the Copy diagnostics button |
+| `POST /api/session/reset` | no, same-origin pages only | Clears the session statistics (empty JSON object `{}` as the body) |
 
 "Cross-origin readable" means the response carries `Access-Control-Allow-Origin: *`. A custom overlay runs with an opaque origin (see section 5), so it can use `/state` and `/events` but cannot read the `/api/` routes. Tools outside the browser (curl, scripts, bots) can read all of them.
 
@@ -74,7 +78,8 @@ The companion publishes read-only data on `127.0.0.1`. All numbers are JSON numb
   "game": "menu",
   "map": null,
   "last_score": null,
-  "keys": null
+  "keys": null,
+  "session": { "started_at": "2026-10-16T18:00:00Z", "plays": 0, "passes": 0, "fails": 0, "abandoned": 0, "avg_accuracy": 0, "best_accuracy": 0, "best_rating": 0, "full_combos": 0, "streak": 0, "best_streak": 0 }
 }
 ```
 
@@ -82,6 +87,7 @@ The companion publishes read-only data on `127.0.0.1`. All numbers are JSON numb
 - `keys`: the last lane keys frame, or `null` while key sampling is off or unsupported (see Lane keys below).
 - `map`: the map being played, or `null`. See the map object below.
 - `last_score`: the latest result, or `null`. See the result object below.
+- `session`: the statistics of the session, see the session object below.
 
 The snapshot only holds what the companion has seen since it started. After a restart, `map` and `last_score` stay `null` until the next play.
 
@@ -107,11 +113,12 @@ A comment line `: ping` is sent every 15 seconds to keep the connection open. Th
 
 | Type | `data` |
 |------|--------|
-| `snapshot` | The same object as `GET /state`: `game`, `map`, `last_score`, `keys`. Always the first event. |
+| `snapshot` | The same object as `GET /state`: `game`, `map`, `last_score`, `keys`, `session`. Always the first event. |
 | `game.state` | `{ "state": "<value>", "screen": "<value>" }`. `screen` is the raw lower case Quaver screen name and is left out when the state does not come from a screen (`closed`). |
 | `map.started` | The map object, sent when gameplay begins |
 | `score.saved` | The result object, sent when a play is saved |
 | `play.ended` | `{ "map": <map object>, "saved": false }`, sent when a play left the `gameplay` screen and no score was saved for it. See Plays without a saved score below. |
+| `session.updated` | The session object, sent right after each `score.saved` and after a reset. See the session object below. |
 | `keys.frame` | Lane keys, only when the optional key sampling is on: `{ "layout": "4k", "lanes": 4, "scratch": false, "down": [bool], "presses": [int], "kps": n, "peak": n }`. See Lane keys below. |
 
 #### Game states
@@ -192,6 +199,26 @@ Used by `map.started`, `map` in the snapshot, and `map` in a result.
 | `times_played` | number | How many times the game counts the map as played |
 | `map_id` | number | Online id of the map, `0` when it has none |
 | `map_set_id` | number | Online id of the mapset, `0` when it has none |
+
+#### The session object
+
+In-memory statistics since qsc started or since the last `POST /api/session/reset`, built from `score.saved` and `play.ended` only. Nothing is written to disk. Autoplay results are ignored.
+
+| Field | Type | Meaning |
+|-------|------|---------|
+| `started_at` | string | RFC 3339 UTC time the statistics started (qsc start or reset) |
+| `plays` | number | Saved plays, passes and fails together |
+| `passes` | number | Saved plays that were not failed |
+| `fails` | number | Saved plays that were failed |
+| `abandoned` | number | Plays that ended without a saved score (`play.ended`) |
+| `avg_accuracy` | number | Mean accuracy of the passes, `0` without a pass |
+| `best_accuracy` | number | Best accuracy among the passes |
+| `best_rating` | number | Best performance rating among the passes |
+| `full_combos` | number | Passes that were a full combo |
+| `streak` | number | Passes in a row now; a fail or an abandoned play resets it |
+| `best_streak` | number | Longest streak of the session |
+
+The event `session.updated` follows `score.saved` for the same play; the order is `game.state`, `map.started`, `score.saved`, `session.updated`.
 
 #### The result object
 
@@ -331,7 +358,7 @@ This overlay is served at `http://127.0.0.1:7878/overlays/mini-card/`. Files are
 
 ### Rules and limits
 
-- The folder name uses only lowercase letters, digits and hyphens. A name used by a built-in overlay (`now-playing`, `result`, `history`, `state`, `alert`, `keys`, `curve`) is ignored: the built-in one always wins.
+- The folder name uses only lowercase letters, digits and hyphens. A name used by a built-in overlay (`now-playing`, `result`, `history`, `state`, `alert`, `keys`, `curve`, `session`) is ignored: the built-in one always wins.
 - `index.html` is required. At most 100 overlays are listed.
 - An overlay holds at most 200 files and folders, nested at most 3 levels deep (for example `index.html`, `css/style.css`, `img/icons/star.svg`).
 - A file is at most 2 MiB. Names use only letters, digits, `.`, `_` and `-`, and do not start with a dot.
