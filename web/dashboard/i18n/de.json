@@ -32,6 +32,8 @@
   "overlays.best_hint": "Zeichnet eine gestrichelte Linie bei der besten Genauigkeit der angezeigten Runden.",
   "overlays.sound": "Klang abspielen",
   "overlays.sound_hint": "Ein kurzer synthetisierter Klang, wenn ein Hinweis erscheint. Standardmäßig aus.",
+  "overlays.meta": "Map-Details",
+  "overlays.meta_hint": "Fügt eine Zeile mit Mapper, BPM, Länge und Notenanzahl hinzu. Standardmäßig aus.",
   "overlays.autohide_alert_hint": "Leer lassen, um nach 8 Sekunden auszublenden. Von 1 bis 3600.",
   "overlays.hide": "Abzeichen ausblenden bei",
   "overlays.hide_hint": "Das Abzeichen verschwindet, wenn das Spiel in einem markierten Status ist.",

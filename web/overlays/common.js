@@ -77,6 +77,7 @@
     sound: params.get('sound') === '1',
     counts: params.get('counts') !== '0',
     peak: params.get('peak') !== '0',
+    meta: params.get('meta') === '1',
   };
   root.style.setProperty('--scale', String(qscParams.scale));
   window.qscParams = qscParams;

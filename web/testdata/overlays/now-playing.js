@@ -125,4 +125,57 @@ test('a stream the server ends is reopened after five seconds and keeps deliveri
   assert.equal(win.$('#title').textContent, 'Song');
 });
 
+const DETAIL = { ...MAP, creator: 'Mapper', bpm: 150, length_ms: 125000, regular_notes: 900, long_notes: 150, mines: 0, md5: 'abc' };
+const metaText = (win) => win.$('#meta').textContent;
+const NB = String.fromCharCode(160);
+
+test('the details line stays hidden unless meta=1', () => {
+  const win = open('now-playing', '');
+  const es = stream(win);
+  es.emit('map.started', DETAIL);
+  assert.equal(metaText(win), '');
+  assert.ok(win.$('#meta').hidden);
+});
+
+test('meta=1 shows mapper, BPM, length and counts and leaves out zero values', () => {
+  const win = open('now-playing', 'meta=1');
+  const es = stream(win);
+  es.emit('map.started', DETAIL);
+  assert.ok(!win.$('#meta').hidden);
+  assert.equal(metaText(win), ['by Mapper', '150' + NB + 'BPM', '2:05', '900' + NB + 'notes', '150' + NB + 'LN'].join(' · '));
+  es.emit('map.started', { ...DETAIL, creator: '', bpm: 0, length_ms: 0, regular_notes: 0, long_notes: 0 });
+  assert.equal(metaText(win), '');
+  assert.ok(win.$('#meta').hidden);
+});
+
+test('a score of the shown map applies its rate to the BPM and the length, a new map resets it', () => {
+  const win = open('now-playing', 'meta=1');
+  const es = stream(win);
+  es.emit('map.started', DETAIL);
+  es.emit('score.saved', { score: { rate: 1.5 }, map: { md5: 'abc' } });
+  assert.equal(metaText(win), ['by Mapper', '225' + NB + 'BPM', '1:23', '900' + NB + 'notes', '150' + NB + 'LN'].join(' · '));
+  es.emit('score.saved', { score: { rate: 2 }, map: { md5: 'other' } });
+  assert.match(metaText(win), /150.BPM . 2:05/);
+  es.emit('score.saved', { score: { rate: 1.5 }, map: { md5: 'abc' } });
+  es.emit('map.started', DETAIL);
+  assert.match(metaText(win), /150.BPM . 2:05/);
+});
+
+test('the snapshot rate comes from the last score of the same map only', () => {
+  const win = open('now-playing', 'meta=1');
+  const es = stream(win);
+  es.emit('snapshot', { game: 'gameplay', map: DETAIL, last_score: { score: { rate: 1.5 }, map: { md5: 'abc' } } });
+  assert.match(metaText(win), /225.BPM . 1:23/);
+  es.emit('snapshot', { game: 'gameplay', map: DETAIL, last_score: { score: { rate: 1.5 }, map: { md5: 'zzz' } } });
+  assert.match(metaText(win), /150.BPM . 2:05/);
+  es.emit('snapshot', { game: 'gameplay', map: DETAIL });
+  assert.match(metaText(win), /150.BPM/);
+});
+
+test('the details follow the language and the demo shows them', () => {
+  const win = open('now-playing', 'demo=1&meta=1&lang=de');
+  assert.equal(metaText(win), ['von Example Mapper', '150' + NB + 'BPM', '2:00', '900' + NB + 'Noten', '150' + NB + 'LN'].join(' · '));
+  assert.ok(visible(win.$('#card')));
+});
+
 run();

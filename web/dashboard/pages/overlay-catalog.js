@@ -9,7 +9,7 @@
   // Recommended OBS browser source sizes; params lists the options each overlay honors; autohide is the delay used when none is given.
   const OVERLAYS = [
     { id: 'now-playing', path: '/overlays/now-playing/', width: 540, height: 140,
-      nameKey: 'overlays.now_playing.name', descKey: 'overlays.now_playing.description', params: ['autohide', 'scale', 'lang'] },
+      nameKey: 'overlays.now_playing.name', descKey: 'overlays.now_playing.description', params: ['autohide', 'scale', 'lang', 'meta'] },
     { id: 'result', path: '/overlays/result/', width: 520, height: 230,
       nameKey: 'overlays.result.name', descKey: 'overlays.result.description', params: ['autohide', 'scale', 'lang'] },
     { id: 'history', path: '/overlays/history/', width: 520, height: 180,

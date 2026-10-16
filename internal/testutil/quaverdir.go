@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	mapTable   = `CREATE TABLE Map (Id integer primary key autoincrement not null, Md5Checksum varchar, Artist varchar, Title varchar, DifficultyName varchar, LastTimePlayed integer, Mode integer, Difficulty10X float, Difficulty09X float, Difficulty115X float, HasScratchKey integer)`
+	mapTable   = `CREATE TABLE Map (Id integer primary key autoincrement not null, Md5Checksum varchar, Artist varchar, Title varchar, DifficultyName varchar, LastTimePlayed integer, Mode integer, Difficulty10X float, Difficulty09X float, Difficulty115X float, HasScratchKey integer, Creator varchar, Bpm float, SongLength integer, RegularNoteCount integer, LongNoteCount integer, MineCount integer, RankedStatus integer, TimesPlayed integer, MapId integer, MapSetId integer)`
 	scoreTable = `CREATE TABLE Score (Id integer primary key autoincrement not null, MapMd5 varchar, TotalScore integer, Grade integer, Accuracy float, MaxCombo integer, CountMarv integer, CountPerf integer, CountGreat integer, CountGood integer, CountOkay integer, CountMiss integer, Mods integer, DateTime varchar, PerformanceRating float, JudgementBreakdown varchar, LocalProfileId integer)`
 )
 
@@ -54,6 +54,12 @@ func NewNoScratchQuaverDir(t testing.TB) *FakeDir {
 	d := newDir(t, strings.Replace(mapTable, ", HasScratchKey integer", "", 1), scoreTable)
 	d.noScratch = true
 	return d
+}
+
+// NewOldMapQuaverDir is like NewQuaverDir but its Map table has none of the optional columns after HasScratchKey.
+func NewOldMapQuaverDir(t testing.TB) *FakeDir {
+	schema, _, _ := strings.Cut(mapTable, ", Creator varchar")
+	return newDir(t, schema+")", scoreTable)
 }
 
 // NewLegacyQuaverDir is like NewQuaverDir but its Score table has no JudgementBreakdown column.

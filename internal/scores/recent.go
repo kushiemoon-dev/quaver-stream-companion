@@ -29,6 +29,7 @@ type scoreRow struct {
 	grade   int
 	mapMode int
 	scratch int
+	extra   mapExtra
 }
 
 type scanner interface{ Scan(dest ...any) error }
@@ -36,11 +37,11 @@ type scanner interface{ Scan(dest ...any) error }
 func scanScore(sc scanner) (scoreRow, error) {
 	var rw scoreRow
 	j := &rw.r.Score.Judgments
-	err := sc.Scan(&rw.r.Score.ID, &rw.mapMD5, &rw.grade, &rw.r.Score.Accuracy, &rw.r.Score.MaxCombo,
+	dest := []any{&rw.r.Score.ID, &rw.mapMD5, &rw.grade, &rw.r.Score.Accuracy, &rw.r.Score.MaxCombo,
 		&j.Marv, &j.Perf, &j.Great, &j.Good, &j.Okay, &j.Miss,
 		&rw.r.Score.TotalScore, &rw.r.Score.PlayedAt, &rw.r.Score.ModsRaw, &rw.r.Score.Rating,
-		&rw.r.Map.MD5, &rw.r.Map.Artist, &rw.r.Map.Title, &rw.r.Map.DifficultyName, &rw.r.Map.Difficulty, &rw.mapMode, &rw.r.Map.LastPlayedMS, &rw.scratch)
-	return rw, err
+		&rw.r.Map.MD5, &rw.r.Map.Artist, &rw.r.Map.Title, &rw.r.Map.DifficultyName, &rw.r.Map.Difficulty, &rw.mapMode, &rw.r.Map.LastPlayedMS, &rw.scratch}
+	return rw, sc.Scan(append(dest, rw.extra.dests()...)...)
 }
 
 // result derives the flags that need nothing but the row itself.
@@ -54,6 +55,7 @@ func (rw scoreRow) result() Result {
 	r.Score.Rate, r.Score.Mods = decodeMods(r.Score.ModsRaw)
 	r.Map.Keys = keysFor(rw.mapMode)
 	r.Map.Scratch = r.Map.Keys > 0 && rw.scratch != 0
+	rw.extra.apply(&r.Map)
 	if r.Map.MD5 == "" {
 		r.Map.MD5 = rw.mapMD5
 	}

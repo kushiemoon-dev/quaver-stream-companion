@@ -287,7 +287,7 @@
       const overlay = (res[1].config && res[1].config.overlay) || {};
       const theme = overlay.theme || FALLBACK_THEME;
       const accent = url.normalizeAccent(overlay.accent || '');
-      model = { overlay: cat.OVERLAYS[0].id, autohide: '', scale: '', lang: 'auto', n: '', best: false, sound: false, counts: true, peak: true, hide: [], themes: Array.isArray(res[0]) ? res[0] : [], themesDir: res[1].themes_dir || '', overlaysDir: typeof (res[2] || {}).dir === 'string' ? res[2].dir : '', theme: theme, accent: accent, defaultTheme: theme, defaultAccent: accent };
+      model = { overlay: cat.OVERLAYS[0].id, autohide: '', scale: '', lang: 'auto', n: '', best: false, sound: false, meta: false, counts: true, peak: true, hide: [], themes: Array.isArray(res[0]) ? res[0] : [], themesDir: res[1].themes_dir || '', overlaysDir: typeof (res[2] || {}).dir === 'string' ? res[2].dir : '', theme: theme, accent: accent, defaultTheme: theme, defaultAccent: accent };
       root.replaceChildren(buildCard());
       const target = ui.grid.querySelector('.theme-input:checked') || ui.grid.querySelector('.theme-input');
       if (refocus && target) target.focus();

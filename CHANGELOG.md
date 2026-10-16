@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- The map object (`map.started`, the snapshot and results) carries `creator`, `bpm`, `length_ms`, `regular_notes`, `long_notes`, `mines`, `ranked_status`, `times_played`, `map_id` and `map_set_id`. A game database without those columns still works and reports empty values.
+- The now playing overlay has a `meta` option (`?meta=1`, a **Map details** checkbox on the Overlays page) that adds one line with the mapper, BPM, length and note counts. BPM and length follow the play rate once a score of the map is known.
+
 ## [0.1.1] - 2026-10-15
 
 Fixes for Linux and for every Quaver key mode, and data that follows the game more closely.

@@ -9,6 +9,9 @@
   const MAX_TEXT = 200;
   const MAX_RATE = 10;
   const MAX_STARS = 999;
+  const MAX_BPM = 99999;
+  const MAX_LENGTH_MS = 86400000;
+  const MAX_NOTES = 99999;
   const MAX_COUNT = 50;
   const MAX_RANK = 999;
   const MAX_CHIPS = 8;
@@ -81,6 +84,32 @@
       artist: text(m.artist),
       line: [text(m.difficulty_name), stars ? stars + STAR : '', k > 0 ? k + 'K' : ''].filter(Boolean).join(SEP),
     };
+  }
+
+  function positive(v, max) {
+    const n = num(v);
+    return isFinite(n) && n > 0 && n <= max ? n : 0;
+  }
+
+  // One line of map details: mapper, BPM, length and note counts. Values that are 0 or missing are left out.
+  // BPM and length are stored at 1.0x; a known play rate scales them. labels: by, notes, ln, mines.
+  function metaLine(map, rate, lang, labels) {
+    const m = obj(map);
+    const l = obj(labels);
+    const r = positive(rate, MAX_RATE) || 1;
+    const bpm = positive(m.bpm, MAX_BPM);
+    const secs = Math.round(positive(m.length_ms, MAX_LENGTH_MS) / r / 1000);
+    const count = function (v, label) {
+      const n = Math.floor(positive(v, MAX_NOTES));
+      return n > 0 ? [n, text(l[label], 20)].filter(Boolean).join(NBSP) : '';
+    };
+    const mapper = text(m.creator, 60).trim();
+    return [
+      mapper ? [text(l.by, 20), mapper].filter(Boolean).join(' ') : '',
+      bpm ? decimal(bpm * r, 0, lang) + NBSP + 'BPM' : '',
+      secs > 0 ? Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0') : '',
+      count(m.regular_notes, 'notes'), count(m.long_notes, 'ln'), count(m.mines, 'mines'),
+    ].filter(Boolean).join(SEP);
   }
 
   // room is how many chips are left for mods, the "+N" chip included; without it six mods are shown.
@@ -436,7 +465,7 @@
   const api = {
     createConnection: createConnection, createIdGate: createIdGate,
     gradeClass: gradeClass, gradeText: gradeText, formatAccuracy: formatAccuracy, formatRate: formatRate,
-    formatStars: formatStars, nowPlayingView: nowPlayingView, modList: modList, judgments: judgments, parseCount: parseCount,
+    formatStars: formatStars, nowPlayingView: nowPlayingView, metaLine: metaLine, modList: modList, judgments: judgments, parseCount: parseCount,
     parseScale: parseScale, parseAutohide: parseAutohide, parseLang: parseLang, parseHide: parseHide,
     isHiddenState: isHiddenState, rankLabel: rankLabel, stateKey: stateKey, stateTone: stateTone, resultView: resultView,
     curve: curve, createAutohide: createAutohide, alertView: alertView, bestLine: bestLine,

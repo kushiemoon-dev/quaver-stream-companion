@@ -33,6 +33,11 @@ assert.strictEqual(link({ overlay: 'state', scale: 2 }, true), '/overlays/state/
 assert.strictEqual(link({ overlay: 'history', autohide: '5', hide: ['menu'] }), O + '/overlays/history/');
 assert.strictEqual(link({ overlay: 'now-playing', n: '30', hide: ['menu'] }), O + '/overlays/now-playing/');
 
+// the map details line is opt-in and only for now playing
+assert.strictEqual(link({ overlay: 'now-playing', meta: true }), O + '/overlays/now-playing/?meta=1');
+assert.strictEqual(link({ overlay: 'now-playing', meta: false }), O + '/overlays/now-playing/');
+assert.strictEqual(link({ overlay: 'result', meta: true }), O + '/overlays/result/');
+
 // alert hides after 8 seconds by default, so only a different value is carried
 assert.strictEqual(link({ overlay: 'alert' }), O + '/overlays/alert/');
 assert.strictEqual(link({ overlay: 'alert', autohide: '8' }), O + '/overlays/alert/');

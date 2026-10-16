@@ -29,6 +29,7 @@ Options go in the query string, for example `/overlays/result/?theme=nord&autohi
 | `n` | history | Number of plays from 5 to 50 | 20 |
 | `best` | history | `1` draws a dashed line at the best accuracy of the plays shown | off |
 | `sound` | alert | `1` plays a short synthesized chime when an alert appears | off |
+| `meta` | now playing | `1` adds a line with the mapper, BPM, length and note counts (regular notes, long notes `LN`, mines), leaving out what is `0` or empty. BPM and length are shown at the play rate once a score of the map is known, else at 1.0x | off |
 | `counts` | keys | `0` hides the press counter under each lane | on |
 | `peak` | keys | `0` hides the peak keys per second of the map | on |
 | `layout`, `lanes`, `scratch` | keys | Only with `demo=1`, to preview a layout: `layout=7k` or `lanes=7` (1 to 10 key lanes), and `scratch=1` to add a scratch lane | 4 lanes |
@@ -181,6 +182,16 @@ Used by `map.started`, `map` in the snapshot, and `map` in a result.
 | `keys` | number | Lane count of the mode, from 1 to 10 (1K to 10K), without the scratch lane. `0` when the mode is unknown |
 | `scratch` | boolean | `true` when the map has an extra scratch lane next to its `keys` lanes |
 | `last_played_ms` | number | When the map was last played, in milliseconds since the Unix epoch |
+| `creator` | string | Mapper name, empty when unknown |
+| `bpm` | number | BPM at 1.0x, `0` when unknown. Multiply by the play rate for the speed that was played |
+| `length_ms` | number | Length in milliseconds at 1.0x, `0` when unknown. Divide by the play rate for the time that was played |
+| `regular_notes` | number | Number of regular notes |
+| `long_notes` | number | Number of long notes |
+| `mines` | number | Number of mines |
+| `ranked_status` | string | `not_submitted`, `unranked`, `ranked`, `dan` or `unknown` (a status this version does not know, or a game database without the column) |
+| `times_played` | number | How many times the game counts the map as played |
+| `map_id` | number | Online id of the map, `0` when it has none |
+| `map_set_id` | number | Online id of the mapset, `0` when it has none |
 
 #### The result object
 
