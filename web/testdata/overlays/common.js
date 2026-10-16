@@ -137,9 +137,9 @@ test('the default theme failing reveals the page without looping', async () => {
 });
 
 test('parameters are parsed with limits and safe defaults', () => {
-  const win = open('demo=1&scale=9&autohide=99999&hide=Menu,bogus,menu,%20gameplay&n=1000&best=1&sound=1&counts=0&peak=0&lang=de');
+  const win = open('demo=1&scale=9&autohide=99999&hide=Menu,bogus,menu,%20gameplay&n=1000&best=1&sound=1&counts=0&peak=0&meta=1&lang=de');
   assert.deepEqual(JSON.parse(JSON.stringify(win.qscParams)), {
-    demo: true, lang: 'de', scale: 3, autohide: 3600, hide: ['menu', 'gameplay'], n: 50, best: true, sound: true, counts: false, peak: false,
+    demo: true, lang: 'de', scale: 3, autohide: 3600, hide: ['menu', 'gameplay'], n: 50, best: true, sound: true, counts: false, peak: false, meta: true,
   });
   assert.equal(root(win).lang, 'de');
   assert.equal(root(win).style.getPropertyValue('--scale'), '3');

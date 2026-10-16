@@ -23,6 +23,28 @@ assert.strictEqual(m.nowPlayingView({ title: 'x'.repeat(500) }).title.length, 20
 `)
 }
 
+func TestMetaLineGuardsMissingAndHugeValues(t *testing.T) {
+	runNodeModel(t, "overlays/model.js", `
+const assert = require('assert');
+const m = require(process.argv[2]);
+const nb = String.fromCharCode(160);
+const dot = ' ' + String.fromCharCode(183) + ' ';
+const labels = { by: 'by', notes: 'notes', ln: 'LN', mines: 'mines' };
+assert.strictEqual(m.metaLine(null, 1, 'en', labels), '');
+assert.strictEqual(m.metaLine({}, 1, 'en'), '');
+assert.strictEqual(m.metaLine({ mines: 4 }, 1, 'en'), '4');
+assert.strictEqual(m.metaLine({ creator: 'Me', mines: 4 }, 1, 'en', labels), 'by Me' + dot + '4' + nb + 'mines');
+assert.strictEqual(m.metaLine({ creator: 'Me' }, 1, 'en'), 'Me');
+assert.strictEqual(m.metaLine({ bpm: 120.4, length_ms: 59500 }, 1, 'en', labels), '120' + nb + 'BPM' + dot + '1:00');
+assert.strictEqual(m.metaLine({ bpm: 100, length_ms: 90000 }, 1.5, 'en', labels), '150' + nb + 'BPM' + dot + '1:00');
+for (const bad of [0, -1, NaN, 'x', 99, null]) assert.strictEqual(m.metaLine({ bpm: 100 }, bad, 'en', labels), '100' + nb + 'BPM', String(bad));
+for (const bad of [-5, 'x', 1e12, null, NaN]) assert.strictEqual(m.metaLine({ bpm: bad, length_ms: bad, regular_notes: bad, creator: 5 }, 1, 'en', labels), '', String(bad));
+assert.strictEqual(m.metaLine({ regular_notes: '12.9' }, 1, 'en', labels), '12' + nb + 'notes');
+assert.strictEqual(m.metaLine({ creator: 'x'.repeat(500) }, 1, 'en').length, 60);
+assert.strictEqual(m.metaLine({ bpm: 1234 }, 1, 'fr', labels).endsWith(nb + 'BPM'), true);
+`)
+}
+
 func TestNowPlayingPageHasNoUnguardedFormatting(t *testing.T) {
 	src := readPage(t, "now-playing")
 	if strings.Contains(src, "toFixed") {

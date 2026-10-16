@@ -171,7 +171,7 @@ func TestOverlayReconnectsDoNotReshowOrRestartTimers(t *testing.T) {
 	if strings.Contains(strings.SplitN(src[strings.Index(src, "function render()"):], "\n}\n", 2)[0], "autohide.touch") {
 		t.Error("now-playing render must not restart the autohide timer")
 	}
-	for _, want := range []string{"firstSnapshot", "'map.started': function (d) { map = d; fresh(); }", "'score.saved'"} {
+	for _, want := range []string{"firstSnapshot", "'map.started': function (d) { map = d; rate = 1; fresh(); }", "'score.saved'"} {
 		if !strings.Contains(src, want) {
 			t.Errorf("now-playing is missing %q", want)
 		}

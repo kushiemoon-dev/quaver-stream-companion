@@ -226,6 +226,10 @@ test('controls: options reports changes and shows only the controls an overlay h
   sync(cat.byId('keys'));
   const visible = () => el.children.slice(1).filter((c) => !c.hidden).map((c) => c.querySelector('label, legend').textContent);
   assert.deepEqual(visible().sort(), ['Overlay language', 'Peak keys per second', 'Press counters', 'Scale']);
+  sync(cat.byId('now-playing'));
+  assert.ok(visible().includes('Map details'));
+  assert.equal(visible().length, 4);
+  sync(cat.byId('keys'));
   sync(cat.byId('state'));
   assert.equal(visible().length, 3);
   input('ov-count').value = '7';
@@ -241,7 +245,7 @@ test('controls: options reports changes and shows only the controls an overlay h
   assert.deepEqual(JSON.parse(JSON.stringify(changes)), [{ n: '7' }, { autohide: '3' }, { scale: '2' }, { hide: ['menu', 'lobby'] }, { hide: ['lobby'] }]);
   const peak = el.querySelectorAll('input[type="checkbox"]').filter((i) => !i.getAttribute('value'));
   peak.forEach((i, k) => { i.checked = k % 2 === 0; i.dispatchEvent(new win.Event('change')); });
-  assert.deepEqual(changes.slice(5).map((c) => Object.keys(c)[0] + '=' + Object.values(c)[0]), ['best=true', 'counts=false', 'peak=true', 'sound=false']);
+  assert.deepEqual(changes.slice(5).map((c) => Object.keys(c)[0] + '=' + Object.values(c)[0]), ['best=true', 'counts=false', 'peak=true', 'meta=false', 'sound=true']);
 });
 
 run();

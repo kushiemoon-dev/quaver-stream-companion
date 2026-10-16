@@ -32,6 +32,8 @@
   "overlays.best_hint": "Trace une ligne en pointillés à la meilleure précision des parties affichées.",
   "overlays.sound": "Jouer un son",
   "overlays.sound_hint": "Un court son synthétisé quand une alerte apparaît. Désactivé par défaut.",
+  "overlays.meta": "Détails de la map",
+  "overlays.meta_hint": "Ajoute une ligne avec le mappeur, le BPM, la durée et le nombre de notes. Désactivé par défaut.",
   "overlays.autohide_alert_hint": "Laissez vide pour masquer après 8 secondes. De 1 à 3600.",
   "overlays.hide": "Masquer le badge pendant",
   "overlays.hide_hint": "Le badge disparaît quand le jeu est dans un état coché.",

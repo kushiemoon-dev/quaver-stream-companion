@@ -38,7 +38,7 @@
     if (has('lang') && cat.LANGS.indexOf(m.lang) > 0) out.lang = m.lang;
     const n = Math.floor(number(m.n));
     if (has('n') && isFinite(n) && clamp(n, 'n') !== cat.DEFAULTS.n) out.n = String(clamp(n, 'n'));
-    ['best', 'sound'].forEach(function (k) { if (has(k) && m[k] === true) out[k] = '1'; });
+    ['best', 'sound', 'meta'].forEach(function (k) { if (has(k) && m[k] === true) out[k] = '1'; });
     ['counts', 'peak'].forEach(function (k) { if (has(k) && m[k] === false) out[k] = '0'; });
     const hide = cat.STATES.filter(function (s) { return Array.isArray(m.hide) && m.hide.indexOf(s) >= 0; });
     if (has('hide') && hide.length > 0) out.hide = hide.join(',');

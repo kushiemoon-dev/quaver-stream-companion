@@ -32,6 +32,8 @@
   "overlays.best_hint": "Draws a dashed line at the best accuracy of the plays shown.",
   "overlays.sound": "Play a chime",
   "overlays.sound_hint": "A short synthesized sound when an alert appears. Off by default.",
+  "overlays.meta": "Map details",
+  "overlays.meta_hint": "Adds one line with the mapper, BPM, length and note counts. Off by default.",
   "overlays.autohide_alert_hint": "Leave empty to hide after 8 seconds. From 1 to 3600.",
   "overlays.hide": "Hide the badge during",
   "overlays.hide_hint": "The badge disappears while the game is in a checked state.",

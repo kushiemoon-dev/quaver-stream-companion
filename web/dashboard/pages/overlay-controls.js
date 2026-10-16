@@ -77,6 +77,7 @@
       best: checkField('overlays.best', 'overlays.best_hint', model.best, function (v) { onChange({ best: v }); }),
       counts: checkField('overlays.counts', 'overlays.counts_hint', model.counts, function (v) { onChange({ counts: v }); }),
       peak: checkField('overlays.peak', 'overlays.peak_hint', model.peak, function (v) { onChange({ peak: v }); }),
+      meta: checkField('overlays.meta', 'overlays.meta_hint', model.meta, function (v) { onChange({ meta: v }); }),
       sound: checkField('overlays.sound', 'overlays.sound_hint', model.sound, function (v) { onChange({ sound: v }); }),
       hide: hideGroup(model, onChange),
     };

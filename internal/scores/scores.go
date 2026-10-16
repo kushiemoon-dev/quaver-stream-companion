@@ -39,8 +39,21 @@ type Map struct {
 	// Keys is the lane count of the mode without the scratch lane, 0 for an unknown mode.
 	Keys int `json:"keys"`
 	// Scratch tells that the map has an extra scratch lane next to its Keys lanes.
-	Scratch      bool  `json:"scratch"`
-	LastPlayedMS int64 `json:"last_played_ms"`
+	Scratch      bool   `json:"scratch"`
+	LastPlayedMS int64  `json:"last_played_ms"`
+	Creator      string `json:"creator"`
+	// BPM and LengthMS are the values at 1.0x.
+	BPM          float64 `json:"bpm"`
+	LengthMS     int64   `json:"length_ms"`
+	RegularNotes int     `json:"regular_notes"`
+	LongNotes    int     `json:"long_notes"`
+	Mines        int     `json:"mines"`
+	// RankedStatus is not_submitted, unranked, ranked, dan or unknown.
+	RankedStatus string `json:"ranked_status"`
+	TimesPlayed  int    `json:"times_played"`
+	// MapID and MapSetID are the online ids, 0 when absent.
+	MapID    int64 `json:"map_id"`
+	MapSetID int64 `json:"map_set_id"`
 }
 
 // Judgments counts hits per judgment.
@@ -96,6 +109,7 @@ type Store struct {
 	// warnedFuture is the newest future map date already reported.
 	warnedFuture atomic.Int64
 	scratch      scratchFlag
+	extras       scratchFlag
 }
 
 // Open opens quaverDir/quaver.db read-only.
@@ -125,7 +139,7 @@ func Open(quaverDir string) (*Store, error) {
 	db.SetConnMaxIdleTime(idleTime)
 	api.SetConnMaxIdleTime(idleTime)
 	ident, _ := fileIdentity(path)
-	st := &Store{db: db, api: api, now: time.Now, path: path, ident: ident, scratch: scratchFlag{probe: scratchColumn}}
+	st := &Store{db: db, api: api, now: time.Now, path: path, ident: ident, scratch: scratchFlag{probe: scratchColumn}, extras: scratchFlag{probe: extraProbe, fallback: extraFallback}}
 	st.mapCols()
 	return st, nil
 }
@@ -148,8 +162,11 @@ func (s *Store) Close() error { return errors.Join(s.db.Close(), s.api.Close()) 
 
 const mapColsBase = `COALESCE(m.Md5Checksum,''), COALESCE(m.Artist,''), COALESCE(m.Title,''), COALESCE(m.DifficultyName,''), COALESCE(m.Difficulty10X,0), COALESCE(m.Mode,0), COALESCE(m.LastTimePlayed,0)`
 
-// mapCols lists the map columns that are read for a score or a map; the scratch flag comes last.
-func (s *Store) mapCols() string { return mapColsBase + ", " + s.scratch.expr(s.api, s.now()) }
+// mapCols lists the map columns that are read for a score or a map: the scratch flag, then the extra columns.
+func (s *Store) mapCols() string {
+	now := s.now()
+	return mapColsBase + ", " + s.scratch.expr(s.api, now) + ", " + s.extras.expr(s.api, now)
+}
 
 // scratchRecheck is how long to wait before asking again when the column check failed.
 const scratchRecheck = time.Minute
@@ -157,11 +174,13 @@ const scratchRecheck = time.Minute
 // scratchFlag finds out once whether Map has a HasScratchKey column. A failed check (the
 // database was busy) is retried at most once per scratchRecheck instead of disabling the flag for good.
 type scratchFlag struct {
-	mu      sync.Mutex
-	probe   func(*sql.DB) (expr string, err error)
-	value   string
-	known   bool
-	checked time.Time
+	mu    sync.Mutex
+	probe func(*sql.DB) (expr string, err error)
+	value string
+	// fallback is read while value is unknown; empty means 0.
+	fallback string
+	known    bool
+	checked  time.Time
 }
 
 // expr returns the SQL that reads the flag: 0 while the column is missing or unknown.
@@ -175,6 +194,9 @@ func (f *scratchFlag) expr(db *sql.DB, now time.Time) string {
 		}
 	}
 	if f.value == "" {
+		if f.fallback != "" {
+			return f.fallback
+		}
 		return "0"
 	}
 	return f.value
@@ -229,11 +251,12 @@ func (s *Store) LastPlayedMap(ctx context.Context) (Map, error) {
 func (s *Store) lastPlayedMap(ctx context.Context) (Map, error) {
 	var m Map
 	var mode, scratch int
+	var ex mapExtra
 	limit := s.now().Add(maxClockSkew).UnixMilli()
 	s.warnFutureMap(ctx, limit)
 	err := s.db.QueryRowContext(ctx,
 		`SELECT `+s.mapCols()+` FROM Map m WHERE COALESCE(m.LastTimePlayed,0) <= ? ORDER BY m.LastTimePlayed DESC LIMIT 1`, limit,
-	).Scan(&m.MD5, &m.Artist, &m.Title, &m.DifficultyName, &m.Difficulty, &mode, &m.LastPlayedMS, &scratch)
+	).Scan(append([]any{&m.MD5, &m.Artist, &m.Title, &m.DifficultyName, &m.Difficulty, &mode, &m.LastPlayedMS, &scratch}, ex.dests()...)...)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Map{}, ErrNotFound
 	}
@@ -242,6 +265,7 @@ func (s *Store) lastPlayedMap(ctx context.Context) (Map, error) {
 	}
 	m.Keys = keysFor(mode)
 	m.Scratch = m.Keys > 0 && scratch != 0
+	ex.apply(&m)
 	return m, nil
 }
 
