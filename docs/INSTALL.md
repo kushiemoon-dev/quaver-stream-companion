@@ -12,7 +12,7 @@
 | `qsc_<version>_linux_x86_64.AppImage` | Linux, 64 bit Intel or AMD, no extraction needed |
 | `checksums.txt` | SHA-256 of every file above |
 
-`<version>` is the release tag, for example `v0.1.1`. Tags with a hyphen are pre-releases. Each archive holds the program, the license, the third party notices (the `v0.1.0-rc1` archives do not contain them), the README, the guides in `docs/` and, on Linux, the `qsc.service` file.
+`<version>` is the release tag, for example `v0.2.0`. Tags with a hyphen are pre-releases. Each archive holds the program, the license, the third party notices (the `v0.1.0-rc1` archives do not contain them), the README, the guides in `docs/` and, on Linux, the `qsc.service` file.
 
 ## Download and verify
 

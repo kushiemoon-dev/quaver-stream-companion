@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-16
+
+A text output for OBS, session statistics, map details, a demo preview in the dashboard and a website with a live demo.
+
 ### Added
 
 - A static landing page in `site/` with the install steps, a live demo of the real overlays (theme and language picker, and a simulator that plays made-up maps) and the privacy statements, and a workflow that builds it with `scripts/build-site.mjs` and can publish it with GitHub Pages once Pages is enabled in the repository settings.
@@ -17,6 +21,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The now playing overlay has a `meta` option (`?meta=1`, a **Map details** checkbox on the Overlays page) that adds one line with the mapper, BPM, length and note counts. BPM and length follow the play rate once a score of the map is known.
 - The `text_files` setting (off by default, one checkbox in Settings, applies right away) keeps small UTF-8 text files in a `text` folder next to the config file: `title.txt`, `artist.txt`, `difficulty.txt`, `mapper.txt`, `nowplaying.txt`, `last_grade.txt` and `last_accuracy.txt`, for OBS Text sources that read from a file. They follow `map.started` and `score.saved`.
 - `GET /api/text/{file}` (for example `/api/text/nowplaying.txt`) returns the same texts as `text/plain; charset=utf-8`, for local tools and browser sources.
+
+### Changed
+
+- The scripts of the built-in overlays moved from inline code in their pages to a `page.js` file next to each page. The overlays look and behave the same, and a custom overlay is not affected.
+
+### Fixed
+
+- Ticking several states in the hide list of the overlay options kept only the last one in the link.
+- The preview frame of the Overlays page is named after what it shows: example data or live data.
+- The OBS note under the port field no longer shares its element id with the override note.
+
+### Development
+
+- The JavaScript of the dashboard and the overlays is covered by tests that run the real code in a simulated browser (`scripts/js-coverage.mjs` prints the report): from 38.6 to 100 percent of lines. CI fails below 95 percent of lines, 90 percent of branches and 95 percent of functions for JavaScript, and below 85 percent of statements for Go.
 
 ## [0.1.1] - 2026-10-15
 
@@ -99,7 +117,8 @@ First release candidate, published as a pre-release.
 - A Quit button in the dashboard settings and a `qsc stop` command.
 - `qsc doctor`, `qsc version`, and release archives for Windows and Linux (amd64, arm64), a Linux AppImage and `checksums.txt`.
 
-[Unreleased]: https://github.com/kushiemoon-dev/quaver-stream-companion/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/kushiemoon-dev/quaver-stream-companion/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/kushiemoon-dev/quaver-stream-companion/releases/tag/v0.2.0
 [0.1.1]: https://github.com/kushiemoon-dev/quaver-stream-companion/releases/tag/v0.1.1
 [0.1.0]: https://github.com/kushiemoon-dev/quaver-stream-companion/releases/tag/v0.1.0
 [0.1.0-rc2]: https://github.com/kushiemoon-dev/quaver-stream-companion/releases/tag/v0.1.0-rc2
