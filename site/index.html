@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>QuaverStreamCompanion</title>
+<meta name="description" content="Live Quaver data for your stream overlays, read from the files the game already writes. Local, no account, no telemetry.">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to the content</a>
+
+<header class="top">
+  <div class="wrap bar">
+    <a class="brand" href="#top">QuaverStreamCompanion</a>
+    <nav aria-label="Page sections">
+      <a href="#install">Install</a>
+      <a href="#overlays">Overlays</a>
+      <a href="#privacy">Privacy</a>
+      <a href="#docs">Docs</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero wrap" id="top">
+    <h1>Live Quaver data for your stream overlays</h1>
+    <p class="lead">QuaverStreamCompanion (<code>qsc</code>) is a small local app that follows your Quaver games and serves the game state, the map you are playing and the result of every play to ready-made OBS overlays.</p>
+    <p class="actions">
+      <a class="button" href="https://github.com/kushiemoon-dev/quaver-stream-companion/releases/latest">Download the latest release</a>
+      <a href="https://github.com/kushiemoon-dev/quaver-stream-companion">View the source</a>
+    </p>
+    <p class="note">Free and open source (MIT). Windows 10 and later is tested. Linux is tested in CI with simulated Steam folders, but not yet with a real Quaver install.</p>
+  </section>
+
+  <section class="wrap" id="install" aria-labelledby="install-title">
+    <h2 id="install-title">Up and running in three steps</h2>
+    <ol class="steps">
+      <li>
+        <h3>Download</h3>
+        <p>Get the archive for your system from the releases page, check it against <code>checksums.txt</code> and unzip it. There is no installer.</p>
+      </li>
+      <li>
+        <h3>Run it</h3>
+        <p>Start <code>qsc --open</code>. It finds your Quaver folder, serves everything on your own machine and opens the dashboard in your browser.</p>
+      </li>
+      <li>
+        <h3>Add the overlays in OBS</h3>
+        <p>On the Overlays page, copy a link and paste it into an OBS Browser source. Then play a map: the overlay appears when you start and hides in the menu.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="wrap" id="overlays" aria-labelledby="overlays-title">
+    <h2 id="overlays-title">Eight overlays, eleven themes</h2>
+    <p>Now playing, result, history, state, alert, lane keys, judgment curve and session statistics, each in 11 built-in themes or in a theme of your own. These are the real overlays in demo mode, with made-up data.</p>
+    <div class="gallery">
+      <figure>
+        <img src="img/now-playing-neutral-light.png" width="552" height="222" loading="lazy" alt="The now playing overlay in the neutral light theme: a white card with the song title Example Song, the artist Example Artist, and the line Hard, 18.50 stars, 4K.">
+        <figcaption>Now playing, theme <code>neutral-light</code></figcaption>
+      </figure>
+      <figure>
+        <img src="img/result-pixel.png" width="618" height="422" loading="lazy" alt="The result overlay in the pixel theme: grade S, accuracy 97.42 percent, max combo 812x, the count of each judgment and chips for rate, mod, rank, personal best and best.">
+        <figcaption>Result, theme <code>pixel</code></figcaption>
+      </figure>
+      <figure>
+        <img src="img/session-neon-cosy.png" width="992" height="346" loading="lazy" alt="The session overlay in the neon cosy theme: a dark violet card with 12 plays, 9 passes and 3 fails, average accuracy 95.21 percent, best accuracy 98.70 percent, streaks, full combos and best rating.">
+        <figcaption>Session statistics, theme <code>neon-cosy</code></figcaption>
+      </figure>
+      <figure>
+        <img src="img/curve-neon-cosy.png" width="1072" height="392" loading="lazy" alt="The judgment curve overlay in the neon cosy theme: a line chart of accuracy over the map with a dashed line at the average and the final value highlighted.">
+        <figcaption>Judgment curve, theme <code>neon-cosy</code></figcaption>
+      </figure>
+      <figure>
+        <img src="img/keys-pixel.png" width="992" height="324" loading="lazy" alt="The lane keys overlay in the pixel theme: four lane bars, two lit, with a press counter under each lane and the keys per second and peak values.">
+        <figcaption>Lane keys (Windows, off by default), theme <code>pixel</code></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="wrap" id="privacy" aria-labelledby="privacy-title">
+    <h2 id="privacy-title">Local, and nothing leaves your machine</h2>
+    <ul class="facts">
+      <li>It only reads files Quaver already writes: <code>Logs/runtime.log</code> and <code>quaver.db</code>, which is opened read-only.</li>
+      <li>It never reads game memory, never modifies or injects into the game, and never writes to the Quaver folder.</li>
+      <li>No account, no telemetry and no online service. The server listens on <code>127.0.0.1</code> only.</li>
+      <li>Lane keys and KPS are opt-in, off by default, and work on Windows only.</li>
+      <li>QuaverStreamCompanion is an unofficial tool and is not affiliated with Quaver. Quaver is a trademark of its respective owners.</li>
+    </ul>
+  </section>
+
+  <section class="wrap" id="docs" aria-labelledby="docs-title">
+    <h2 id="docs-title">Docs and license</h2>
+    <ul class="links">
+      <li><a href="https://github.com/kushiemoon-dev/quaver-stream-companion/blob/main/docs/INSTALL.md">Installation guide</a></li>
+      <li><a href="https://github.com/kushiemoon-dev/quaver-stream-companion/blob/main/docs/OBS.md">OBS setup guide</a></li>
+      <li><a href="https://github.com/kushiemoon-dev/quaver-stream-companion/blob/main/docs/OVERLAYS.md">Overlay options and API</a></li>
+      <li><a href="https://github.com/kushiemoon-dev/quaver-stream-companion/blob/main/docs/THEMES.md">Make your own theme</a></li>
+      <li><a href="https://github.com/kushiemoon-dev/quaver-stream-companion/blob/main/LICENSE">MIT license</a></li>
+    </ul>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <p>QuaverStreamCompanion is MIT licensed and not affiliated with <a href="https://quavergame.com">Quaver</a>. This page loads nothing from other sites.</p>
+  </div>
+</footer>
+</body>
+</html>

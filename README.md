@@ -386,6 +386,7 @@ go test ./...
 | [OBS setup](docs/OBS.md) | Adding the overlays to OBS, sizes, troubleshooting |
 | [Overlays](docs/OVERLAYS.md) | Overlay options, the data reference and how to build your own overlay |
 | [Themes](docs/THEMES.md) | Making a theme, the tokens, credits and licenses |
+| [Landing page](https://kushiemoon-dev.github.io/quaver-stream-companion/) | A one page overview with the install steps and screenshots (source in `site/`) |
 | [Releasing](docs/RELEASING.md) | How a release is cut, and the repository settings to check |
 | [Docs index](docs/README.md) | All the guides in one list |
 
