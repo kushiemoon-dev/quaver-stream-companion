@@ -94,7 +94,7 @@ func TestSmokeScriptsUseOnlyBuiltins(t *testing.T) {
 		}
 	}
 	drive := read(t, "scripts/smoke/drive.mjs")
-	for _, want := range []string{"7878, 5001, 5003", "'overlays'", "overlay-catalog.js", "--expect-version", "/events", "/state", "/api/status", "'doctor'", "'stop'"} {
+	for _, want := range []string{"7878, 5001, 5003", "'overlays'", "overlay-catalog.js", "--expect-version", "/events", "/state", "/api/status", "session.updated", "/api/session/reset", "'doctor'", "'stop'"} {
 		if !strings.Contains(drive, want) {
 			t.Errorf("drive.mjs does not contain %q", want)
 		}

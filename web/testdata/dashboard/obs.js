@@ -6,7 +6,7 @@ const dom = require('../../testsupport/dom.js');
 const H = require('./helpers.js');
 
 const ORIGIN = 'http://127.0.0.1:7878';
-const NAMES = ['now-playing', 'result', 'history', 'state', 'alert', 'keys', 'curve'];
+const NAMES = ['now-playing', 'result', 'history', 'state', 'alert', 'keys', 'curve', 'session'];
 
 const open = (routes = {}) => H.open({ hash: '#/obs', routes });
 const rows = (win) => win.$$('.obs-table tbody tr');
@@ -27,7 +27,7 @@ test('seven steps, the guide texts and the troubleshooting entries are on the pa
 
 test('the table lists every overlay with its size and its link on this server', async () => {
   const win = await open();
-  assert.equal(rows(win).length, 7);
+  assert.equal(rows(win).length, 8);
   assert.deepEqual(rows(win).map((r) => r.querySelector('input').value), NAMES.map((n) => ORIGIN + '/overlays/' + n + '/'));
   assert.equal(rows(win)[0].querySelector('th').textContent, H.en['overlays.now_playing.name']);
   assert.match(rows(win)[0].querySelector('.obs-size').textContent, /540/);

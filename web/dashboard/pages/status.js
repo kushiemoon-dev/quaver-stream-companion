@@ -298,7 +298,7 @@
   }
 
   function mount(root) {
-    ui = {
+    const mounted = ui = {
       game: h('span', { class: 'pill pill-state state-unknown' }),
       diagErr: h('p', { class: 'muted diag-error' }),
       conn: h('span', { class: 'pill pill-warn', role: 'status' }),
@@ -325,6 +325,7 @@
     root.appendChild(h('div', { class: 'save-row' }, ui.copyDiag, h('p', { class: 'muted hint' }, t('status.copy_diag_hint'))));
     root.appendChild(ui.copyStatus);
     root.appendChild(ui.copyBox);
+    root.appendChild(window.qscStatusSession.build(function () { return ui === mounted; }));
     root.appendChild(ui.foot);
     mountId++;
     inflight = false;

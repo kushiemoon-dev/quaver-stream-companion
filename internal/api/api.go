@@ -61,6 +61,8 @@ type Deps struct {
 	Port       int
 	// Diagnostics returns the redacted support report text.
 	Diagnostics func(ctx context.Context) string
+	// ResetSession clears the session statistics and announces them.
+	ResetSession func()
 	// Quit stops the whole app; the API calls it at most once, after answering POST /api/quit.
 	Quit func()
 }
@@ -94,13 +96,14 @@ type api struct {
 func New(d Deps) http.Handler {
 	a := api{d, new(atomic.Bool)}
 	routes := map[string]map[string]http.HandlerFunc{
-		"/api/status":      {http.MethodGet: a.status},
-		"/api/diagnostics": {http.MethodGet: a.diagnostics},
-		"/api/config":      {http.MethodGet: a.getConfig, http.MethodPut: a.putConfig},
-		"/api/history":     {http.MethodGet: a.history},
-		"/api/themes":      {http.MethodGet: a.themes},
-		"/api/overlays":    {http.MethodGet: a.overlays},
-		"/api/quit":        {http.MethodPost: a.quit},
+		"/api/status":        {http.MethodGet: a.status},
+		"/api/diagnostics":   {http.MethodGet: a.diagnostics},
+		"/api/config":        {http.MethodGet: a.getConfig, http.MethodPut: a.putConfig},
+		"/api/history":       {http.MethodGet: a.history},
+		"/api/themes":        {http.MethodGet: a.themes},
+		"/api/overlays":      {http.MethodGet: a.overlays},
+		"/api/quit":          {http.MethodPost: a.quit},
+		"/api/session/reset": {http.MethodPost: a.sessionReset},
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, scoresPrefix) {

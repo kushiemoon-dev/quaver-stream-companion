@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- A session overlay (`/overlays/session/`, 480 x 170) shows the session statistics as a card, with `scale`, `lang`, theme and `demo` options, and a **Reset the session** button on the Status page of the dashboard. It is the eighth built-in overlay.
+- Session statistics in memory since qsc started or the last reset: plays, passes, fails, average and best accuracy, best rating, full combos and pass streaks. They are in `GET /state` as `session`, in a new `session.updated` event sent right after each `score.saved`, and `POST /api/session/reset` clears them.
 - The map object (`map.started`, the snapshot and results) carries `creator`, `bpm`, `length_ms`, `regular_notes`, `long_notes`, `mines`, `ranked_status`, `times_played`, `map_id` and `map_set_id`. A game database without those columns still works and reports empty values.
 - The now playing overlay has a `meta` option (`?meta=1`, a **Map details** checkbox on the Overlays page) that adds one line with the mapper, BPM, length and note counts. BPM and length follow the play rate once a score of the map is known.
 - The `text_files` setting (off by default, one checkbox in Settings, applies right away) keeps small UTF-8 text files in a `text` folder next to the config file: `title.txt`, `artist.txt`, `difficulty.txt`, `mapper.txt`, `nowplaying.txt`, `last_grade.txt` and `last_accuracy.txt`, for OBS Text sources that read from a file. They follow `map.started` and `score.saved`.

@@ -17,6 +17,7 @@
   const MAX_CHIPS = 8;
   const MIN_COUNT = 5;
   const MAX_JUDGMENT = 999999;
+  const MAX_RATING = 9999;
   const MAX_KPS = 999;
   const MAX_KEYS = 10;
   const MAX_LANES = MAX_KEYS + 1;
@@ -417,6 +418,37 @@
     };
   }
 
+  const MAX_ELAPSED_S = 99 * 3600 + 3599;
+  const NONE = '-';
+
+  function formatElapsed(ms) {
+    const n = num(ms);
+    const s = isFinite(n) ? clamp(Math.floor(n / 1000), 0, MAX_ELAPSED_S) : 0;
+    const pad = function (v) { return String(v).padStart(2, '0'); };
+    const h = Math.floor(s / 3600);
+    return (h > 0 ? h + ':' + pad(Math.floor((s % 3600) / 60)) : String(Math.floor(s / 60))) + ':' + pad(s % 60);
+  }
+
+  // The figures of a session object as display strings; averages and ratings show "-" until there is a pass.
+  function sessionView(summary, now, lang) {
+    const s = obj(summary);
+    const count = function (v) { const n = num(v); return isFinite(n) ? clamp(Math.floor(n), 0, MAX_JUDGMENT) : 0; };
+    const passes = count(s.passes);
+    const started = Date.parse(text(s.started_at, 40));
+    const rating = num(s.best_rating);
+    return {
+      elapsed: formatElapsed(isFinite(started) ? num(now) - started : 0),
+      plays: String(count(s.plays)),
+      outcome: passes + ' / ' + count(s.fails),
+      average: passes > 0 ? formatAccuracy(s.avg_accuracy, lang) : NONE,
+      best: passes > 0 ? formatAccuracy(s.best_accuracy, lang) : NONE,
+      streak: String(count(s.streak)),
+      bestStreak: String(count(s.best_streak)),
+      fullCombos: String(count(s.full_combos)),
+      rating: passes > 0 && isFinite(rating) ? decimal(clamp(rating, 0, MAX_RATING), 2, lang) : NONE,
+    };
+  }
+
   const RECONNECT_FIRST_MS = 5000;
   const RECONNECT_MAX_MS = 30000;
   const EVENT_SOURCE_CLOSED = 2;
@@ -469,7 +501,7 @@
     parseScale: parseScale, parseAutohide: parseAutohide, parseLang: parseLang, parseHide: parseHide,
     isHiddenState: isHiddenState, rankLabel: rankLabel, stateKey: stateKey, stateTone: stateTone, resultView: resultView,
     curve: curve, createAutohide: createAutohide, alertView: alertView, bestLine: bestLine,
-    lastLabel: lastLabel, keysView: keysView, demoKeys: demoKeys, keysUnknown: keysUnknown, keysHint: keysHint, timelineView: timelineView,
+    lastLabel: lastLabel, sessionView: sessionView, formatElapsed: formatElapsed, keysView: keysView, demoKeys: demoKeys, keysUnknown: keysUnknown, keysHint: keysHint, timelineView: timelineView,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else window.qscModel = api;

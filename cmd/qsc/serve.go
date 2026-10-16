@@ -119,7 +119,7 @@ func serve(ctx context.Context, args []string, out, errw io.Writer) (code int) {
 				if !ok {
 					return
 				}
-				st.Apply(e)
+				st.Handle(b, e)
 			}
 		}
 	})
@@ -225,14 +225,15 @@ func serve(ctx context.Context, args []string, out, errw io.Writer) (code int) {
 		return override()
 	}
 	apiHandler := api.New(api.Deps{
-		Version:    version.Version,
-		Started:    time.Now(),
-		Snapshot:   st.Snapshot,
-		History:    be.recent,
-		Timeline:   be.timeline,
-		ConfigPath: opts.configPath,
-		Effective:  effective,
-		Degraded:   func() bool { dir, _ := be.current(); return dir == "" },
+		Version:      version.Version,
+		Started:      time.Now(),
+		Snapshot:     st.Snapshot,
+		ResetSession: func() { st.ResetSession(b) },
+		History:      be.recent,
+		Timeline:     be.timeline,
+		ConfigPath:   opts.configPath,
+		Effective:    effective,
+		Degraded:     func() bool { dir, _ := be.current(); return dir == "" },
 		Detect: func() string {
 			d, _ := paths.Find("", steamRoots())
 			return d

@@ -22,6 +22,8 @@
       nameKey: 'overlays.keys.name', descKey: 'overlays.keys.description', params: ['scale', 'lang', 'counts', 'peak'] },
     { id: 'curve', path: '/overlays/curve/', width: 520, height: 180,
       nameKey: 'overlays.curve.name', descKey: 'overlays.curve.description', params: ['autohide', 'scale', 'lang'] },
+    { id: 'session', path: '/overlays/session/', width: 480, height: 170,
+      nameKey: 'overlays.session.name', descKey: 'overlays.session.description', params: ['scale', 'lang'] },
   ];
 
   let custom = [];
