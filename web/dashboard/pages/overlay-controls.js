@@ -60,6 +60,16 @@
       h('p', { class: 'muted hint' }, t('overlays.hide_hint')));
   }
 
+  // The preview-only switch: remembers the choice and announces it in its status line.
+  function demoSwitch(checked, onChange) {
+    const status = h('p', { class: 'muted status-line', role: 'status', 'aria-live': 'polite' });
+    const input = h('input', { id: 'ov-demo', type: 'checkbox', checked: checked, 'aria-describedby': 'ov-demo-hint', onchange: function (ev) { window.qscOverlayUtil.storeDemo(ev.target.checked); say(ev.target.checked); onChange(ev.target.checked); } });
+    function say(on) { status.textContent = t(on ? 'overlays.demo_on' : 'overlays.demo_off'); }
+    const el = h('div', { class: 'field' }, h('label', { class: 'check', for: 'ov-demo' }, input, h('span', null, t('overlays.demo'))),
+      h('p', { id: 'ov-demo-hint', class: 'muted hint' }, t('overlays.demo_hint')), status);
+    return el;
+  }
+
   // Option controls keyed by param name; sync(overlay) shows only the ones that overlay supports.
   function options(model, onChange) {
     const lim = cat.LIMITS;
@@ -90,5 +100,5 @@
     return { el: root, sync: sync };
   }
 
-  window.qscOverlayControls = { picker: picker, options: options };
+  window.qscOverlayControls = { picker: picker, options: options, demoSwitch: demoSwitch };
 })();

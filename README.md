@@ -141,7 +141,7 @@ The dashboard is served at `http://127.0.0.1:7878/` and needs nothing but a brow
 | Page | What it does |
 |------|--------------|
 | **Status** | Live game state, current map, the health of your setup and a Copy diagnostics button for bug reports |
-| **Overlays** | Copy the OBS browser source link, pick a theme from the visual theme picker (built-in or your own custom themes) and an accent color, preview the result, and save it as your default look |
+| **Overlays** | Copy the OBS browser source link, pick a theme from the visual theme picker (built-in or your own custom themes) and an accent color, preview the result (with demo data or live data, your choice), and save it as your default look |
 | **OBS** | A step by step guide to add the overlays to OBS, with the recommended sizes, copyable links and a connection check |
 | **History** | Your recent plays: map, difficulty with rate and mods, grade, accuracy, max combo and judgments |
 | **Settings** | Quaver folder, port, dashboard language, the config, themes and overlays paths, the version, the crash detection option, the opt-in lane keys card and a Quit button |

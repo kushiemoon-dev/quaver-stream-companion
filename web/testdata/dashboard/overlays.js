@@ -435,7 +435,7 @@ test('custom overlay names and descriptions from a hostile manifest are shown as
   assert.equal(text(win.$('.overlay-card > p.muted:not(.hint)')), '<script>alert(1)</script>');
   assert.equal(win.$('.overlay-card').querySelector('img'), null);
   assert.equal(win.$('.overlay-card').querySelector('script'), null);
-  assert.equal(frame(win).getAttribute('title'), 'Preview of the ' + HOSTILE + ' overlay with example data');
+  assert.equal(frame(win).getAttribute('title'), 'Preview of the ' + HOSTILE + ' overlay');
   assert.equal(copyButton(win).getAttribute('aria-label'), 'Copy the ' + HOSTILE + ' overlay link');
   assert.ok(text(win.$('.overlay-card > .hint code')).includes(HOSTILE));
 });
@@ -516,6 +516,70 @@ test('a preview or copy timer firing after the page is closed does nothing, and 
   win.location.hash = '#/overlays';
   await win.flush();
   assert.equal(win.$$('input[name="ov-overlay"]').length, 8);
+});
+
+const demoBox = (win) => win.$('#ov-demo');
+const live = (map) => ({ '/state': () => H.json({ game: 'menu', map }) });
+
+test('the demo switch defaults to on without a known map, off with Quaver found and a map, and is labelled', async () => {
+  const idle = await openOverlays();
+  assert.equal(demoBox(idle.win).checked, true);
+  assert.equal(win_label(idle.win), 'Preview with demo data');
+  assert.match(frame(idle.win).getAttribute('src'), /demo=1/);
+  const playing = await openOverlays(live({ title: 'x' }));
+  assert.equal(demoBox(playing.win).checked, false);
+  assert.doesNotMatch(frame(playing.win).getAttribute('src'), /demo/);
+  const missing = await openOverlays({ ...live({ title: 'x' }), 'GET /api/status': () => H.json(H.status({ checks: [{ id: 'quaver_dir', ok: false, detail: 'nope' }] })) });
+  assert.equal(demoBox(missing.win).checked, true);
+});
+
+function win_label(win) { return text(win.$('label[for="ov-demo"]')); }
+
+test('toggling the demo switch changes only the preview, announces it, and the copied link stays the same', async () => {
+  const { win } = await openOverlays();
+  const copied = link(win);
+  assert.equal(copied, ORIGIN + '/overlays/now-playing/');
+  tick(win, false, demoBox(win));
+  await settle(win, 250);
+  assert.equal(frame(win).getAttribute('src'), '/overlays/now-playing/?theme=neutral-light');
+  assert.equal(link(win), copied);
+  assert.equal(frame(win).getAttribute('title'), 'Preview of the Now playing overlay');
+  const status = win.$('#ov-demo').closest('.field').querySelector('[aria-live]');
+  assert.equal(text(status), 'The preview shows live data.');
+  tick(win, true, demoBox(win));
+  await settle(win, 250);
+  assert.equal(frame(win).getAttribute('src'), '/overlays/now-playing/?theme=neutral-light&demo=1');
+  assert.equal(frame(win).getAttribute('title'), 'Preview of the Now playing overlay with example data');
+  assert.equal(text(status), 'The preview shows demo data.');
+  assert.doesNotMatch(link(win), /demo/);
+  await selectOverlay(win, 'session');
+  assert.equal(frame(win).getAttribute('src'), '/overlays/session/?theme=neutral-light&demo=1');
+  assert.doesNotMatch(link(win), /demo/);
+});
+
+test('the choice is remembered, wins over the default, and a blocked storage is tolerated', async () => {
+  const first = await openOverlays();
+  tick(first.win, false, demoBox(first.win));
+  assert.equal(first.win.localStorage.getItem('qsc.overlays.demo'), '0');
+  first.win.localStorage.setItem('qsc.overlays.demo', '1');
+  first.win.location.hash = '#/status';
+  await first.win.flush();
+  first.win.location.hash = '#/overlays';
+  await first.win.flush();
+  assert.equal(demoBox(first.win).checked, true);
+  first.win.localStorage.setItem('qsc.overlays.demo', 'junk');
+  first.win.location.hash = '#/status';
+  await first.win.flush();
+  first.win.location.hash = '#/overlays';
+  await first.win.flush();
+  assert.equal(demoBox(first.win).checked, true);
+  const s = setup();
+  const blocked = await H.open({ hash: '#/overlays', routes: s.routes, storageThrows: true });
+  assert.equal(demoBox(blocked).checked, true);
+  tick(blocked, false, demoBox(blocked));
+  await settle(blocked, 250);
+  assert.doesNotMatch(frame(blocked).getAttribute('src'), /demo/);
+  assert.equal(blocked.logs.filter((l) => l.level === 'error').length, 0);
 });
 
 run();
