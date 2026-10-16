@@ -21,5 +21,11 @@ jobs:
         with:
           node-version: 20
       - run: go vet ./...
-      - run: go test -race -cover ./...
-      - run: node scripts/js-coverage.mjs
+      - run: go test -race "-coverprofile=cover.out" ./...
+      - name: Go coverage floor
+        if: runner.os == 'Linux'
+        run: |
+          total=$(go tool cover -func=cover.out | awk '/^total:/ {gsub("%", "", $3); print $3}')
+          echo "Go statement coverage: ${total}%"
+          awk -v t="$total" 'BEGIN { exit (t + 0 < 85) }' || { echo "Go coverage is below the 85% floor"; exit 1; }
+      - run: node scripts/js-coverage.mjs --lines 95 --branches 90 --functions 95

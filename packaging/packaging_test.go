@@ -300,9 +300,9 @@ func TestJavaScriptCoverageScript(t *testing.T) {
 	}
 }
 
-func TestCIReportsJavaScriptCoverage(t *testing.T) {
+func TestCIEnforcesCoverageFloors(t *testing.T) {
 	wf := read(t, ".github/workflows/ci.yml")
-	goTest := strings.Index(wf, "go test -race -cover ./...")
+	goTest := strings.Index(wf, `go test -race "-coverprofile=cover.out" ./...`)
 	cov := strings.Index(wf, "- run: node scripts/js-coverage.mjs")
 	if goTest < 0 || cov < goTest {
 		t.Error("ci.yml must run node scripts/js-coverage.mjs after the Go tests")
@@ -310,7 +310,9 @@ func TestCIReportsJavaScriptCoverage(t *testing.T) {
 	if !strings.Contains(wf, "os: [ubuntu-latest, windows-latest]") {
 		t.Error("ci.yml must keep the Ubuntu and Windows matrix for the coverage step")
 	}
-	if strings.Contains(wf, "--lines") || strings.Contains(wf, "QSC_JS_COV") {
-		t.Error("the coverage step is report only: no threshold yet")
+	for _, want := range []string{"node scripts/js-coverage.mjs --lines", "--branches", "--functions", "below the 85% floor"} {
+		if !strings.Contains(wf, want) {
+			t.Errorf("ci.yml must enforce the coverage floors: missing %q", want)
+		}
 	}
 }
