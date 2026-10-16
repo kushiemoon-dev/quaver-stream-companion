@@ -140,7 +140,7 @@ func TestSiteContent(t *testing.T) {
 	html := files["index.html"]
 	for _, want := range []string{
 		`<html lang="en">`, `name="viewport"`, `<meta name="color-scheme" content="dark">`, "<title>", `rel="stylesheet" href="style.css"`,
-		"qsc --open", repoURL + "/releases/latest", "v0.1.1", "not affiliated with Quaver",
+		"qsc --open", repoURL + "/releases/latest", "v0.2.0", "not affiliated with Quaver",
 		"quaver.db", "read-only", "127.0.0.1", "Linux", "not yet with a real Quaver install", repoURL + "/blob/main/LICENSE",
 		repoURL + "/blob/main/docs/OBS.md", repoURL + "/blob/main/docs/OVERLAYS.md", repoURL + "/blob/main/docs/THEMES.md",
 		"loads its two fonts from Google Fonts", "The app itself makes no network request",
