@@ -25,6 +25,18 @@ go test ./... -count=1
 
 `gofmt -l .` must print nothing, and `go vet` and the tests must pass. Tests use synthetic data, free ports (`127.0.0.1:0`) and temporary folders (`t.TempDir()`). They must never read your real config file, your Quaver folder or the real keyboard, and they must not leave a server running. Add a test that fails without your change.
 
+## Measuring coverage
+
+Go: `go test -cover ./...`.
+
+JavaScript in `web/` (dashboard and overlay pages):
+
+```sh
+node scripts/js-coverage.mjs
+```
+
+The script runs `go test ./web` with V8 coverage, then prints a per-file table and a total. It needs Go, Node 20 or later and network access for `npx` on the first run. It writes `coverage-js/`, which is ignored by git. Add `--lines N`, `--branches N` or `--functions N` (or set `QSC_JS_COV_LINES`, `QSC_JS_COV_BRANCHES`, `QSC_JS_COV_FUNCTIONS`) to fail below a threshold.
+
 ## Code rules
 
 - Keep comments rare: a short doc comment on exported names, and the occasional comment for a non-obvious reason.
