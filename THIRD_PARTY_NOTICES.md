@@ -9,18 +9,18 @@ QuaverStreamCompanion itself is MIT licensed (see [LICENSE](LICENSE)). The `qsc`
 
 ## Go modules linked into the binary
 
-- github.com/dustin/go-humanize v1.0.1 (MIT)
+- github.com/dustin/go-humanize v1.1.0 (MIT)
 - github.com/google/uuid v1.6.0 (BSD-3-Clause)
 - github.com/mattn/go-isatty v0.0.24 (MIT)
-- github.com/ncruces/go-strftime v1.0.0 (MIT)
+- github.com/ncruces/go-strftime v1.1.0 (MIT)
 - github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec (BSD-3-Clause)
-- golang.org/x/sys v0.48.0 (BSD-3-Clause)
-- modernc.org/libc v1.77.1 (BSD-3-Clause)
+- golang.org/x/sys v0.49.0 (BSD-3-Clause)
+- modernc.org/libc v1.79.0 (BSD-3-Clause)
 - modernc.org/mathutil v1.7.1 (BSD-3-Clause)
 - modernc.org/memory v1.12.1 (BSD-3-Clause)
 - modernc.org/sqlite v1.60.1 (BSD-3-Clause)
 
-## github.com/dustin/go-humanize v1.0.1
+## github.com/dustin/go-humanize v1.1.0
 
 ### LICENSE
 
@@ -101,7 +101,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 ```
 
-## github.com/ncruces/go-strftime v1.0.0
+## github.com/ncruces/go-strftime v1.1.0
 
 ### LICENSE
 
@@ -165,7 +165,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ```
 
-## golang.org/x/sys v0.48.0
+## golang.org/x/sys v0.49.0
 
 ### LICENSE
 
@@ -228,7 +228,7 @@ shall terminate as of the date such litigation is filed.
 
 ```
 
-## modernc.org/libc v1.77.1
+## modernc.org/libc v1.79.0
 
 ### LICENSE
 
