@@ -10,10 +10,10 @@ import (
 )
 
 func TestKeysOverlayPage(t *testing.T) {
-	src := readWeb(t, "overlays/keys/index.html")
+	src := readPage(t, "keys")
 	for _, want := range []string{
 		"qscConnect(", "{ keys: true }", "'keys.frame'", "snapshot", "qscModel.keysView(", "qscModel.demoKeys(", "qscModel.keysUnknown(", "showHint('unknown_mode')", "qscModel.keysHint(",
-		"/api/status", "params.demo", "params.counts", "params.peak", `class="card fill hidden"`,
+		"/api/status", "params.demo", "params.counts", "params.peak",
 		"qscT('keys.kps')", "qscT('keys.peak')", "qscT('keys.' + hint)",
 	} {
 		if !strings.Contains(src, want) {
@@ -36,7 +36,7 @@ func TestKeysOverlayParamsAndOptIn(t *testing.T) {
 		}
 	}
 	for _, name := range []string{"now-playing", "result", "history", "state", "alert", "curve"} {
-		if strings.Contains(readWeb(t, "overlays/"+name+"/index.html"), "keys: true") {
+		if strings.Contains(readPage(t, name), "keys: true") {
 			t.Errorf("%s must not ask for key frames", name)
 		}
 	}

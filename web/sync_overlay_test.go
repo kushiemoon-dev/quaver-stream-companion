@@ -7,7 +7,7 @@ import (
 
 func TestOverlaysResyncOnSnapshots(t *testing.T) {
 	for _, name := range []string{"result", "curve"} {
-		src := readWeb(t, "overlays/"+name+"/index.html")
+		src := readPage(t, name)
 		for _, want := range []string{"qscModel.createIdGate()", "'snapshot'", "gate.fresh("} {
 			if !strings.Contains(src, want) {
 				t.Errorf("%s is missing %q", name, want)
