@@ -27,7 +27,7 @@ go test ./... -count=1
 
 ## Measuring coverage
 
-Go: `go test -cover ./...`.
+Go: `go test -cover ./...`. CI fails below 85 percent of statements in total.
 
 JavaScript in `web/` (dashboard and overlay pages):
 
@@ -35,7 +35,7 @@ JavaScript in `web/` (dashboard and overlay pages):
 node scripts/js-coverage.mjs
 ```
 
-The script runs `go test ./web` with V8 coverage, then prints a per-file table and a total. It needs Go, Node 20 or later and network access for `npx` on the first run. It writes `coverage-js/`, which is ignored by git. Add `--lines N`, `--branches N` or `--functions N` (or set `QSC_JS_COV_LINES`, `QSC_JS_COV_BRANCHES`, `QSC_JS_COV_FUNCTIONS`) to fail below a threshold.
+The script runs `go test ./web` with V8 coverage, then prints a per-file table and a total. It needs Go, Node 20 or later and network access for `npx` on the first run. It writes `coverage-js/`, which is ignored by git. Add `--lines N`, `--branches N` or `--functions N` (or set `QSC_JS_COV_LINES`, `QSC_JS_COV_BRANCHES`, `QSC_JS_COV_FUNCTIONS`) to fail below a threshold. CI requires 95 percent of lines, 90 percent of branches and 95 percent of functions.
 
 ## Testing the pages
 
