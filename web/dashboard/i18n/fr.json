@@ -171,6 +171,8 @@
   "settings.language_help": "S'applique immédiatement.",
   "settings.watch": "Détecter un plantage de Quaver",
   "settings.watch_help": "qsc regarde les noms des programmes en cours pour remarquer que Quaver a planté (sous Linux, la ligne de commande des processus Wine, uniquement pour trouver Quaver.exe) ; rien n'est enregistré ni envoyé. S'applique immédiatement.",
+  "settings.text": "Écrire les fichiers texte du morceau en cours",
+  "settings.text_help": "qsc tient à jour de petits fichiers texte (titre, artiste, difficulté, mapper, morceau en cours, dernier grade, dernière précision) dans le dossier text à côté du fichier de réglages, pour les sources texte d'OBS qui lisent un fichier. Ils suivent la prochaine map ou le prochain score. S'applique immédiatement.",
   "settings.lang.auto": "Auto (langue du navigateur)",
   "settings.lang.en": "English",
   "settings.lang.fr": "Français",

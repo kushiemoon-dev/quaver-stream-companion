@@ -171,6 +171,8 @@
   "settings.language_help": "Wird sofort übernommen.",
   "settings.watch": "Absturz von Quaver erkennen",
   "settings.watch_help": "qsc prüft die Namen der laufenden Programme, um einen Absturz von Quaver zu bemerken (unter Linux die Befehlszeile von Wine-Prozessen, nur um Quaver.exe zu finden); nichts wird gespeichert oder gesendet. Wird sofort übernommen.",
+  "settings.text": "Textdateien zum laufenden Song schreiben",
+  "settings.text_help": "qsc pflegt kleine Textdateien (Titel, Künstler, Schwierigkeit, Mapper, laufender Song, letzte Note, letzte Genauigkeit) im Ordner text neben der Einstellungsdatei, für OBS-Textquellen, die aus einer Datei lesen. Die Dateien folgen der nächsten Map oder dem nächsten Score. Wird sofort übernommen.",
   "settings.lang.auto": "Auto (Browsersprache)",
   "settings.lang.en": "English",
   "settings.lang.fr": "Français",

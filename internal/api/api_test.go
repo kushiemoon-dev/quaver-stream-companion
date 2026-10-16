@@ -738,3 +738,24 @@ func TestPutProcessSettingIsAcceptedAndOmittedMeansOn(t *testing.T) {
 		t.Fatalf("a non boolean must be rejected, code %d", w.Code)
 	}
 }
+
+func TestPutTextFilesSettingIsAcceptedWithoutRestartAndOmittedMeansOff(t *testing.T) {
+	e := newEnv(t)
+	var got cfgResp
+	w := e.put(`{"port":5555,"text_files":true}`, nil)
+	decode(t, w, &got)
+	if w.Code != 200 || !got.Config.TextFiles || got.RestartRequired {
+		t.Fatalf("code %d %s", w.Code, w.Body.String())
+	}
+	if saved, err := config.Load(e.cfgPath); err != nil || !saved.TextFiles {
+		t.Fatalf("saved = %+v, %v", saved, err)
+	}
+	w = e.put(`{"port":5555}`, nil)
+	decode(t, w, &got)
+	if w.Code != 200 || got.Config.TextFiles {
+		t.Fatalf("omitted key must mean off: code %d %s", w.Code, w.Body.String())
+	}
+	if w = e.put(`{"text_files":"yes"}`, nil); w.Code != 400 {
+		t.Fatalf("a non boolean must be rejected, code %d", w.Code)
+	}
+}

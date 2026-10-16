@@ -10,6 +10,7 @@ const dir = (win) => win.$('#set-dir');
 const port = (win) => win.$('#set-port');
 const lang = (win) => win.$('#set-lang');
 const watch = (win) => win.$('#set-watch');
+const text = (win) => win.$('#set-text');
 const form = (win) => win.$('.settings-form');
 const submit = (win) => form(win).dispatchEvent(new dom.Event('submit'));
 const status = (win) => form(win).querySelector('.save-status').textContent;
@@ -24,6 +25,9 @@ test('the form shows the saved values, the effective folder and no banner', asyn
   assert.equal(port(win).value, '7878');
   assert.equal(lang(win).value, '');
   assert.equal(watch(win).checked, true);
+  assert.equal(text(win).checked, false);
+  assert.equal(text(win).getAttribute('aria-describedby'), 'set-text-help');
+  assert.equal(win.$('#set-text-help').textContent, H.en['settings.text_help']);
   assert.equal(banner(win).hidden, true);
   assert.equal(win.$('#set-dir-help').textContent, H.en['settings.dir_effective'] + ' ' + S.QDIR);
   assert.equal(win.$('#set-port-note').hidden, true);
@@ -41,8 +45,9 @@ test('a language outside the list falls back to automatic and a v0.1.0 config wa
   const { win } = await S.open({ config: S.config({ language: 'xx', watch_quaver_process: undefined }) });
   assert.equal(lang(win).value, '');
   assert.equal(watch(win).checked, true);
-  const off = await S.open({ config: S.config({ watch_quaver_process: false }) });
+  const off = await S.open({ config: S.config({ watch_quaver_process: false, text_files: true }) });
   assert.equal(watch(off.win).checked, false);
+  assert.equal(text(off.win).checked, true);
 });
 
 test('a field set by a command-line flag is locked and shows the effective value', async () => {
@@ -98,6 +103,7 @@ test('saving reads the current config first and changes only this form, trimming
   port(win).value = '8000';
   lang(win).value = 'de';
   watch(win).checked = false;
+  text(win).checked = true;
   const gate = dom.deferred();
   state.putGate = gate.promise;
   submit(win);
@@ -108,7 +114,7 @@ test('saving reads the current config first and changes only this form, trimming
   assert.equal(status(win), H.en['settings.saving']);
   gate.resolve();
   await win.flush();
-  assert.deepEqual(state.puts[0], { quaver_dir: 'C:/Other', port: 8000, language: 'de', watch_quaver_process: false, overlay: { theme: 'night' }, keys: { enabled: true }, extra: 1 });
+  assert.deepEqual(state.puts[0], { quaver_dir: 'C:/Other', port: 8000, language: 'de', watch_quaver_process: false, text_files: true, overlay: { theme: 'night' }, keys: { enabled: true }, extra: 1 });
   assert.equal(win.fetchCalls.filter((c) => c.method === 'PUT')[0].init.headers['X-Requested-With'], 'qsc');
 });
 
@@ -330,6 +336,10 @@ test('the model rejects bad ports and builds a body without touching the current
   assert.deepEqual(body, { port: 2, overlay: { a: 1 }, quaver_dir: 'x', language: 'en' });
   body.overlay.a = 2;
   assert.equal(cur.overlay.a, 1);
+  assert.equal('text_files' in body, false);
+  assert.equal(model.buildConfigBody(cur, { text_files: true }, []).text_files, true);
+  assert.equal(model.textFromConfig(null), false);
+  assert.equal(model.textFromConfig({ text_files: 'true' }), false);
 });
 
 run();

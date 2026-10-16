@@ -76,6 +76,7 @@
     f.port.control.value = String(m.isOverridden(overridden, 'port') ? effective.port : current.port);
     f.language.control.value = m.LANGUAGES.indexOf(current.language) >= 0 ? current.language : '';
     ui.watch.checked = m.watchFromConfig(current);
+    ui.text.checked = m.textFromConfig(current);
     FIELDS.forEach(function (name) {
       const locked = m.isOverridden(overridden, name);
       f[name].control.disabled = locked;
@@ -100,7 +101,7 @@
     const port = m.validatePort(f.port.control.value);
     return {
       port: port,
-      values: { quaver_dir: f.quaver_dir.control.value, port: port.value, language: f.language.control.value, watch_quaver_process: ui.watch.checked },
+      values: { quaver_dir: f.quaver_dir.control.value, port: port.value, language: f.language.control.value, watch_quaver_process: ui.watch.checked, text_files: ui.text.checked },
     };
   }
 
@@ -215,6 +216,7 @@
       return h('option', { value: code, lang: LANG_ATTR[code] }, t('settings.lang.' + (code || 'auto')));
     }));
     ui.watch = h('input', { id: 'set-watch', type: 'checkbox', 'aria-describedby': 'set-watch-help' });
+    ui.text = h('input', { id: 'set-text', type: 'checkbox', 'aria-describedby': 'set-text-help' });
     return h('form', { class: 'card settings-form', onsubmit: onSubmit },
       ui.banner,
       field('quaver_dir', 'set-dir', 'settings.dir', dir, ui.dirHelp),
@@ -223,6 +225,9 @@
       h('div', { class: 'field' },
         h('label', { class: 'check' }, ui.watch, h('span', null, t('settings.watch'))),
         h('p', { id: 'set-watch-help', class: 'muted hint' }, t('settings.watch_help'))),
+      h('div', { class: 'field' },
+        h('label', { class: 'check' }, ui.text, h('span', null, t('settings.text'))),
+        h('p', { id: 'set-text-help', class: 'muted hint' }, t('settings.text_help'))),
       ui.general,
       h('div', { class: 'save-row' }, ui.save, ui.reload, ui.status));
   }
