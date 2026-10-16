@@ -29,14 +29,11 @@ func TestEmbeddedAssetsExist(t *testing.T) {
 }
 
 func TestNowPlayingUsesSafeDomUpdates(t *testing.T) {
-	data, err := fs.ReadFile(FS, "overlays/now-playing/index.html")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if strings.Contains(string(data), "innerHTML") {
+	data := readPage(t, "now-playing")
+	if strings.Contains(data, "innerHTML") {
 		t.Fatal("overlay must use textContent, not innerHTML (titles come from map files)")
 	}
-	if !strings.Contains(string(data), "qscConnect") {
+	if !strings.Contains(data, "qscConnect") {
 		t.Fatal("overlay must connect through qscConnect")
 	}
 }
@@ -220,11 +217,7 @@ func TestOverlaysPageIsLoadedAndRegistered(t *testing.T) {
 }
 
 func TestNowPlayingHasDemoModeWithoutEventSource(t *testing.T) {
-	data, err := fs.ReadFile(FS, "overlays/now-playing/index.html")
-	if err != nil {
-		t.Fatal(err)
-	}
-	src := string(data)
+	src := readPage(t, "now-playing")
 	if !strings.Contains(src, "get('demo') === '1'") {
 		t.Fatal("demo must be enabled only by demo=1")
 	}

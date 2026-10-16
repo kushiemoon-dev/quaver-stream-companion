@@ -1,0 +1,52 @@
+const params = qscParams;
+const card = document.getElementById('card');
+document.title = qscT('result.title');
+const autohide = qscAutohide(function () { card.classList.add('hidden'); });
+
+const gate = qscModel.createIdGate();
+
+function render(result) {
+  const v = qscModel.resultView(result, params.lang);
+  if (!v) return;
+  const head = qscEl('div', 'head');
+  head.appendChild(qscEl('div', 'grade ' + v.gradeClass, v.grade));
+  const info = qscEl('div');
+  info.appendChild(qscEl('div', 'big', v.accuracy));
+  info.appendChild(qscEl('div', 'sub', qscT('result.combo') + ' ' + v.combo + 'x'));
+  head.appendChild(info);
+
+  const title = qscEl('div', 'title', v.title);
+  const sub = qscEl('div', 'sub', v.stars ? v.difficultyName + ' · ' + v.stars + '★' : v.difficultyName);
+
+  const grid = qscEl('div', 'judgments');
+  v.judgments.forEach(function (j) {
+    const cell = qscEl('div', 'j-' + j.key);
+    cell.appendChild(qscEl('span', null, qscT('result.' + j.key)));
+    cell.appendChild(qscEl('b', null, String(j.value)));
+    grid.appendChild(cell);
+  });
+
+  const chips = qscEl('div', 'line');
+  if (v.rate) chips.appendChild(qscEl('span', 'chip', v.rate));
+  v.mods.shown.forEach(function (m) { chips.appendChild(qscEl('span', 'chip', m)); });
+  if (v.mods.extra > 0) chips.appendChild(qscEl('span', 'chip', '+' + v.mods.extra));
+  if (v.rank) chips.appendChild(qscEl('span', 'chip', v.rank));
+  v.badges.forEach(function (b) { chips.appendChild(qscEl('span', 'chip', qscT('badge.' + b))); });
+
+  card.replaceChildren(title, sub, head, grid, chips);
+  card.classList.remove('hidden');
+  autohide.touch();
+}
+
+if (params.demo) {
+  render({
+    score: { grade: 'S', accuracy: 97.42, max_combo: 812, rate: 1.15, mods: ['Mirror'], judgments: { marv: 640, perf: 120, great: 32, good: 6, okay: 2, miss: 3 } },
+    map: { title: 'Example Song', difficulty_name: 'Hard', difficulty: 18.5 },
+    is_pb: true, local_rank: 1, local_total: 14, is_local_best: true, full_combo: false, failed: false, paused: false, autoplay: false,
+  });
+} else {
+  qscConnect({
+    'snapshot': function (d) { if (d.last_score && gate.fresh(d.last_score)) render(d.last_score); },
+    'score.saved': function (r) { if (gate.fresh(r)) render(r); },
+  });
+}

@@ -43,8 +43,32 @@ func TestOverlayPagesLoadSharedScripts(t *testing.T) {
 			}
 			last = i
 		}
+		if i := strings.Index(src, `src="page.js"`); i < last {
+			t.Errorf("%s must load page.js after the shared scripts", name)
+		}
 		if !strings.Contains(src, "/overlays/overlay.css") {
 			t.Errorf("%s must load overlay.css", name)
+		}
+	}
+}
+
+func TestOverlayPagesStartHiddenAndKeepInlineScriptsOut(t *testing.T) {
+	cards := map[string]string{
+		"now-playing": `<div id="card" class="card hidden">`,
+		"result":      `<div id="card" class="card hidden"></div>`,
+		"history":     `<div id="card" class="card fill fit hidden"></div>`,
+		"state":       `<div id="pill" class="pill hidden">`,
+		"alert":       `<div id="card" class="card hidden"></div>`,
+		"keys":        `<div id="card" class="card fill hidden"></div>`,
+		"curve":       `<div id="card" class="card fill fit hidden"></div>`,
+	}
+	for _, name := range overlayPages {
+		src := readWeb(t, "overlays/"+name+"/index.html")
+		if !strings.Contains(src, cards[name]) {
+			t.Errorf("%s must start with %s", name, cards[name])
+		}
+		if regexp.MustCompile(`<script>`).MatchString(src) {
+			t.Errorf("%s must keep its script in page.js", name)
 		}
 	}
 }
@@ -82,11 +106,7 @@ func TestOverlaySourcesAreSafe(t *testing.T) {
 
 func TestOverlayDemoBranchesNeverReachTheNetwork(t *testing.T) {
 	for _, name := range overlayPages {
-		data, err := fs.ReadFile(FS, "overlays/"+name+"/index.html")
-		if err != nil {
-			t.Fatal(err)
-		}
-		src := string(data)
+		src := readPage(t, name)
 		loc := regexp.MustCompile(`if \((?:params.demo|isDemo)\) {`).FindStringIndex(src)
 		if loc == nil {
 			t.Errorf("%s must branch on the demo flag", name)
@@ -111,11 +131,7 @@ func TestOverlayDemoBranchesNeverReachTheNetwork(t *testing.T) {
 }
 
 func TestOverlayHistoryFetchesBoundedList(t *testing.T) {
-	data, err := fs.ReadFile(FS, "overlays/history/index.html")
-	if err != nil {
-		t.Fatal(err)
-	}
-	src := string(data)
+	src := readPage(t, "history")
 	for _, want := range []string{"/api/history?limit=", "AbortController", "score.saved"} {
 		if !strings.Contains(src, want) {
 			t.Errorf("history overlay is missing %q", want)
@@ -147,13 +163,12 @@ func TestOverlayHiddenBeatsFill(t *testing.T) {
 }
 
 func TestOverlayReconnectsDoNotReshowOrRestartTimers(t *testing.T) {
-	result, _ := fs.ReadFile(FS, "overlays/result/index.html")
-	if !strings.Contains(string(result), "d.last_score && gate.fresh(d.last_score)") {
+	result := readPage(t, "result")
+	if !strings.Contains(result, "d.last_score && gate.fresh(d.last_score)") {
 		t.Error("result must render snapshot.last_score only when its id was not rendered yet")
 	}
-	np, _ := fs.ReadFile(FS, "overlays/now-playing/index.html")
-	src := string(np)
-	if strings.Contains(strings.SplitN(src[strings.Index(src, "function render()"):], "\n  }\n", 2)[0], "autohide.touch") {
+	src := readPage(t, "now-playing")
+	if strings.Contains(strings.SplitN(src[strings.Index(src, "function render()"):], "\n}\n", 2)[0], "autohide.touch") {
 		t.Error("now-playing render must not restart the autohide timer")
 	}
 	for _, want := range []string{"firstSnapshot", "'map.started': function (d) { map = d; fresh(); }", "'score.saved'"} {
@@ -161,11 +176,11 @@ func TestOverlayReconnectsDoNotReshowOrRestartTimers(t *testing.T) {
 			t.Errorf("now-playing is missing %q", want)
 		}
 	}
-	history, _ := fs.ReadFile(FS, "overlays/history/index.html")
-	if !strings.Contains(string(history), "es.onopen") {
+	history := readPage(t, "history")
+	if !strings.Contains(history, "es.onopen") {
 		t.Error("history must retry a failed first load when the stream connects")
 	}
-	if strings.Contains(string(history), "HEIGHT - 10") {
+	if strings.Contains(history, "HEIGHT - 10") {
 		t.Error("history must use the model's axis positions")
 	}
 }
@@ -217,8 +232,7 @@ func TestOverlayKeysUsedExist(t *testing.T) {
 	en := overlayCatalogs(t)["en"]
 	re := regexp.MustCompile(`qscT\('([a-z0-9_.]+)'\)`)
 	for _, name := range overlayPages {
-		data, _ := fs.ReadFile(FS, "overlays/"+name+"/index.html")
-		for _, m := range re.FindAllStringSubmatch(string(data), -1) {
+		for _, m := range re.FindAllStringSubmatch(readPage(t, name), -1) {
 			if _, ok := en[m[1]]; !ok {
 				t.Errorf("%s uses unknown key %q", name, m[1])
 			}

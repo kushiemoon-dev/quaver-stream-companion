@@ -7,9 +7,9 @@ import (
 )
 
 func TestCurveOverlayPage(t *testing.T) {
-	src := readWeb(t, "overlays/curve/index.html")
+	src := readPage(t, "curve")
 	for _, want := range []string{
-		"'score.saved'", "qscModel.timelineView(", "qscAutohide(", "params.demo", `class="card fill fit hidden"`,
+		"'score.saved'", "qscModel.timelineView(", "qscAutohide(", "params.demo",
 		"'/api/scores/' + ", "'/timeline'", "AbortController", "FETCH_TIMEOUT_MS", "credentials: 'same-origin'",
 		"qscT('curve.title')", "qscT('curve.label')", "createElementNS",
 	} {
@@ -27,7 +27,7 @@ func TestCurveOverlayPage(t *testing.T) {
 		}
 	}
 	for _, name := range []string{"now-playing", "result", "history", "state", "alert", "keys"} {
-		if strings.Contains(readWeb(t, "overlays/"+name+"/index.html"), "/timeline") {
+		if strings.Contains(readPage(t, name), "/timeline") {
 			t.Errorf("%s must not fetch timelines", name)
 		}
 	}

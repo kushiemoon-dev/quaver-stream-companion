@@ -17,11 +17,11 @@ func readWeb(t *testing.T, name string) string {
 }
 
 func TestAlertOverlayNeverReplaysOldScores(t *testing.T) {
-	src := readWeb(t, "overlays/alert/index.html")
+	src := readPage(t, "alert")
 	if strings.Contains(src, "snapshot") {
 		t.Error("alert must ignore the snapshot so a connect never replays an old score")
 	}
-	for _, want := range []string{"'score.saved'", "qscModel.alertView", "qscAutohide(", "DEFAULT_SECONDS = 8", "qscT('alert.' + k)", "card hidden"} {
+	for _, want := range []string{"'score.saved'", "qscModel.alertView", "qscAutohide(", "DEFAULT_SECONDS = 8", "qscT('alert.' + k)"} {
 		if !strings.Contains(src, want) {
 			t.Errorf("alert is missing %q", want)
 		}
@@ -29,7 +29,7 @@ func TestAlertOverlayNeverReplaysOldScores(t *testing.T) {
 }
 
 func TestAlertSoundIsSynthesizedAndOptIn(t *testing.T) {
-	src := readWeb(t, "overlays/alert/index.html")
+	src := readPage(t, "alert")
 	for _, want := range []string{"AudioContext", "params.sound", "createOscillator", ".resume()"} {
 		if !strings.Contains(src, want) {
 			t.Errorf("alert is missing %q", want)
@@ -50,11 +50,16 @@ func TestAlertSoundIsSynthesizedAndOptIn(t *testing.T) {
 }
 
 func TestHistoryBestLineIsOptIn(t *testing.T) {
-	src := readWeb(t, "overlays/history/index.html")
+	src := readPage(t, "history")
 	if !strings.Contains(src, "params.best") || !strings.Contains(src, "qscModel.bestLine(") {
 		t.Error("history must draw the best line only when params.best is set")
 	}
 	if !strings.Contains(readWeb(t, "overlays/overlay.css"), ".curve .best") {
 		t.Error("overlay.css must style the best line")
 	}
+}
+
+func readPage(t *testing.T, name string) string {
+	t.Helper()
+	return readWeb(t, "overlays/"+name+"/page.js")
 }

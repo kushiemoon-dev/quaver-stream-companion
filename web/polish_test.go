@@ -24,7 +24,7 @@ assert.strictEqual(m.nowPlayingView({ title: 'x'.repeat(500) }).title.length, 20
 }
 
 func TestNowPlayingPageHasNoUnguardedFormatting(t *testing.T) {
-	src := readWeb(t, "overlays/now-playing/index.html")
+	src := readPage(t, "now-playing")
 	if strings.Contains(src, "toFixed") {
 		t.Error("now-playing must format stars through the guarded model")
 	}
@@ -257,7 +257,7 @@ func TestOverlayPagesPassTheLanguage(t *testing.T) {
 		"curve":       "qscModel.timelineView(timeline, WIDTH, HEIGHT, params.lang)",
 		"history":     "qscModel.bestLine(c, params.lang)",
 	} {
-		if !strings.Contains(readWeb(t, "overlays/"+page+"/index.html"), want) {
+		if !strings.Contains(readPage(t, page), want) {
 			t.Errorf("%s must call %s", page, want)
 		}
 	}
