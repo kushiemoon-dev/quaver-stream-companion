@@ -26,6 +26,7 @@ Options go in the query string, for example `/overlays/result/?theme=nord&autohi
 | `lang` | all | `en`, `fr` or `de` | The browser language, else `en` |
 | `scale` | all | A number from 0.5 to 3 | 1 |
 | `demo` | all | `1` shows example data and does not connect | off |
+| `feed` | all | `parent` takes the events from the page that frames the overlay, when that page has the same address, instead of connecting to qsc. The website demo uses it; OBS never needs it | off |
 | `autohide` | now playing, result, alert, curve | Seconds from 1 to 3600 until the card hides | never (alert: 8) |
 | `n` | history | Number of plays from 5 to 50 | 20 |
 | `best` | history | `1` draws a dashed line at the best accuracy of the plays shown | off |
