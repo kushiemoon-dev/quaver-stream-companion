@@ -8,6 +8,8 @@
   const params = new URLSearchParams(location.search);
 
   const isDemo = params.get('demo') === '1';
+  // feed=parent lets a page of the same origin that frames the overlay send it the events, for the website demo.
+  const fromParent = params.get('feed') === 'parent' && !!window.parent && window.parent !== window;
   const urlTheme = THEME_RE.test(params.get('theme') || '') ? params.get('theme') : '';
   const urlAccent = ACCENT_RE.test(params.get('accent') || '') ? params.get('accent') : '';
 
@@ -53,7 +55,7 @@
 
   let defaults = Promise.resolve({});
   try {
-    if (!isDemo && !(urlTheme && urlAccent)) defaults = fetchDefaults();
+    if (!fromParent && !isDemo && !(urlTheme && urlAccent)) defaults = fetchDefaults();
   } catch (e) {
     reveal();
   }
@@ -105,7 +107,19 @@
   };
 
   // options.keys asks the server for lane key frames, which are not sent otherwise.
+  function listenToParent(handlers) {
+    function onMessage(ev) {
+      const msg = ev.data;
+      if (ev.origin !== location.origin || ev.source !== window.parent || !msg || msg.type !== 'qsc-event') return;
+      if (typeof msg.event !== 'string' || !Object.prototype.hasOwnProperty.call(handlers, msg.event)) return;
+      if (msg.data !== null && typeof msg.data === 'object') handlers[msg.event](msg.data);
+    }
+    window.addEventListener('message', onMessage);
+    return { onopen: null, close: function () { window.removeEventListener('message', onMessage); } };
+  }
+
   window.qscConnect = function (handlers, options) {
+    if (fromParent) return listenToParent(handlers);
     return model.createConnection(function (url) { return new EventSource(url); }, options && options.keys ? '/events?keys=1' : '/events', handlers, {
       setTimeout: function (fn, ms) { return setTimeout(fn, ms); },
       clearTimeout: function (id) { clearTimeout(id); },

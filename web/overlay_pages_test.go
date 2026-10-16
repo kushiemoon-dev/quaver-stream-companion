@@ -22,6 +22,10 @@ func TestSimulatedBrowserStub(t *testing.T) {
 	runNodeTest(t, "dom_stub.js")
 }
 
+func TestOverlayEventsFromTheHostPage(t *testing.T) {
+	runNodeTest(t, "overlays/feed.js")
+}
+
 func TestOverlayPagesRunInASimulatedBrowser(t *testing.T) {
 	for _, name := range overlayPages {
 		t.Run(name, func(t *testing.T) {
