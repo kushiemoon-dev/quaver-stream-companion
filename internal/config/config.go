@@ -37,6 +37,8 @@ type Config struct {
 	Keys      keys.Config `json:"keys"`
 	// WatchQuaverProcess lets qsc look at the names of running programs to notice a Quaver crash.
 	WatchQuaverProcess bool `json:"watch_quaver_process"`
+	// TextFiles keeps the now playing text files in the config folder for OBS text sources.
+	TextFiles bool `json:"text_files"`
 }
 
 // FieldError describes an invalid setting.

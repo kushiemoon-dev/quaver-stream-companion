@@ -33,6 +33,29 @@ Replace the port if you changed it. Options such as `scale`, `autohide` or `lang
 
 The lane keys overlay needs the Keys card of the dashboard Settings page: turn it on, pick your keys and restart `qsc`. Lane keys are off by default. Only the lane keys you choose are read, and only while a map is being played. Nothing is stored or logged: no key names, no key history. The key state is read system wide, regardless of the focused window, so lane key timing may be sampled while you type elsewhere during gameplay. It works on Windows only for now, and a tap shorter than the polling interval may be missed. The key data is only served to pages loaded from `qsc` and to OBS; other web pages cannot read it. Until then the overlay shows a short hint saying why it is empty.
 
+## Text source, read from file
+
+An OBS Text source can show the map and the last score without a browser source, because it can read a text file. This is off by default.
+
+1. **Turn it on.** In the dashboard Settings page, tick **Write the now playing text files**. It applies right away, no restart. The same setting is `"text_files": true` in the config file.
+2. **Let qsc write the files.** The files are created when you tick the box and then follow the next map or score. With no map known they are empty.
+3. **Add a Text source.** In OBS, click the plus under Sources, choose Text, tick **Read from file** and pick a file of the `text` folder next to the config file (`%APPDATA%quaver-stream-companion	ext` on Windows, `~/.config/quaver-stream-companion/text` on Linux). Use the `nowplaying.txt` file for a single line.
+4. **Style it in OBS.** Font, color and size are the Text source settings; qsc only writes the words.
+
+| File | Content | Example |
+|------|---------|---------|
+| `title.txt` | Map title | `Some Title` |
+| `artist.txt` | Map artist | `Some Artist` |
+| `difficulty.txt` | Difficulty name | `Insane` |
+| `mapper.txt` | Map creator | `Some Mapper` |
+| `nowplaying.txt` | Artist, title and difficulty | `Some Artist - Some Title [Insane]` |
+| `last_grade.txt` | Grade of the last score | `S` |
+| `last_accuracy.txt` | Accuracy of the last score, with a dot | `97.42%` |
+
+The files are UTF-8 without a byte order mark and without a trailing newline. Control characters are removed and each file holds at most 256 bytes. A file is only rewritten when its text changes, through a temporary file that replaces it, so OBS never reads half a line.
+
+The same texts are available over HTTP for tools and browser sources of your own: `http://127.0.0.1:7878/api/text/nowplaying.txt` answers `text/plain; charset=utf-8` with the text of the file of the same name, whether or not the files are written. It answers 404 for any other name and is only meant for pages served by `qsc` and local tools.
+
 ## Troubleshooting
 
 - **Nothing shows.** Use the "Check connection" button on the OBS page and look at the Status page. The port in the link must match the one in Settings, and the host must be `127.0.0.1` or `localhost`.

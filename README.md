@@ -219,6 +219,7 @@ All screenshots use synthetic data.
 | `GET /api/config`, `PUT /api/config` | Read and save the settings file |
 | `GET /api/history` | Recent plays (`?limit=`, 1 to 200) |
 | `GET /api/scores/{id}/timeline` | Accuracy curve of one saved play, from the score database |
+| `GET /api/text/{file}` | The text of one of the now playing text files, as `text/plain` (for example `/api/text/nowplaying.txt`) |
 | `GET /api/themes` | Available overlay themes |
 | `GET /api/overlays` | The custom overlays folder and the custom overlays found in it |
 | `POST /api/quit` | Stop `qsc` cleanly (same guards as saving the settings: used by the dashboard Quit button and `qsc stop`) |
@@ -297,11 +298,12 @@ Settings are stored in a JSON file, written by the Settings and Overlays pages o
   "language": "en",
   "overlay": { "theme": "neutral-light", "accent": "" },
   "keys": { "enabled": false },
-  "watch_quaver_process": true
+  "watch_quaver_process": true,
+  "text_files": false
 }
 ```
 
-An empty `quaver_dir` means auto-detection from your Steam libraries. `language` is `en`, `fr` or `de`. `watch_quaver_process` turns the [crash detection](#crash-detection) on or off. `accent` is a hex color without `#`. A missing file gives the defaults. Saving writes a `"version": 1` key, and keys that `qsc` does not know are kept when settings are saved from the dashboard. A change of port, or of the Quaver folder once it is in use, takes effect the next time `qsc` starts; a folder saved while `qsc` is still looking for Quaver is picked up within 15 seconds. In a hand-edited JSON path, double each backslash (`\\`) or use forward slashes.
+An empty `quaver_dir` means auto-detection from your Steam libraries. `language` is `en`, `fr` or `de`. `watch_quaver_process` turns the [crash detection](#crash-detection) on or off. `text_files` (off by default) keeps text files of the current map and last score in a `text` folder next to the config file, for [OBS text sources](docs/OBS.md#text-source-read-from-file); it applies right away. `accent` is a hex color without `#`. A missing file gives the defaults. Saving writes a `"version": 1` key, and keys that `qsc` does not know are kept when settings are saved from the dashboard. A change of port, or of the Quaver folder once it is in use, takes effect the next time `qsc` starts; a folder saved while `qsc` is still looking for Quaver is picked up within 15 seconds. In a hand-edited JSON path, double each backslash (`\\`) or use forward slashes.
 
 #### Lane keys
 

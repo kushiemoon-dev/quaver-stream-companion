@@ -149,6 +149,7 @@ Quit `qsc` first (the Quit button in Settings, or `qsc stop`), then replace the 
 | Program | where you unzipped it | where you copied it |
 | Config | `%APPDATA%\quaver-stream-companion\config.json` | `~/.config/quaver-stream-companion/config.json` |
 | Custom themes and overlays | next to the config file | next to the config file |
+| Now playing text files (only when **Write the now playing text files** is ticked) | the `text` folder next to the config file | the `text` folder next to the config file |
 
 `qsc` writes nothing to the Quaver folder.
 
@@ -158,7 +159,7 @@ Quit `qsc` first (the Quit button in Settings, or `qsc stop`), then replace the 
 2. Windows: delete the shortcut from the `shell:startup` folder and the folder you unzipped. Linux: run `systemctl --user disable --now qsc.service`, then delete `~/.config/systemd/user/qsc.service` and the program or AppImage.
 3. To also remove your settings, delete the `quaver-stream-companion` folder shown in the table above.
 
-What `qsc` leaves behind: that config folder (`config.json`, `qsc.log` and its older copy `qsc.log.1`, and your custom `themes` and `overlays` folders) and, on Linux, the service file you copied. Nothing is written to the registry or to the Quaver folder.
+What `qsc` leaves behind: that config folder (`config.json`, `qsc.log` and its older copy `qsc.log.1`, your custom `themes` and `overlays` folders, and the `text` folder) and, on Linux, the service file you copied. Nothing is written to the registry or to the Quaver folder.
 
 ## Troubleshooting
 

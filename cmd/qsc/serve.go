@@ -31,6 +31,7 @@ import (
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/scores"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/server"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/state"
+	"github.com/kushiemoon-dev/quaver-stream-companion/internal/textout"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/themes"
 	"github.com/kushiemoon-dev/quaver-stream-companion/internal/version"
 	"github.com/kushiemoon-dev/quaver-stream-companion/web"
@@ -123,6 +124,16 @@ func serve(ctx context.Context, args []string, out, errw io.Writer) (code int) {
 		}
 	})
 
+	textDir := textout.Dir(opts.configPath)
+	texts := textout.NewWriter(textDir, textFilesEnabled(opts.configPath))
+	textEvents, textUnsub := b.Subscribe()
+	spawn(func() {
+		defer textUnsub()
+		if textDir != "" {
+			texts.Run(ctx, textEvents)
+		}
+	})
+
 	laneKeys := keys.NewService(b, opts.keys, newSampler)
 	spawn(func() { laneKeys.Run(ctx) })
 
@@ -171,7 +182,9 @@ func serve(ctx context.Context, args []string, out, errw io.Writer) (code int) {
 				game = ln.State
 			}
 		}
-		st.Seed(a.SeedSnapshot(ctx, game))
+		seedMap, seedScore := a.SeedSnapshot(ctx, game)
+		st.Seed(seedMap, seedScore)
+		texts.Seed(seedMap, seedScore)
 		raw := make(chan string, 64)
 		spawn(func() { gamestate.Tail(ctx, logPath, logPollInterval, raw) })
 		spawn(func() { relay(ctx, raw, lines, laneKeys.Touch) })
@@ -285,4 +298,12 @@ func reportDegraded(w io.Writer, detail string) {
 		fmt.Fprintln(w, " ", l)
 	}
 	fmt.Fprintf(w, "The dashboard works meanwhile. qsc checks again every %s.\n", recheckInterval.get())
+}
+
+// textFilesEnabled reads the text_files setting at each call, so a change applies without a restart.
+func textFilesEnabled(configPath string) func() bool {
+	return func() bool {
+		c, err := config.Load(configPath)
+		return err == nil && c.TextFiles
+	}
 }

@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - The map object (`map.started`, the snapshot and results) carries `creator`, `bpm`, `length_ms`, `regular_notes`, `long_notes`, `mines`, `ranked_status`, `times_played`, `map_id` and `map_set_id`. A game database without those columns still works and reports empty values.
 - The now playing overlay has a `meta` option (`?meta=1`, a **Map details** checkbox on the Overlays page) that adds one line with the mapper, BPM, length and note counts. BPM and length follow the play rate once a score of the map is known.
+- The `text_files` setting (off by default, one checkbox in Settings, applies right away) keeps small UTF-8 text files in a `text` folder next to the config file: `title.txt`, `artist.txt`, `difficulty.txt`, `mapper.txt`, `nowplaying.txt`, `last_grade.txt` and `last_accuracy.txt`, for OBS Text sources that read from a file. They follow `map.started` and `score.saved`.
+- `GET /api/text/{file}` (for example `/api/text/nowplaying.txt`) returns the same texts as `text/plain; charset=utf-8`, for local tools and browser sources.
 
 ## [0.1.1] - 2026-10-15
 
