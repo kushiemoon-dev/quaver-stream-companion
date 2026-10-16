@@ -238,7 +238,7 @@ test('controls: options reports changes and shows only the controls an overlay h
   hide.find((i) => i.getAttribute('value') === 'lobby').dispatchEvent(new win.Event('change'));
   hide.find((i) => i.getAttribute('value') === 'menu').checked = false;
   hide.find((i) => i.getAttribute('value') === 'menu').dispatchEvent(new win.Event('change'));
-  assert.deepEqual(JSON.parse(JSON.stringify(changes)), [{ n: '7' }, { autohide: '3' }, { scale: '2' }, { hide: ['menu', 'lobby'] }, { hide: [] }]);
+  assert.deepEqual(JSON.parse(JSON.stringify(changes)), [{ n: '7' }, { autohide: '3' }, { scale: '2' }, { hide: ['menu', 'lobby'] }, { hide: ['lobby'] }]);
   const peak = el.querySelectorAll('input[type="checkbox"]').filter((i) => !i.getAttribute('value'));
   peak.forEach((i, k) => { i.checked = k % 2 === 0; i.dispatchEvent(new win.Event('change')); });
   assert.deepEqual(changes.slice(5).map((c) => Object.keys(c)[0] + '=' + Object.values(c)[0]), ['best=true', 'counts=false', 'peak=true', 'sound=false']);
