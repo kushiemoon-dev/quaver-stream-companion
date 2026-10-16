@@ -211,7 +211,7 @@
     ui.reload = h('button', { type: 'button', class: 'btn', hidden: true, onclick: onReload }, t('settings.reload'));
     const dir = h('input', { id: 'set-dir', type: 'text', autocomplete: 'off', spellcheck: 'false' });
     const port = h('input', { id: 'set-port', type: 'text', inputmode: 'numeric', autocomplete: 'off', oninput: updatePortNote });
-    ui.portNote = h('p', { id: 'set-port-note', class: 'muted hint', role: 'status', hidden: true }, t('settings.port_obs_note'));
+    ui.portNote = h('p', { id: 'set-port-obs-note', class: 'muted hint', role: 'status', hidden: true }, t('settings.port_obs_note'));
     const lang = h('select', { id: 'set-lang' }, m.LANGUAGES.map(function (code) {
       return h('option', { value: code, lang: LANG_ATTR[code] }, t('settings.lang.' + (code || 'auto')));
     }));

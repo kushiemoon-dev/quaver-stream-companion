@@ -30,7 +30,7 @@ test('the form shows the saved values, the effective folder and no banner', asyn
   assert.equal(win.$('#set-text-help').textContent, H.en['settings.text_help']);
   assert.equal(banner(win).hidden, true);
   assert.equal(win.$('#set-dir-help').textContent, H.en['settings.dir_effective'] + ' ' + S.QDIR);
-  assert.equal(win.$('#set-port-note').hidden, true);
+  assert.equal(win.$('#set-port-obs-note').hidden, true);
   assert.equal(win.$$('.settings-form').length, 2);
   assert.equal(lang(win).children.length, 4);
   assert.equal(dir(win).getAttribute('aria-describedby'), 'set-dir-help set-dir-error');
@@ -56,7 +56,7 @@ test('a field set by a command-line flag is locked and shows the effective value
   assert.equal(dir(win).value, 'C:/flag');
   assert.equal(port(win).disabled, true);
   assert.equal(lang(win).disabled, false);
-  assert.equal(win.$$('#set-port-note')[1].hidden, false);
+  assert.equal(win.$('#set-port-note').hidden, false);
   assert.equal(port(win).getAttribute('aria-describedby'), 'set-port-help set-port-note set-port-error');
   assert.equal(dir(win).getAttribute('aria-describedby'), 'set-dir-help set-dir-note set-dir-error');
   submit(win);
@@ -88,7 +88,7 @@ test('an invalid port shows the error, focuses the field and sends nothing', asy
 
 test('the OBS note shows only for a valid port that differs from the running one', async () => {
   const { win } = await S.open();
-  const note = win.$('#set-port-note');
+  const note = win.$('#set-port-obs-note');
   for (const [value, hidden] of [['9000', false], ['7878', true], ['nope', true], ['65535', false]]) {
     port(win).value = value;
     port(win).dispatchEvent(new dom.Event('input'));
