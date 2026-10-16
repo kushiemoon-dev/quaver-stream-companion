@@ -29,7 +29,6 @@ function threshold(name) {
 const limits = ['lines', 'branches', 'functions'].map((n) => [n, threshold(n)]).filter(([, v]) => v !== null);
 const tmp = mkdtempSync(join(tmpdir(), 'qsc-cov-'));
 const v8 = join(tmp, 'v8');
-const inline = join(tmp, 'inline');
 mkdirSync(v8);
 
 const run = (cmd, cmdArgs, env, capture) =>
@@ -39,7 +38,6 @@ function main() {
   const testEnv = {
     ...process.env,
     QSC_WEB: join(root, 'web'),
-    QSC_INLINE: inline,
     NODE_V8_COVERAGE: v8,
     NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ''} --require ${JSON.stringify(preload)}`.trim(),
   };
@@ -47,7 +45,7 @@ function main() {
   if (tests.status !== 0) return tests.status ?? 1;
 
   const report = ['report', '--temp-directory', v8, '--reports-dir', join(root, 'coverage-js'),
-    '--src', 'web', '--src', inline, '--all', '--allowExternal',
+    '--src', 'web', '--all', '--allowExternal',
     '--exclude', '**/testdata/**', '--exclude', '**/testsupport/**', '--exclude', '**/scripts/**', '--reporter=text', '--reporter=json-summary'];
   if (args.includes('--html')) report.push('--reporter=html');
   if (limits.length) report.push('--check-coverage', ...limits.flatMap(([n, v]) => [`--${n}`, String(v)]));
