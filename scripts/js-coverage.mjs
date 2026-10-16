@@ -48,7 +48,7 @@ function main() {
 
   const report = ['report', '--temp-directory', v8, '--reports-dir', join(root, 'coverage-js'),
     '--src', 'web', '--src', inline, '--all', '--allowExternal',
-    '--exclude', '**/testdata/**', '--exclude', '**/scripts/**', '--reporter=text', '--reporter=json-summary'];
+    '--exclude', '**/testdata/**', '--exclude', '**/testsupport/**', '--exclude', '**/scripts/**', '--reporter=text', '--reporter=json-summary'];
   if (args.includes('--html')) report.push('--reporter=html');
   if (limits.length) report.push('--check-coverage', ...limits.flatMap(([n, v]) => [`--${n}`, String(v)]));
 
