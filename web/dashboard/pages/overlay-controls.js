@@ -48,13 +48,13 @@
   }
 
   function hideGroup(model, onChange) {
+    const inputs = [];
     const boxes = cat.STATES.map(function (s) {
-      return h('label', { class: 'check' },
-        h('input', { type: 'checkbox', value: s, checked: model.hide.indexOf(s) >= 0, onchange: function (ev) {
-          const rest = model.hide.filter(function (x) { return x !== s; });
-          onChange({ hide: ev.target.checked ? rest.concat(s) : rest });
-        } }),
-        h('span', null, t('game.' + s)));
+      const input = h('input', { type: 'checkbox', value: s, checked: model.hide.indexOf(s) >= 0, onchange: function () {
+        onChange({ hide: inputs.filter(function (i) { return i.checked; }).map(function (i) { return i.value; }) });
+      } });
+      inputs.push(input);
+      return h('label', { class: 'check' }, input, h('span', null, t('game.' + s)));
     });
     return h('fieldset', { class: 'seg-group field' }, h('legend', null, t('overlays.hide')), h('div', { class: 'check-list' }, boxes),
       h('p', { class: 'muted hint' }, t('overlays.hide_hint')));
