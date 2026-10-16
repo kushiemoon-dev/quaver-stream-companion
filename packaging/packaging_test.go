@@ -284,3 +284,33 @@ func TestOverlaysDocMentionsTheClientLimit(t *testing.T) {
 		t.Error("OVERLAYS.md must document the 64 client limit")
 	}
 }
+
+func TestJavaScriptCoverageScript(t *testing.T) {
+	if !strings.Contains(read(t, ".gitignore"), "/coverage-js/") {
+		t.Error(".gitignore must ignore /coverage-js/")
+	}
+	dashes := string([]rune{0x2014, 0x2013})
+	for _, rel := range []string{"scripts/js-coverage.mjs", "scripts/js-coverage-preload.cjs", "CONTRIBUTING.md"} {
+		if strings.ContainsAny(read(t, rel), dashes) {
+			t.Errorf("%s contains an em or en dash", rel)
+		}
+	}
+	if !strings.Contains(read(t, "CONTRIBUTING.md"), "node scripts/js-coverage.mjs") {
+		t.Error("CONTRIBUTING.md must explain how to measure JavaScript coverage")
+	}
+}
+
+func TestCIReportsJavaScriptCoverage(t *testing.T) {
+	wf := read(t, ".github/workflows/ci.yml")
+	goTest := strings.Index(wf, "go test -race -cover ./...")
+	cov := strings.Index(wf, "- run: node scripts/js-coverage.mjs")
+	if goTest < 0 || cov < goTest {
+		t.Error("ci.yml must run node scripts/js-coverage.mjs after the Go tests")
+	}
+	if !strings.Contains(wf, "os: [ubuntu-latest, windows-latest]") {
+		t.Error("ci.yml must keep the Ubuntu and Windows matrix for the coverage step")
+	}
+	if strings.Contains(wf, "--lines") || strings.Contains(wf, "QSC_JS_COV") {
+		t.Error("the coverage step is report only: no threshold yet")
+	}
+}
