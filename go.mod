@@ -6,7 +6,7 @@ toolchain go1.26.9
 
 require (
 	golang.org/x/sys v0.49.0
-	modernc.org/sqlite v1.60.1
+	modernc.org/sqlite v1.61.0
 )
 
 require (
